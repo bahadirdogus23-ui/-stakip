@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İş Takip</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7280;
+    --border: #e2e5ea; --accent: #2563eb; --danger: #dc2626; --warn: #d97706; --ok: #16a34a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e6e8ec; --muted: #9aa3b2;
+      --border: #2b3240; --accent: #60a5fa; --danger: #f87171; --warn: #fbbf24; --ok: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 1.3rem; margin: 0; }
+  nav { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav button { background: none; border: none; padding: 10px 14px; color: var(--muted); font-size: 1rem; cursor: pointer; border-bottom: 2px solid transparent; }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  main { padding: 16px; max-width: 900px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  form .wide { grid-column: 1 / -1; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+  input, select, textarea { font: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+  textarea { min-height: 60px; resize: vertical; }
+  button.primary { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 10px 14px; font: inherit; cursor: pointer; }
+  button.small { font-size: .8rem; padding: 4px 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 5px; cursor: pointer; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .toolbar input, .toolbar select { flex: 1; min-width: 140px; }
+  .item { display: flex; gap: 10px; align-items: flex-start; }
+  .item .body { flex: 1; min-width: 0; }
+  .item .title { font-weight: 600; word-break: break-word; }
+  .item.done .title { text-decoration: line-through; color: var(--muted); }
+  .meta { font-size: .8rem; color: var(--muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; font-size: .75rem; }
+  .overdue { color: var(--danger); }
+  .today { color: var(--warn); }
+  .high { color: var(--danger); } .mid { color: var(--warn); } .low { color: var(--ok); }
+  .actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .stat .num { font-size: 1.8rem; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: .85rem; }
+  .empty { color: var(--muted); text-align: center; padding: 20px; }
+  .hidden { display: none; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 İş Takip</h1>
+  <div class="toolbar" style="margin:0">
+    <button class="small" id="exportBtn">Yedek Al (indir)</button>
+    <button class="small" id="importBtn">Yedekten Yükle</button>
+    <input type="file" id="importFile" accept="application/json" class="hidden">
+  </div>
+</header>
+<nav>
+  <button data-tab="ozet" class="active">Özet</button>
+  <button data-tab="gorevler">Görevler</button>
+  <button data-tab="kayitlar">Veri Girişi</button>
+  <button data-tab="notlar">Notlar</button>
+</nav>
+
+<main>
+  <!-- ÖZET -->
+  <section id="tab-ozet">
+    <div class="stats" id="stats"></div>
+    <h3>⏰ Gecikmiş ve bugünkü işler</h3>
+    <div id="urgentList"></div>
+  </section>
+
+  <!-- GÖREVLER -->
+  <section id="tab-gorevler" class="hidden">
+    <div class="card">
+      <form id="taskForm">
+        <label class="wide">Ne yapılacak?
+          <input name="title" required placeholder="Örn: Ahmet Bey'e teklif gönder">
+        </label>
+        <label>Kim istedi?
+          <input name="from" placeholder="Örn: Müdür" list="peopleList">
+        </label>
+        <label>Son tarih
+          <input name="due" type="date">
+        </label>
+        <label>Öncelik
+          <select name="priority">
+            <option value="mid">Orta</option>
+            <option value="high">Yüksek</option>
+            <option value="low">Düşük</option>
+          </select>
+        </label>
+        <label class="wide">Detay
+          <textarea name="detail" placeholder="İsteğe bağlı açıklama"></textarea>
+        </label>
+        <div class="wide"><button class="primary" type="submit">Görev Ekle</button></div>
+      </form>
+      <datalist id="peopleList"></datalist>
+    </div>
+    <div class="toolbar">
+      <input id="taskSearch" placeholder="Görevlerde ara...">
+      <select id="taskFilter">
+        <option value="open">Açık olanlar</option>
+        <option value="done">Tamamlananlar</option>
+        <option value="all">Hepsi</option>
+      </select>
+    </div>
+    <div id="taskList"></div>
+  </section>
+
+  <!-- VERİ GİRİŞİ -->
+  <section id="tab-kayitlar" class="hidden">
+    <div class="card">
+      <form id="recordForm">
+        <label>Tarih
+          <input name="date" type="date" required>
+        </label>
+        <label>Kategori
+          <input name="category" required placeholder="Örn: Satış, Masraf, Ziyaret" list="categoryList">
+        </label>
+        <label>Kişi / Firma
+          <input name="party" placeholder="İsteğe bağlı">
+        </label>
+        <label>Tutar / Miktar
+          <input name="amount" type="number" step="any" placeholder="İsteğe bağlı">
+        </label>
+        <label class="wide">Açıklama
+          <textarea name="desc" placeholder="Ne oldu?"></textarea>
+        </label>
+        <div class="wide"><button class="primary" type="submit">Kaydet</button></div>
+      </form>
+      <datalist id="categoryList"></datalist>
+    </div>
+    <div class="toolbar">
+      <input id="recordSearch" placeholder="Kayıtlarda ara...">
+      <select id="recordCategory"><option value="">Tüm kategoriler</option></select>
+      <button class="small" id="csvBtn">Excel için CSV indir</button>
+    </div>
+    <div class="card table-wrap"><div id="recordTable"></div></div>
+  </section>
+
+  <!-- NOTLAR -->
+  <section id="tab-notlar" class="hidden">
+    <div class="card">
+      <form id="noteForm">
+        <label class="wide">Not
+          <textarea name="text" required placeholder="Aklına gelen, unutmaman gereken her şey..."></textarea>
+        </label>
+        <div class="wide"><button class="primary" type="submit">Not Ekle</button></div>
+      </form>
+    </div>
+    <div class="toolbar"><input id="noteSearch" placeholder="Notlarda ara..."></div>
+    <div id="noteList"></div>
+  </section>
+</main>
+
+<script>
+const STORE_KEY = 'istakip-v1';
+let db = { tasks: [], records: [], notes: [] };
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) db = Object.assign(db, JSON.parse(raw));
+  } catch (e) { console.warn('Veri okunamadı', e); }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }
+  catch (e) { alert('Kaydedilemedi! Lütfen yedek alın.'); }
+  render();
+}
+
+const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD, yerel saat
+const fmtDate = d => d ? new Date(d + 'T00:00').toLocaleDateString('tr-TR') : '';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PRIORITY = { high: 'Yüksek', mid: 'Orta', low: 'Düşük' };
+const PRIO_ORDER = { high: 0, mid: 1, low: 2 };
+
+// ---- Sekmeler ----
+document.querySelectorAll('nav button').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + btn.dataset.tab));
+}));
+
+// ---- Görevler ----
+document.getElementById('taskForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(e.target));
+  db.tasks.push({ id: id(), title: f.title.trim(), from: f.from.trim(), due: f.due, priority: f.priority,
+                  detail: f.detail.trim(), done: false, created: new Date().toISOString() });
+  e.target.reset();
+  save();
+});
+
+function dueClass(t) {
+  if (t.done || !t.due) return '';
+  if (t.due < todayStr()) return 'overdue';
+  if (t.due === todayStr()) return 'today';
+  return '';
+}
+
+function taskHtml(t) {
+  const dc = dueClass(t);
+  const dueLabel = t.due ? (dc === 'overdue' ? '⚠ Gecikti: ' : dc === 'today' ? '📌 Bugün: ' : '📅 ') + fmtDate(t.due) : '';
+  return `<div class="card item ${t.done ? 'done' : ''}">
+    <input type="checkbox" ${t.done ? 'checked' : ''} data-toggle="${t.id}" aria-label="Tamamlandı">
+    <div class="body">
+      <div class="title">${esc(t.title)}</div>
+      ${t.detail ? `<div style="margin-top:4px">${esc(t.detail)}</div>` : ''}
+      <div class="meta">
+        <span class="badge ${t.priority}">${PRIORITY[t.priority]}</span>
+        ${t.from ? `<span>👤 ${esc(t.from)}</span>` : ''}
+        ${dueLabel ? `<span class="${dc}">${dueLabel}</span>` : ''}
+      </div>
+    </div>
+    <div class="actions"><button class="small" data-del-task="${t.id}">Sil</button></div>
+  </div>`;
+}
+
+function sortTasks(list) {
+  return list.slice().sort((a, b) =>
+    (a.done - b.done) || ((a.due || '9999') .localeCompare(b.due || '9999')) || (PRIO_ORDER[a.priority] - PRIO_ORDER[b.priority]));
+}
+
+function renderTasks() {
+  const q = document.getElementById('taskSearch').value.toLowerCase();
+  const filter = document.getElementById('taskFilter').value;
+  const list = sortTasks(db.tasks.filter(t =>
+    (filter === 'all' || (filter === 'done') === t.done) &&
+    (!q || [t.title, t.from, t.detail].join(' ').toLowerCase().includes(q))));
+  document.getElementById('taskList').innerHTML = list.length ? list.map(taskHtml).join('') : '<div class="empty">Görev yok.</div>';
+  document.getElementById('peopleList').innerHTML = [...new Set(db.tasks.map(t => t.from).filter(Boolean))].map(p => `<option value="${esc(p)}">`).join('');
+}
+
+document.addEventListener('change', e => {
+  const tid = e.target.dataset.toggle;
+  if (tid) { const t = db.tasks.find(x => x.id === tid); t.done = e.target.checked; t.doneAt = t.done ? new Date().toISOString() : null; save(); }
+});
+document.addEventListener('click', e => {
+  const d = e.target.dataset;
+  if (d.delTask && confirm('Görev silinsin mi?')) { db.tasks = db.tasks.filter(x => x.id !== d.delTask); save(); }
+  if (d.delRecord && confirm('Kayıt silinsin mi?')) { db.records = db.records.filter(x => x.id !== d.delRecord); save(); }
+  if (d.delNote && confirm('Not silinsin mi?')) { db.notes = db.notes.filter(x => x.id !== d.delNote); save(); }
+});
+['taskSearch', 'taskFilter', 'recordSearch', 'recordCategory', 'noteSearch'].forEach(i =>
+  document.getElementById(i).addEventListener('input', render));
+
+// ---- Veri girişi ----
+const recordForm = document.getElementById('recordForm');
+recordForm.date.value = todayStr();
+recordForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(e.target));
+  db.records.push({ id: id(), date: f.date, category: f.category.trim(), party: f.party.trim(),
+                    amount: f.amount === '' ? null : Number(f.amount), desc: f.desc.trim() });
+  e.target.reset();
+  recordForm.date.value = todayStr();
+  save();
+});
+
+function filteredRecords() {
+  const q = document.getElementById('recordSearch').value.toLowerCase();
+  const cat = document.getElementById('recordCategory').value;
+  return db.records
+    .filter(r => (!cat || r.category === cat) && (!q || [r.category, r.party, r.desc].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function renderRecords() {
+  const cats = [...new Set(db.records.map(r => r.category))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const sel = document.getElementById('recordCategory');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Tüm kategoriler</option>' + cats.map(c => `<option ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
+  document.getElementById('categoryList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+
+  const list = filteredRecords();
+  if (!list.length) { document.getElementById('recordTable').innerHTML = '<div class="empty">Kayıt yok.</div>'; return; }
+  const total = list.reduce((s, r) => s + (r.amount || 0), 0);
+  document.getElementById('recordTable').innerHTML = `<table>
+    <thead><tr><th>Tarih</th><th>Kategori</th><th>Kişi/Firma</th><th>Tutar</th><th>Açıklama</th><th></th></tr></thead>
+    <tbody>${list.map(r => `<tr>
+      <td>${fmtDate(r.date)}</td><td>${esc(r.category)}</td><td>${esc(r.party)}</td>
+      <td>${r.amount == null ? '' : r.amount.toLocaleString('tr-TR')}</td><td>${esc(r.desc)}</td>
+      <td><button class="small" data-del-record="${r.id}">Sil</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><th colspan="3">Toplam (${list.length} kayıt)</th><th>${total.toLocaleString('tr-TR')}</th><th colspan="2"></th></tr></tfoot>
+  </table>`;
+}
+
+document.getElementById('csvBtn').addEventListener('click', () => {
+  const rows = [['Tarih', 'Kategori', 'Kişi/Firma', 'Tutar', 'Açıklama'],
+    ...filteredRecords().map(r => [r.date, r.category, r.party, r.amount ?? '', r.desc])];
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  download('﻿' + csv, `kayitlar-${todayStr()}.csv`, 'text/csv');
+});
+
+// ---- Notlar ----
+document.getElementById('noteForm').addEventListener('submit', e => {
+  e.preventDefault();
+  db.notes.push({ id: id(), text: e.target.text.value.trim(), created: new Date().toISOString() });
+  e.target.reset();
+  save();
+});
+function renderNotes() {
+  const q = document.getElementById('noteSearch').value.toLowerCase();
+  const list = db.notes.filter(n => !q || n.text.toLowerCase().includes(q)).sort((a, b) => b.created.localeCompare(a.created));
+  document.getElementById('noteList').innerHTML = list.length ? list.map(n => `<div class="card item">
+    <div class="body"><div style="white-space:pre-wrap">${esc(n.text)}</div>
+    <div class="meta">${new Date(n.created).toLocaleString('tr-TR')}</div></div>
+    <div class="actions"><button class="small" data-del-note="${n.id}">Sil</button></div></div>`).join('') : '<div class="empty">Not yok.</div>';
+}
+
+// ---- Özet ----
+function renderSummary() {
+  const open = db.tasks.filter(t => !t.done);
+  const overdue = open.filter(t => t.due && t.due < todayStr());
+  const today = open.filter(t => t.due === todayStr());
+  const month = todayStr().slice(0, 7);
+  const stats = [
+    ['Açık görev', open.length], ['Geciken', overdue.length], ['Bugün', today.length],
+    ['Bu ay kayıt', db.records.filter(r => r.date.startsWith(month)).length], ['Not', db.notes.length]];
+  document.getElementById('stats').innerHTML = stats.map(([l, n]) =>
+    `<div class="card stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+  const urgent = sortTasks([...overdue, ...today]);
+  document.getElementById('urgentList').innerHTML = urgent.length ? urgent.map(taskHtml).join('') : '<div class="empty">Acil iş yok 👍</div>';
+}
+
+// ---- Yedekleme ----
+function download(content, name, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+document.getElementById('exportBtn').addEventListener('click', () =>
+  download(JSON.stringify(db, null, 2), `istakip-yedek-${todayStr()}.json`, 'application/json'));
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data.tasks) || !Array.isArray(data.records) || !Array.isArray(data.notes)) throw new Error('format');
+    if (confirm('Mevcut verilerin yerine yedekteki veriler yüklensin mi?')) { db = data; save(); }
+  } catch { alert('Geçersiz yedek dosyası.'); }
+  e.target.value = '';
+});
+
+function render() { renderSummary(); renderTasks(); renderRecords(); renderNotes(); }
+load();
+render();
+</script>
+</body>
+</html>
