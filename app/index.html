@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2b3440">
+<title>Kırsal Yol Bakım</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Kırsal Yol Bakım</b><span>Arapgir Şantiye Yönetimi</span></div>
+  <div class="status">
+    <a id="bell" class="pill" href="#panel/ozet" title="Uyarılar">🔔</a>
+    <span id="sync-state" class="pill">…</span>
+    <button id="sync-btn" class="btn">⟳ Senkronize</button>
+  </div>
+</header>
+<nav id="tabs" class="tabs"></nav>
+<nav id="subtabs" class="subtabs"></nav>
+<main id="view"></main>
+<div id="print-area"></div>
+<noscript>Bu uygulama için JavaScript gereklidir.</noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
