@@ -39,18 +39,21 @@
     for (const o of sonuc.ozet) {
       const m = Hesap.malzemeBul(A, o.malzemeId);
       if (!m) continue;
+      // Cam/ayna: plaka yok, net alan × m² fiyatı (işlem fiyatı alanında tutulur)
+      const cam = Hesap.camMi(m);
       const plakaM2 = (sayi(m.plakaUzun) * sayi(m.plakaKisa)) / 1e6;
-      const tamPlaka = sayi(plakaSayisi[o.malzemeId]);
-      const alanPlaka = plakaM2 > 0 ? (o.alanM2 * (1 + sayi(F.alanFire) / 100)) / plakaM2 : 0;
+      const tamPlaka = cam ? 0 : sayi(plakaSayisi[o.malzemeId]);
+      const alanPlaka = !cam && plakaM2 > 0 ? (o.alanM2 * (1 + sayi(F.alanFire) / 100)) / plakaM2 : 0;
       const plaka = F.plakaHesabi === 'alan' ? alanPlaka : tamPlaka;
       const plakaTutar = kurus(plaka * sayi(m.plakaFiyati));
       const islemTutar = kurus(o.alanM2 * sayi(m.islemFiyatiM2));
       const bantM = o.bantM * bantCarpan;
       const bantTutar = kurus(bantM * sayi(m.bantFiyati));
       if (plaka > 0 && !(sayi(m.plakaFiyati) > 0)) eksikFiyat.push(`${m.ad} plaka fiyatı`);
+      if (cam && o.alanM2 > 0 && !(sayi(m.islemFiyatiM2) > 0)) eksikFiyat.push(`${m.ad} m² fiyatı`);
       if (bantM > 0 && !(sayi(m.bantFiyati) > 0)) eksikFiyat.push(`${m.ad} bant fiyatı`);
       kalemler.malzeme.push({
-        malzemeId: m.id, ad: m.ad,
+        malzemeId: m.id, ad: m.ad, cam,
         plaka: Math.round(plaka * 100) / 100, plakaFiyati: sayi(m.plakaFiyati), plakaTutar,
         alanM2: o.alanM2, islemFiyatiM2: sayi(m.islemFiyatiM2), islemTutar,
         bantM: Math.round(bantM * 10) / 10, bantFiyati: sayi(m.bantFiyati), bantTutar,

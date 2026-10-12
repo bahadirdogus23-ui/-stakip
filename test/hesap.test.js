@@ -59,7 +59,7 @@ test('satır yükseklikleri ön yüz alanını tam doldurur', () => {
 test('gömme kapak ve ara dikme', () => {
   const m = Hesap.yeniModul('ust');
   m.kapakTipi = 'ic';
-  m.satirlar[0].dikme = 1;
+  m.sutunlar[0].satirlar[0].dikme = 1;
   const s = Hesap.modulHesapla(m, ayar);
   const kapak = bul(s, 'Kapak');
   // Gömme: (600 - 2*18 - 2*3 - (18 + 2*3)) / 2
@@ -146,11 +146,11 @@ test('L köşe dolap: tablalar, kapaklar ve arkalıklar', () => {
 });
 
 test('kör köşe paneli kapak alanını daraltır', () => {
-  const m = Hesap.yeniModul('korkose'); // 1000 genişlik, 560 kör panel solda, 1 kapak
+  const m = Hesap.yeniModul('korkose'); // 900 genişlik, 560 kör panel solda, 1 kapak
   const s = Hesap.modulHesapla(m, ayar);
   assert.equal(bul(s, 'Kör köşe paneli').en, 560);
-  // Kapak: (1000 - 1.5) - (1.5 + 560 + 3)
-  assert.equal(bul(s, 'Kapak').en, 1000 - 1.5 - (1.5 + 560 + 3));
+  // Kapak: (900 - 1.5) - (1.5 + 560 + 3)
+  assert.equal(bul(s, 'Kapak').en, 900 - 1.5 - (1.5 + 560 + 3));
 });
 
 test('ray tipi çekmece kutusu ölçüsünü değiştirir', () => {
@@ -266,7 +266,7 @@ test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
   assert.equal(p.ayarlar.malzemeler[0].kalinlik, 18);
   assert.equal(m.arkalik, 'kanal');
   assert.equal(m.baza.tip, 'yok');
-  assert.deepEqual(m.satirlar[0], { tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false });
+  assert.deepEqual(m.sutunlar[0].satirlar[0], { tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false });
   assert.deepEqual(m.malzeme, {});
   assert.equal(p.yerlesim.tip, 'duz');
   assert.equal(p.yerlesim.duvarA, 3000);
@@ -341,4 +341,146 @@ test('maliyet: eksik fiyat bildirilir, lake malzemede m² işlem fiyatı eklenir
   const lake = r.kalemler.malzeme.find((m) => m.malzemeId === 'lake18');
   assert.ok(lake.islemTutar > 0);
   assert.equal(lake.bantTutar, 0);
+});
+
+// ---------- Katalog, bölmeler, cam, sürgü, panel, bağlantılar ----------
+
+test('katalog: tüm hazır modüller uyarısız hesaplanır', () => {
+  for (const k of Object.keys(Hesap.PRESETLER)) {
+    const s = Hesap.modulHesapla(Hesap.yeniModul(k), ayar);
+    assert.ok(s.geo, `${k} çizilemedi`);
+    assert.deepEqual(s.uyarilar, [], `${k}: ${s.uyarilar.join(' | ')}`);
+    assert.ok(s.parcalar.length > 0, `${k} parça üretmedi`);
+  }
+  assert.ok(Object.keys(Hesap.PRESETLER).length >= 45);
+});
+
+test('bölmeler: dikey bölme genişlikleri, boydan dikme ve bölme başına kapak', () => {
+  const m = Hesap.yeniModul('gardirop3'); // 1500, bölme 1 = 476 iç, bölme 2 oto
+  const s = Hesap.modulHesapla(m, ayar);
+  const g = s.geo;
+  assert.equal(g.sutunlar.length, 2);
+  assert.equal(g.sutunlar[0].x2 - g.sutunlar[0].x1, 476);
+  assert.equal(g.sutunlar[1].x2 - g.sutunlar[1].x1, 1500 - 36 - 18 - 476);
+  const dikme = bul(s, 'Bölme dikmesi');
+  assert.equal(dikme.boy, 2320 - 36); // gövde 2400 - baza 80, tablalar arası
+  // Bölme 1 kapağı: dış kenardan dikme ortasına kadar
+  const k1 = s.parcalar.find((p) => p.ad === 'Kapak (bölme 1, satır 2)');
+  assert.equal(k1.en, r(18 + 476 + 9 - 1.5 - 1.5));
+  const k2 = s.parcalar.find((p) => p.ad === 'Kapak (bölme 2, satır 2)');
+  assert.equal(k2.adet, 2);
+  assert.ok(s.hirdavat.some((h) => h.ad.startsWith('Askı borusu')));
+  assert.equal(bul(s, 'Raf (bölme 1').adet, 5);
+});
+function r(x) { return Math.round(x * 10) / 10; }
+
+test('cam: çerçevesiz, profilli ve çerçeveli cam kapak ölçüleri', () => {
+  const m = Hesap.yeniModul('ust'); // 600×720, 2 kapak 297×717
+  const sat = m.sutunlar[0].satirlar[0];
+  sat.kapakTuru = 'cam';
+  let s = Hesap.modulHesapla(m, ayar);
+  let cam = bul(s, 'Kapak (satır 1) – cam');
+  assert.equal(cam.malzeme, 'cam4');
+  assert.deepEqual([cam.boy, cam.en, cam.adet], [717, 297, 2]);
+  assert.deepEqual(cam.bant, { u: 0, k: 0 });
+  assert.ok(s.hirdavat.some((h) => h.kod === 'mentese_cam'));
+
+  sat.kapakTuru = 'cam_profil';
+  s = Hesap.modulHesapla(m, ayar);
+  cam = bul(s, 'Kapak (satır 1) – profil camı');
+  assert.deepEqual([cam.boy, cam.en], [717 - 36, 297 - 36]);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'al_profil').fiyatMiktari, 2 * 2 * (717 + 297) / 1000);
+
+  sat.kapakTuru = 'cam_cerceve';
+  s = Hesap.modulHesapla(m, ayar);
+  assert.equal(bul(s, 'Kapak (satır 1) – çerçeve dikmesi').adet, 4);
+  assert.equal(bul(s, 'Kapak (satır 1) – çerçeve kaydı').boy, 297 - 140);
+  cam = bul(s, 'Kapak (satır 1) – çerçeve camı');
+  assert.deepEqual([cam.boy, cam.en], [717 - 140 + 16 - 2, 297 - 140 + 16 - 2]);
+});
+
+test('cam raf ve LED', () => {
+  const m = Hesap.yeniModul('ust_cam'); // 800, 2 cam raf, LED
+  const s = Hesap.modulHesapla(m, ayar);
+  const raf = bul(s, 'Cam raf');
+  assert.equal(raf.malzeme, 'cam8');
+  assert.equal(raf.boy, 764 - 2 - 2);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'cam_raf_pimi').adet, 8);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'led_serit').fiyatMiktari, 0.764);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'led_adaptor').adet, 1);
+});
+
+test('açılım: yukarı kalkan ve aşağı devrilen kapak hırdavatı', () => {
+  const m = Hesap.yeniModul('ust_klapa');
+  let s = Hesap.modulHesapla(m, ayar);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'kapak_kaldirma').adet, 1);
+  m.sutunlar[0].satirlar[0].acilim = 'asagi';
+  s = Hesap.modulHesapla(m, ayar);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'klapa_mentese').adet, 2);
+  assert.ok(!s.hirdavat.some((h) => h.kod === 'kapak_kaldirma'));
+});
+
+test('sürgü kapak: kapak ölçüsü, ray ve iç çekmece', () => {
+  const m = Hesap.yeniModul('surgulu'); // 1800, 2 kapak, bindirme 30
+  const s = Hesap.modulHesapla(m, ayar);
+  const k = bul(s, 'Sürgü kapak');
+  assert.equal(k.adet, 2);
+  assert.equal(k.en, (1800 + 30) / 2);
+  assert.equal(k.boy, 2320 - 40);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'surgu_ray').fiyatMiktari, 3.6);
+  assert.ok(!s.hirdavat.some((h) => h.ad.startsWith('Menteşe')));
+  // İç çekmece önleri gövde içine gömme yerleşir
+  const on = bul(s, 'Çekmece önü');
+  assert.ok(on.en < 873);
+  assert.equal(s.geo.surgu.kapaklar.length, 2);
+});
+
+test('şeffaf T bağlantı ara birleşimlerde, şeffaf köşe bağlantı köşelerde', () => {
+  const a2 = Hesap.varsayilanAyarlar();
+  a2.hirdavat.araBaglanti = 'seffaf_t';
+  const m = Hesap.yeniModul('alt'); // D 560 → 3 nokta; 1 ara tabla (2 uç)
+  let s = Hesap.modulHesapla(m, a2);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'seffaf_t').adet, 2 * 3);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'sunta_vidasi').adet, 4 * 6);
+  assert.equal(s.hirdavat.find((h) => h.kod === 'minifix').adet, 2 * 3 + 4); // köşe: alt tabla 2 uç + kuşak 4 nokta
+  a2.hirdavat = Object.assign({}, a2.hirdavat, { baglanti: 'seffaf_kose', araBaglanti: 'ayni' });
+  s = Hesap.modulHesapla(m, a2);
+  assert.ok(s.hirdavat.some((h) => h.kod === 'seffaf_kose'));
+  assert.ok(s.hirdavat.some((h) => h.kod === 'seffaf_t'), 'gövdeyle aynı seçilince ara birleşimler T bağlantı olur');
+  assert.ok(!s.hirdavat.some((h) => h.kod === 'minifix'));
+});
+
+test('panel modülleri: ölçü, bant ve yerleşim yönü', () => {
+  const y = Hesap.modulHesapla(Hesap.yeniModul('yan_kapama'), ayar);
+  assert.deepEqual([y.parcalar[0].boy, y.parcalar[0].en], [870, 580]);
+  assert.equal(y.geo.W, 18);
+  assert.equal(y.geo.D, 580);
+  const raf = Hesap.modulHesapla(Hesap.yeniModul('duvar_rafi'), ayar);
+  assert.equal(raf.geo.W, 800);
+  assert.equal(raf.hirdavat.find((h) => h.kod === 'raf_tasiyici').adet, 2);
+  const baza = Hesap.yeniModul('baza_bandi');
+  const alt = Hesap.yeniModul('alt');
+  const s = Hesap.projeHesapla(proje([alt, baza], { yerlesim: { tip: 'duz', duvarA: 3000, duvarB: 0 } }));
+  assert.equal(s.yerlesim.yerler.length, 1, 'baza bandı yerleşimde yer kaplamaz');
+  assert.ok(s.kesimListesi.some((p) => p.ad === 'Baza bandı'));
+});
+
+test('cam plakaya yerleştirilmez, m² fiyatıyla maliyetlenir', () => {
+  const p = Hesap.projeyiNormallestir(proje([Hesap.yeniModul('ust_cam')]));
+  const s = Hesap.projeHesapla(p);
+  const y = Yerlesim.projeYerlesimi(s.kesimListesi, p.ayarlar);
+  assert.ok(!y.some((g) => g.malzemeId === 'cam4' || g.malzemeId === 'cam8'));
+  const { r } = maliyetKur(p);
+  const cam = r.kalemler.malzeme.find((m) => m.malzemeId === 'cam4');
+  assert.equal(cam.plaka, 0);
+  assert.ok(Math.abs(cam.islemTutar - cam.alanM2 * 900) < 0.01);
+  assert.ok(!r.kalemler.hizmet.some((h) => h.malzemeId === 'cam4'));
+});
+
+test('600 mm üstü montaj yüksekliği asılı sırada sayılır', () => {
+  const b = Hesap.yeniModul('bulasik_panel'); // montaj 100 → zemin
+  const u = Hesap.yeniModul('ust_klapa');      // montaj 1810 → duvar
+  const s = Hesap.projeHesapla(proje([b, u], { yerlesim: { tip: 'duz', duvarA: 3000, duvarB: 0 } }));
+  assert.equal(s.yerlesim.yerler.find((y) => y.modul.id === b.id).sira, 'zemin');
+  assert.equal(s.yerlesim.yerler.find((y) => y.modul.id === u.id).sira, 'duvar');
 });

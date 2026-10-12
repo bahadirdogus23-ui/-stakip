@@ -1,8 +1,11 @@
 /*
  * Mobilya ölçü hesap motoru.
- * Bir modülün (dolap/gövde) dış ölçülerinden ve yapı tercihlerinden
- * tüm parçaların net ve kesim ölçülerini, hırdavat listesini ve
- * çizim için geometrisini üretir. Tüm ölçüler milimetredir.
+ * Bir modülün (dolap/gövde/panel) dış ölçülerinden ve yapı tercihlerinden
+ * tüm parçaların net ve kesim ölçülerini, cam listesini, hırdavat listesini
+ * ve çizim için geometrisini üretir. Tüm ölçüler milimetredir.
+ *
+ * Dolap yapısı: gövde → dikey bölmeler (sütunlar) → her bölmede yukarıdan
+ * aşağı satırlar (kapak, çekmece, açık raf, cihaz nişi).
  */
 (function (root, factory) {
   const api = factory();
@@ -12,15 +15,44 @@
   'use strict';
 
   const RAY_BOYLARI = [250, 300, 350, 400, 450, 500, 550, 600];
-  const KULLANIMLAR = ['govde', 'kapak', 'cekmece', 'arkalik'];
-  const KULLANIM_AD = { govde: 'Gövde', kapak: 'Kapak / ön', cekmece: 'Çekmece kutusu', arkalik: 'Arkalık / taban' };
-  const MALZEME_TURLERI = ['Suntalam', 'MDF Lam', 'MDF Lake', 'Ham MDF', 'Akrilik / parlak', 'Kontrplak', 'Masif panel', 'HDF', 'Kompakt laminat', 'Diğer'];
+  const KULLANIMLAR = ['govde', 'kapak', 'cekmece', 'arkalik', 'cam', 'camRaf', 'ayna'];
+  const KULLANIM_AD = {
+    govde: 'Gövde', kapak: 'Kapak / ön', cekmece: 'Çekmece kutusu', arkalik: 'Arkalık / taban',
+    cam: 'Kapak camı', camRaf: 'Cam raf', ayna: 'Ayna',
+  };
+  const MALZEME_TURLERI = ['Suntalam', 'MDF Lam', 'MDF Lake', 'Ham MDF', 'Akrilik / parlak', 'Kontrplak', 'Masif panel', 'HDF', 'Kompakt laminat', 'Cam', 'Ayna', 'Diğer'];
+  const camMi = (m) => !!m && (m.tur === 'Cam' || m.tur === 'Ayna');
+
+  const SATIR_TIPLERI = { kapak: 'Kapak', cekmece: 'Çekmece', acik: 'Açık raf', nis: 'Cihaz nişi' };
+  const KAPAK_TURLERI = { panel: 'Düz panel', cam: 'Cam (çerçevesiz)', cam_profil: 'Alüminyum profil + cam', cam_cerceve: 'MDF çerçeve + cam', ayna: 'Ayna' };
+  const ACILIMLAR = { yana: 'Yana açılır', yukari: 'Yukarı kalkar', asagi: 'Aşağı devrilir (klapa)' };
+  const SURGU_TURLERI = { panel: 'Düz panel', ayna: 'Ayna (profilli)', cam_profil: 'Cam (profilli)' };
+  const PANEL_TURLERI = {
+    yan_kapama: { ad: 'Yan kapama paneli', aciklama: 'Dolap dizisinin açıkta kalan yanına' },
+    dolgu: { ad: 'Dolgu paneli', aciklama: 'Duvar ile dolap arasındaki boşluğa' },
+    bulasik: { ad: 'Bulaşık makinesi kapağı', aciklama: 'Ankastre bulaşık makinesine' },
+    raf: { ad: 'Duvar rafı', aciklama: 'Gizli taşıyıcılı duvar rafı' },
+    tabla: { ad: 'Tabla', aciklama: 'Masa, tezgah veya çalışma tablası' },
+    baza: { ad: 'Baza bandı', aciklama: 'Dolapların altındaki süpürgelik; yerleşimde yer kaplamaz' },
+    serbest: { ad: 'Serbest panel', aciklama: 'Herhangi bir düz parça' },
+  };
 
   /** Seçilebilir hırdavat türleri. Ölçüyü etkileyen değerler burada tutulur. */
   const HIRDAVAT_SECENEKLERI = {
     baglanti: {
-      baslik: 'Gövde bağlantısı',
+      baslik: 'Gövde bağlantısı (köşeler)',
       secenekler: {
+        minifix: { ad: 'Minifix + kavela' },
+        konfirmat: { ad: 'Konfirmat vida' },
+        kavela: { ad: 'Kavela + tutkal' },
+        seffaf_kose: { ad: 'Şeffaf köşe bağlantı (plastik)' },
+      },
+    },
+    araBaglanti: {
+      baslik: 'Ara bağlantı (sabit raf, dikme)',
+      secenekler: {
+        ayni: { ad: 'Gövde bağlantısıyla aynı' },
+        seffaf_t: { ad: 'Şeffaf T bağlantı (plastik)' },
         minifix: { ad: 'Minifix + kavela' },
         konfirmat: { ad: 'Konfirmat vida' },
         kavela: { ad: 'Kavela + tutkal' },
@@ -70,10 +102,21 @@
     kavela: { ad: 'Kavela 8×35', birim: 'adet', fiyat: 0.5 },
     konfirmat: { ad: 'Konfirmat vida 7×50', birim: 'adet', fiyat: 1.5 },
     tutkal: { ad: 'Ahşap tutkalı', birim: 'birleşim', fiyat: 2 },
+    seffaf_kose: { ad: 'Şeffaf köşe bağlantı', birim: 'adet', fiyat: 3 },
+    seffaf_t: { ad: 'Şeffaf T bağlantı', birim: 'adet', fiyat: 3 },
+    sunta_vidasi: { ad: 'Sunta vidası 3,5×16', birim: 'adet', fiyat: 0.3 },
     mentese_standart: { ad: 'Menteşe standart', birim: 'adet', fiyat: 35 },
     mentese_frenli: { ad: 'Menteşe frenli', birim: 'adet', fiyat: 85 },
     mentese_yaysiz: { ad: 'Menteşe yaysız', birim: 'adet', fiyat: 60 },
+    mentese_cam: { ad: 'Cam kapak menteşesi', birim: 'adet', fiyat: 150 },
     mentese_katlanir: { ad: 'Katlanır kapak bağlantı menteşesi', birim: 'adet', fiyat: 120 },
+    kapak_kaldirma: { ad: 'Kapak kaldırma mekanizması', birim: 'takım', fiyat: 900 },
+    klapa_mentese: { ad: 'Klapa menteşesi', birim: 'adet', fiyat: 60 },
+    klapa_kol: { ad: 'Klapa taşıma kolu', birim: 'takım', fiyat: 250 },
+    surgu_ray: { ad: 'Sürgü kapak ray profili', birim: 'm', fiyat: 300 },
+    surgu_takim: { ad: 'Sürgü kapak tekerlek takımı', birim: 'kapak', fiyat: 400 },
+    al_profil: { ad: 'Alüminyum kapak profili', birim: 'm', fiyat: 220 },
+    profil_kose: { ad: 'Profil köşe birleştirme', birim: 'adet', fiyat: 8 },
     ray_bilyeli: { ad: 'Bilyeli teleskopik ray', birim: 'takım', fiyat: 220 },
     ray_bilyeli_frenli: { ad: 'Frenli bilyeli teleskopik ray', birim: 'takım', fiyat: 450 },
     ray_gizli: { ad: 'Gizli frenli ray', birim: 'takım', fiyat: 850 },
@@ -85,28 +128,41 @@
     gola: { ad: 'Gola profil', birim: 'm', fiyat: 280 },
     ayak_plastik: { ad: 'Plastik ayarlı ayak', birim: 'adet', fiyat: 15 },
     ayak_metal: { ad: 'Metal ayarlı ayak', birim: 'adet', fiyat: 60 },
+    tekerlek: { ad: 'Tekerlek (frenli)', birim: 'adet', fiyat: 45 },
     raf_pimi: { ad: 'Raf pimi', birim: 'adet', fiyat: 1 },
+    cam_raf_pimi: { ad: 'Cam raf pimi', birim: 'adet', fiyat: 4 },
     raf_baglanti: { ad: 'Raf birleştirme bağlantısı', birim: 'adet', fiyat: 10 },
+    raf_tasiyici: { ad: 'Gizli raf taşıyıcı', birim: 'adet', fiyat: 60 },
     aski_borusu: { ad: 'Askı borusu', birim: 'm', fiyat: 160 },
     aski_flans: { ad: 'Askı borusu flanşı', birim: 'adet', fiyat: 15 },
+    led_serit: { ad: 'LED şerit', birim: 'm', fiyat: 120 },
+    led_profil: { ad: 'LED alüminyum profili', birim: 'm', fiyat: 80 },
+    led_adaptor: { ad: 'LED adaptörü', birim: 'adet', fiyat: 300 },
+    bulasik_seti: { ad: 'Bulaşık makinesi kapak montaj seti', birim: 'takım', fiyat: 150 },
     arkalik_vida: { ad: 'Arkalık vidası / zımba çivisi', birim: 'adet', fiyat: 0.4 },
-    kor_kosebent: { ad: 'Kör panel köşebendi', birim: 'adet', fiyat: 5 },
+    kosebent: { ad: 'Bağlantı köşebendi', birim: 'adet', fiyat: 5 },
   };
 
   const VARSAYILAN_AYARLAR = {
     malzemeler: [
-      { id: 'sl18', ad: 'Suntalam Beyaz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false , plakaFiyati: 2200, bantFiyati: 12, islemFiyatiM2: 0 },
-      { id: 'sl18c', ad: 'Suntalam Ceviz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: true , plakaFiyati: 2600, bantFiyati: 14, islemFiyatiM2: 0 },
-      { id: 'sl16', ad: 'Suntalam Beyaz 16mm', tur: 'Suntalam', kalinlik: 16, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false , plakaFiyati: 2000, bantFiyati: 12, islemFiyatiM2: 0 },
-      { id: 'mdflam18', ad: 'MDF Lam Beyaz 18mm', tur: 'MDF Lam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 1, damar: false , plakaFiyati: 3200, bantFiyati: 18, islemFiyatiM2: 0 },
-      { id: 'lake18', ad: 'MDF Lake 18mm (boyalı)', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false , plakaFiyati: 2600, bantFiyati: 0, islemFiyatiM2: 1400 },
-      { id: 'akrilik18', ad: 'Akrilik Parlak 18mm', tur: 'Akrilik / parlak', kalinlik: 18, plakaUzun: 2800, plakaKisa: 1220, bant: 1, damar: false , plakaFiyati: 9000, bantFiyati: 30, islemFiyatiM2: 0 },
-      { id: 'kp18', ad: 'Kontrplak 18mm', tur: 'Kontrplak', kalinlik: 18, plakaUzun: 2440, plakaKisa: 1220, bant: 0.5, damar: true , plakaFiyati: 3800, bantFiyati: 15, islemFiyatiM2: 0 },
-      { id: 'hdf8', ad: 'HDF Beyaz 8mm', tur: 'HDF', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false , plakaFiyati: 950, bantFiyati: 0, islemFiyatiM2: 0 },
-      { id: 'hdf4', ad: 'HDF Beyaz 4mm', tur: 'HDF', kalinlik: 4, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false , plakaFiyati: 650, bantFiyati: 0, islemFiyatiM2: 0 },
+      { id: 'sl18', ad: 'Suntalam Beyaz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false, plakaFiyati: 2200, bantFiyati: 12, islemFiyatiM2: 0 },
+      { id: 'sl18c', ad: 'Suntalam Ceviz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: true, plakaFiyati: 2600, bantFiyati: 14, islemFiyatiM2: 0 },
+      { id: 'sl16', ad: 'Suntalam Beyaz 16mm', tur: 'Suntalam', kalinlik: 16, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false, plakaFiyati: 2000, bantFiyati: 12, islemFiyatiM2: 0 },
+      { id: 'mdflam18', ad: 'MDF Lam Beyaz 18mm', tur: 'MDF Lam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 1, damar: false, plakaFiyati: 3200, bantFiyati: 18, islemFiyatiM2: 0 },
+      { id: 'lake18', ad: 'MDF Lake 18mm (boyalı)', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 2600, bantFiyati: 0, islemFiyatiM2: 1400 },
+      { id: 'akrilik18', ad: 'Akrilik Parlak 18mm', tur: 'Akrilik / parlak', kalinlik: 18, plakaUzun: 2800, plakaKisa: 1220, bant: 1, damar: false, plakaFiyati: 9000, bantFiyati: 30, islemFiyatiM2: 0 },
+      { id: 'kp18', ad: 'Kontrplak 18mm', tur: 'Kontrplak', kalinlik: 18, plakaUzun: 2440, plakaKisa: 1220, bant: 0.5, damar: true, plakaFiyati: 3800, bantFiyati: 15, islemFiyatiM2: 0 },
+      { id: 'hdf8', ad: 'HDF Beyaz 8mm', tur: 'HDF', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 950, bantFiyati: 0, islemFiyatiM2: 0 },
+      { id: 'hdf4', ad: 'HDF Beyaz 4mm', tur: 'HDF', kalinlik: 4, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 650, bantFiyati: 0, islemFiyatiM2: 0 },
+      // Cam ve ayna: plakaya yerleştirilmez, m² fiyatıyla (işlem fiyatı alanı) hesaplanır.
+      { id: 'cam4', ad: 'Şeffaf temperli cam 4mm', tur: 'Cam', kalinlik: 4, plakaUzun: 3210, plakaKisa: 2250, bant: 0, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 900 },
+      { id: 'cam4f', ad: 'Füme temperli cam 4mm', tur: 'Cam', kalinlik: 4, plakaUzun: 3210, plakaKisa: 2250, bant: 0, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 1000 },
+      { id: 'cam4b', ad: 'Buzlu (satine) cam 4mm', tur: 'Cam', kalinlik: 4, plakaUzun: 3210, plakaKisa: 2250, bant: 0, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 1100 },
+      { id: 'cam8', ad: 'Temperli cam raf 8mm', tur: 'Cam', kalinlik: 8, plakaUzun: 3210, plakaKisa: 2250, bant: 0, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 1600 },
+      { id: 'ayna4', ad: 'Ayna 4mm', tur: 'Ayna', kalinlik: 4, plakaUzun: 3210, plakaKisa: 2250, bant: 0, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 800 },
     ],
-    kullanim: { govde: 'sl18', kapak: 'mdflam18', cekmece: 'sl16', arkalik: 'hdf8' },
-    hirdavat: { baglanti: 'minifix', mentese: 'frenli', ray: 'bilyeli', kulp: 'kulp', ayak: 'plastik' },
+    kullanim: { govde: 'sl18', kapak: 'mdflam18', cekmece: 'sl16', arkalik: 'hdf8', cam: 'cam4', camRaf: 'cam8', ayna: 'ayna4' },
+    hirdavat: { baglanti: 'minifix', araBaglanti: 'ayni', mentese: 'frenli', ray: 'bilyeli', kulp: 'kulp', ayak: 'plastik' },
     // Fiyat ve maliyet (TL, KDV hariç). Tüm fiyatlar örnektir.
     fiyat: {
       hirdavat: {},             // kod -> birim fiyat (boşsa katalog örnek fiyatı)
@@ -135,68 +191,100 @@
     rafOnGeriCekme: 20,       // hareketli raf önden geri çekme
     rafYanBosluk: 1,          // hareketli raf her yandan boşluk
     kusakGenisligi: 100,      // üst kuşak eni
+    profilCamPay: 18,         // alüminyum profilli kapakta camın her kenardan küçülmesi
+    cerceveEni: 70,           // MDF çerçeveli cam kapakta çerçeve eni
+    camLambaPayi: 8,          // çerçeve lambasına giren cam payı (her kenar)
+    surguBindirme: 30,        // sürgü kapakların üst üste binme payı
+    surguYukseklikPay: 40,    // sürgü kapak yüksekliğinin gövdeden kısalığı (ray payı)
   };
 
-  const satir = (tip, yukseklik, adet, raf, dikme, aski) => ({ tip, yukseklik, adet, raf: raf || 0, dikme: dikme || 0, aski: !!aski });
+  // ---------- Katalog (hazır modüller) ----------
+  const S = (tip, yukseklik, adet, ek) => Object.assign({ tip, yukseklik, adet: adet || 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false }, ek || {});
+  const SUT = (genislik, satirlar) => ({ genislik, satirlar });
+  const AYAK = (h) => ({ tip: 'ayak', yukseklik: h || 100, geriCekme: 50 });
+  const BAZA = (h, gc) => ({ tip: 'panel', yukseklik: h || 80, geriCekme: gc == null ? 40 : gc });
+  const YOK = { tip: 'yok', yukseklik: 0, geriCekme: 0 };
+  const G = (grup, ad, aciklama, o) => Object.assign({
+    grup, ad, aciklama, tip: 'normal', yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam',
+    baza: YOK, montajYuksekligi: 0, korPanel: 0, korTaraf: 'sol', onTipi: 'normal', surguAdet: 2, surguTuru: 'panel', raf: 0,
+  }, o);
+  const TEK = (...satirlar) => [SUT(null, satirlar)];
+  const P = (grup, ad, aciklama, panelTuru, boy, en, ek) => Object.assign({
+    grup, ad, aciklama, tip: 'panel', panelTuru, panelMalzeme: 'kapak', boy, en, bantU: 2, bantK: 2, montajYuksekligi: 0,
+    genislik: en, yukseklik: boy, derinlik: 0, baza: YOK,
+  }, ek || {});
+  const ALT = { yukseklik: 870, derinlik: 560, ust: 'kusak', baza: AYAK(100) };
+  const UST = { yukseklik: 720, derinlik: 320, montajYuksekligi: 1450 };
+  const BOY = { yukseklik: 2150, derinlik: 560, baza: AYAK(100) };
 
   const PRESETLER = {
-    alt: {
-      ad: 'Alt Dolap', genislik: 600, yukseklik: 870, derinlik: 560,
-      yapi: 'yanlar_boydan', ust: 'kusak', arkalik: 'kanal', kapakTipi: 'tam',
-      baza: { tip: 'ayak', yukseklik: 100, geriCekme: 50 },
-      satirlar: [satir('cekmece', 150, 1), satir('kapak', null, 2, 1)],
-    },
-    ust: {
-      ad: 'Üst Dolap', genislik: 600, yukseklik: 720, derinlik: 320, montajYuksekligi: 1450,
-      yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam',
-      baza: { tip: 'yok', yukseklik: 0, geriCekme: 0 },
-      satirlar: [satir('kapak', null, 2, 2)],
-    },
-    korkose: {
-      ad: 'Kör Köşe Alt Dolap', genislik: 1000, yukseklik: 870, derinlik: 560,
-      yapi: 'yanlar_boydan', ust: 'kusak', arkalik: 'kanal', kapakTipi: 'tam',
-      baza: { tip: 'ayak', yukseklik: 100, geriCekme: 50 },
-      korPanel: 560, korTaraf: 'sol',
-      satirlar: [satir('kapak', null, 1, 1)],
-    },
-    lkose: {
-      tip: 'lkose', ad: 'L Köşe Alt Dolap', genislik: 900, genislik2: 900, yukseklik: 870, derinlik: 560,
-      ust: 'tam', arkalik: 'cakma', kapakTipi: 'tam', raf: 1,
-      baza: { tip: 'ayak', yukseklik: 100, geriCekme: 50 },
-      satirlar: [],
-    },
-    lkoseust: {
-      tip: 'lkose', ad: 'L Köşe Üst Dolap', genislik: 600, genislik2: 600, yukseklik: 720, derinlik: 320, montajYuksekligi: 1450,
-      ust: 'tam', arkalik: 'cakma', kapakTipi: 'tam', raf: 2,
-      baza: { tip: 'yok', yukseklik: 0, geriCekme: 0 },
-      satirlar: [],
-    },
-    gardirop: {
-      ad: 'Gardırop', genislik: 1000, yukseklik: 2400, derinlik: 580,
-      yapi: 'tabla_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam',
-      baza: { tip: 'panel', yukseklik: 80, geriCekme: 40 },
-      satirlar: [satir('kapak', 400, 2), satir('kapak', null, 2, 0, 0, true)],
-    },
-    sifonyer: {
-      ad: 'Şifonyer', genislik: 800, yukseklik: 900, derinlik: 450,
-      yapi: 'tabla_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam',
-      baza: { tip: 'ayak', yukseklik: 60, geriCekme: 0 },
-      satirlar: [satir('cekmece', null, 1), satir('cekmece', null, 1), satir('cekmece', null, 1), satir('cekmece', null, 1)],
-    },
-    kitaplik: {
-      ad: 'Kitaplık', genislik: 800, yukseklik: 2000, derinlik: 300,
-      yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'cakma', kapakTipi: 'tam',
-      baza: { tip: 'panel', yukseklik: 60, geriCekme: 30 },
-      satirlar: [satir('acik', null, 1, 3, 1), satir('kapak', 700, 2, 1)],
-    },
+    // Mutfak – alt
+    alt: G('Mutfak alt', 'Alt Dolap', '1 çekmece + 2 kapak', Object.assign({ genislik: 600, sutunlar: TEK(S('cekmece', 150), S('kapak', null, 2, { raf: 1 })) }, ALT)),
+    alt_kapak: G('Mutfak alt', 'Alt Dolap (kapaklı)', '2 kapak, 1 raf', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', null, 2, { raf: 1 })) }, ALT)),
+    alt_tek: G('Mutfak alt', 'Alt Dolap (tek kapak)', 'Dar dolap, 1 kapak', Object.assign({ genislik: 450, sutunlar: TEK(S('cekmece', 150), S('kapak', null, 1, { raf: 1 })) }, ALT)),
+    alt_cekmece3: G('Mutfak alt', 'Çekmeceli Alt Dolap (3)', '3 çekmece (tencere)', Object.assign({ genislik: 600, sutunlar: TEK(S('cekmece', 150), S('cekmece', null), S('cekmece', null)) }, ALT)),
+    alt_cekmece4: G('Mutfak alt', 'Çekmeceli Alt Dolap (4)', '4 çekmece (çatal-bıçak)', Object.assign({ genislik: 600, sutunlar: TEK(S('cekmece', 150), S('cekmece', 150), S('cekmece', null), S('cekmece', null)) }, ALT)),
+    evye: G('Mutfak alt', 'Evye Altı Dolabı', '2 kapak, arkalıksız, raf yok', Object.assign({ genislik: 800, arkalik: 'yok', sutunlar: TEK(S('kapak', null, 2)) }, ALT)),
+    firin_alt: G('Mutfak alt', 'Ankastre Fırın Alt Dolabı', 'Fırın nişi + alt çekmece', Object.assign({ genislik: 600, sutunlar: TEK(S('nis', 595), S('cekmece', null)) }, ALT)),
+    siselik: G('Mutfak alt', 'Şişelik / Dar Alt Dolap', '150–300 mm dar dolap', Object.assign({ genislik: 200, sutunlar: TEK(S('kapak', null, 1, { raf: 2 })) }, ALT)),
+    korkose: G('Mutfak alt', 'Kör Köşe Alt Dolap', 'Köşede kör panelli dolap', Object.assign({ genislik: 900, korPanel: 560, sutunlar: TEK(S('kapak', null, 1, { raf: 1 })) }, ALT)),
+    lkose: G('Mutfak alt', 'L Köşe Alt Dolap', 'Katlanır kapaklı köşe', { tip: 'lkose', genislik: 900, genislik2: 900, yukseklik: 870, derinlik: 560, arkalik: 'cakma', raf: 1, baza: AYAK(100) }),
+    ada: G('Mutfak alt', 'Mutfak Adası', 'Çekmeceler + kapaklı bölme', { genislik: 1200, yukseklik: 900, derinlik: 600, baza: BAZA(100, 50), sutunlar: [SUT(null, [S('cekmece', 150), S('cekmece', null), S('cekmece', null)]), SUT(null, [S('cekmece', 150), S('kapak', null, 2, { raf: 1 })])] }),
+    // Mutfak – üst
+    ust: G('Mutfak üst', 'Üst Dolap', '2 kapak, 2 raf', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', null, 2, { raf: 2 })) }, UST)),
+    ust_tek: G('Mutfak üst', 'Üst Dolap (tek kapak)', '1 kapak, 2 raf', Object.assign({ genislik: 400, sutunlar: TEK(S('kapak', null, 1, { raf: 2 })) }, UST)),
+    ust_cam: G('Mutfak üst', 'Camlı Üst Dolap (vitrin)', 'Profil cam kapak, cam raf, LED', Object.assign({ genislik: 800, sutunlar: TEK(S('kapak', null, 2, { raf: 2, kapakTuru: 'cam_profil', rafTipi: 'cam', led: true })) }, UST)),
+    ust_klapa: G('Mutfak üst', 'Kaldırmalı Kapaklı Üst Dolap', 'Yukarı açılan kapak', { genislik: 800, yukseklik: 360, derinlik: 320, montajYuksekligi: 1810, sutunlar: TEK(S('kapak', null, 1, { acilim: 'yukari' })) }),
+    aspirator: G('Mutfak üst', 'Aspiratör Üstü Dolap', 'Kısa, yukarı açılan', { genislik: 600, yukseklik: 400, derinlik: 320, montajYuksekligi: 1770, sutunlar: TEK(S('kapak', null, 1, { acilim: 'yukari' })) }),
+    buzdolabi_ust: G('Mutfak üst', 'Buzdolabı Üstü Dolap', 'Derin, kısa dolap', { genislik: 600, yukseklik: 400, derinlik: 560, montajYuksekligi: 1800, sutunlar: TEK(S('kapak', null, 2)) }),
+    ust_acik: G('Mutfak üst', 'Açık Raflı Üst Ünite', 'Kapaksız, 2 raf', Object.assign({ genislik: 600, sutunlar: TEK(S('acik', null, 1, { raf: 2 })) }, UST)),
+    lkoseust: G('Mutfak üst', 'L Köşe Üst Dolap', 'Katlanır kapaklı köşe', { tip: 'lkose', genislik: 600, genislik2: 600, yukseklik: 720, derinlik: 320, montajYuksekligi: 1450, arkalik: 'cakma', raf: 2 }),
+    // Mutfak – boy
+    boy_firin: G('Mutfak boy', 'Boy Dolap – Fırın + Mikrodalga', 'Ankastre fırın ve mikrodalga nişli', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', null, 1, { raf: 1 }), S('nis', 380), S('nis', 595), S('cekmece', 180), S('cekmece', 180)) }, BOY)),
+    boy_kiler: G('Mutfak boy', 'Kiler Boy Dolap', 'Üst ve alt kapaklı, bol raflı', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', 700, 1, { raf: 1 }), S('kapak', null, 1, { raf: 4 })) }, BOY)),
+    kahve: G('Mutfak boy', 'Kahve Köşesi', 'Cam kapak, LED\'li makine nişi, çekmece', Object.assign({ genislik: 800, sutunlar: TEK(S('kapak', 600, 2, { kapakTuru: 'cam_profil', raf: 1, rafTipi: 'cam', led: true }), S('acik', 450, 1, { led: true }), S('cekmece', 180, 2), S('kapak', null, 2, { raf: 1 })) }, BOY)),
+    buzdolabi_kabin: G('Mutfak boy', 'Ankastre Buzdolabı Kabini', 'Buzdolabı nişi + üst dolap', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', 400, 1), S('nis', null)) }, BOY)),
+    // Yatak odası
+    gardirop: G('Yatak odası', 'Gardırop (2 kapak)', 'Üst bölme + askı', { genislik: 1000, yukseklik: 2400, derinlik: 580, yapi: 'tabla_boydan', baza: BAZA(80, 40), sutunlar: TEK(S('kapak', 400, 2), S('kapak', null, 2, { aski: true })) }),
+    gardirop3: G('Yatak odası', 'Gardırop (3 kapak)', 'Raflı bölme + askı bölmesi', { genislik: 1500, yukseklik: 2400, derinlik: 580, yapi: 'tabla_boydan', baza: BAZA(80, 40), sutunlar: [SUT(476, [S('kapak', 400, 1), S('kapak', null, 1, { raf: 5 })]), SUT(null, [S('kapak', 400, 2), S('kapak', null, 2, { aski: true })])] }),
+    gardirop4: G('Yatak odası', 'Gardırop (4 kapak)', 'Raf + askı + çekmeceli raf', { genislik: 2000, yukseklik: 2400, derinlik: 580, yapi: 'tabla_boydan', baza: BAZA(80, 40), sutunlar: [SUT(476, [S('kapak', 400, 1), S('kapak', null, 1, { raf: 5 })]), SUT(null, [S('kapak', 400, 2), S('kapak', null, 2, { aski: true })]), SUT(476, [S('kapak', 400, 1), S('kapak', null, 1, { raf: 3 }), S('cekmece', 200, 1), S('cekmece', 200, 1)])] }),
+    surgulu: G('Yatak odası', 'Sürgülü Gardırop (2 kapak)', 'Askı + raf + iç çekmece', { genislik: 1800, yukseklik: 2400, derinlik: 650, yapi: 'tabla_boydan', baza: BAZA(80, 40), onTipi: 'surgu', surguAdet: 2, sutunlar: [SUT(null, [S('acik', 400), S('acik', null, 1, { aski: true })]), SUT(null, [S('acik', 400), S('acik', null, 1, { raf: 3 }), S('cekmece', 200), S('cekmece', 200)])] }),
+    surgulu_ayna: G('Yatak odası', 'Sürgülü Aynalı Gardırop (3 kapak)', 'Aynalı sürgü kapaklar', { genislik: 2400, yukseklik: 2400, derinlik: 650, yapi: 'tabla_boydan', baza: BAZA(80, 40), onTipi: 'surgu', surguAdet: 3, surguTuru: 'ayna', sutunlar: [SUT(null, [S('acik', 400), S('acik', null, 1, { aski: true })]), SUT(null, [S('acik', 400), S('acik', null, 1, { raf: 4 })]), SUT(null, [S('acik', 400), S('acik', null, 1, { aski: true })])] }),
+    sifonyer: G('Yatak odası', 'Şifonyer', '4 çekmece', { genislik: 800, yukseklik: 900, derinlik: 450, yapi: 'tabla_boydan', baza: AYAK(60), sutunlar: TEK(S('cekmece', null), S('cekmece', null), S('cekmece', null), S('cekmece', null)) }),
+    komodin: G('Yatak odası', 'Komodin', '2 çekmece', { genislik: 450, yukseklik: 500, derinlik: 400, yapi: 'tabla_boydan', baza: AYAK(60), sutunlar: TEK(S('cekmece', null), S('cekmece', null)) }),
+    makyaj: G('Yatak odası', 'Makyaj / Çalışma Ünitesi', 'Çekmeceli yan ünite', { genislik: 400, yukseklik: 720, derinlik: 500, yapi: 'tabla_boydan', baza: AYAK(60), sutunlar: TEK(S('cekmece', 150), S('cekmece', null), S('cekmece', null)) }),
+    // Banyo
+    lavabo: G('Banyo', 'Lavabo Altı Dolabı', '2 kapak, arkalıksız', { genislik: 800, yukseklik: 550, derinlik: 450, arkalik: 'yok', baza: AYAK(100), sutunlar: TEK(S('kapak', null, 2)) }),
+    lavabo_cekmece: G('Banyo', 'Lavabo Altı Çekmeceli', '2 çekmece', { genislik: 800, yukseklik: 550, derinlik: 450, arkalik: 'yok', baza: AYAK(100), sutunlar: TEK(S('cekmece', 180), S('cekmece', null)) }),
+    banyo_boy: G('Banyo', 'Banyo Boy Dolabı', 'Dar, raflı boy dolap', { genislik: 400, yukseklik: 1700, derinlik: 300, baza: AYAK(100), sutunlar: TEK(S('kapak', null, 1, { raf: 4 })) }),
+    aynali: G('Banyo', 'Aynalı Banyo Dolabı', 'Ayna kapak, cam raf', { genislik: 600, yukseklik: 700, derinlik: 150, montajYuksekligi: 1200, sutunlar: TEK(S('kapak', null, 2, { kapakTuru: 'ayna', raf: 2, rafTipi: 'cam' })) }),
+    // Salon
+    tv: G('Salon', 'TV Ünitesi', 'Kapak + açık niş + çekmece + kapak', { genislik: 1800, yukseklik: 500, derinlik: 420, yapi: 'tabla_boydan', baza: AYAK(60), sutunlar: [SUT(450, [S('kapak', null, 1)]), SUT(null, [S('acik', 200), S('cekmece', null)]), SUT(450, [S('kapak', null, 1)])] }),
+    vitrin: G('Salon', 'Vitrin', 'Çerçeveli cam kapak, cam raf, LED', { genislik: 800, yukseklik: 2000, derinlik: 400, baza: BAZA(80, 30), sutunlar: TEK(S('kapak', 1300, 2, { kapakTuru: 'cam_cerceve', raf: 3, rafTipi: 'cam', led: true }), S('kapak', null, 2, { raf: 1 })) }),
+    bufe: G('Salon', 'Büfe / Konsol', 'Kapaklı bölme + çekmeceler', { genislik: 1600, yukseklik: 800, derinlik: 450, yapi: 'tabla_boydan', baza: AYAK(100), sutunlar: [SUT(null, [S('kapak', null, 2, { raf: 1 })]), SUT(null, [S('cekmece', null), S('cekmece', null), S('cekmece', null)])] }),
+    kitaplik: G('Salon', 'Kitaplık', 'Açık raflar + alt kapak', { genislik: 800, yukseklik: 2000, derinlik: 300, arkalik: 'cakma', baza: BAZA(60, 30), sutunlar: TEK(S('acik', null, 1, { raf: 3, dikme: 1 }), S('kapak', 700, 2, { raf: 1 })) }),
+    // Antre
+    ayakkabilik: G('Antre', 'Ayakkabılık', 'Üst çekmeceler + raflı kapaklar', { genislik: 900, yukseklik: 1000, derinlik: 350, baza: AYAK(60), sutunlar: TEK(S('cekmece', 120, 2), S('kapak', null, 2, { raf: 4 })) }),
+    vestiyer: G('Antre', 'Vestiyer / Portmanto', 'Açık askılık + kapaklı raf', { genislik: 1200, yukseklik: 2000, derinlik: 400, baza: BAZA(60, 30), sutunlar: [SUT(null, [S('acik', 300, 1, { raf: 0 }), S('acik', null)]), SUT(500, [S('kapak', null, 1, { raf: 5 })])] }),
+    // Ofis
+    dosya: G('Ofis', 'Dosya Dolabı', 'Cam üst kapak + alt kapak', { genislik: 800, yukseklik: 1900, derinlik: 400, baza: BAZA(60, 30), sutunlar: TEK(S('kapak', 1000, 2, { kapakTuru: 'cam_profil', raf: 2 }), S('kapak', null, 2, { raf: 1 })) }),
+    keson: G('Ofis', 'Çekmeceli Keson', 'Tekerlekli, 3 çekmece', { genislik: 400, yukseklik: 600, derinlik: 500, yapi: 'tabla_boydan', baza: { tip: 'tekerlek', yukseklik: 60, geriCekme: 0 }, sutunlar: TEK(S('cekmece', 120), S('cekmece', null), S('cekmece', null)) }),
+    // Paneller
+    yan_kapama: P('Panel', 'Yan Kapama Paneli', 'Dizinin açık yanına', 'yan_kapama', 870, 580, { bantU: 1, bantK: 1 }),
+    dolgu: P('Panel', 'Dolgu Paneli', 'Duvar–dolap arası', 'dolgu', 720, 50, { montajYuksekligi: 1450 }),
+    bulasik_panel: P('Panel', 'Bulaşık Makinesi Kapağı', 'Ankastre makine için', 'bulasik', 715, 597, { montajYuksekligi: 100 }),
+    duvar_rafi: P('Panel', 'Duvar Rafı', 'Gizli taşıyıcılı', 'raf', 800, 250, { panelMalzeme: 'govde', bantU: 1, bantK: 2, montajYuksekligi: 1500 }),
+    tabla: P('Panel', 'Masa / Çalışma Tablası', 'Düz tabla', 'tabla', 1200, 600, { panelMalzeme: 'govde', montajYuksekligi: 730 }),
+    baza_bandi: P('Panel', 'Baza (Süpürgelik) Bandı', 'Dolap altı süpürgelik', 'baza', 2400, 100, { bantU: 1, bantK: 0 }),
   };
+  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel'];
 
   const kopya = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (x) => Math.round(x * 10) / 10;
   const r3 = (x) => Math.round(x * 1000) / 1000;
   const say = (v, vars) => {
     const n = Number(v);
-    return Number.isFinite(n) ? n : vars;
+    return v !== null && v !== '' && Number.isFinite(n) ? n : vars;
   };
 
   function varsayilanAyarlar() {
@@ -206,23 +294,11 @@
   let sayac = 0;
   const yeniId = (on) => on + Date.now().toString(36) + (sayac++).toString(36);
 
-  function yeniModul(presetAdi) {
-    const p = kopya(PRESETLER[presetAdi] || PRESETLER.alt);
-    p.id = yeniId('m');
-    p.adet = 1;
-    if (!p.tip) p.tip = 'normal';
-    if (p.montajYuksekligi == null) p.montajYuksekligi = 0;
-    if (p.korPanel == null) p.korPanel = 0;
-    if (!p.korTaraf) p.korTaraf = 'sol';
-    if (!p.duvar) p.duvar = 'A';
-    p.malzeme = {};
-    p.hirdavat = {};
-    return p;
-  }
-
   function yeniMalzeme() {
     return { id: yeniId('mz'), ad: 'Yeni malzeme 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 0 };
   }
+
+  const yeniSatir = (tip) => satirNormallestir(S(tip, tip === 'cekmece' ? 180 : null, tip === 'kapak' ? 2 : 1, { raf: tip === 'kapak' || tip === 'acik' ? 1 : 0 }));
 
   // ---------- Veri doğrulama ----------
   // Proje dosyası ve tarayıcı kaydı dışarıdan gelir: her alan beklenen türe
@@ -259,13 +335,23 @@
     const s = r || {};
     const h = sayiAl(s.yukseklik, null, 0, 5000);
     return {
-      tip: secenekAl(s.tip, ['kapak', 'cekmece', 'acik'], 'kapak'),
+      tip: secenekAl(s.tip, Object.keys(SATIR_TIPLERI), 'kapak'),
       yukseklik: h > 0 ? h : null,
       adet: Math.floor(sayiAl(s.adet, 1, 1, 8)),
       raf: Math.floor(sayiAl(s.raf, 0, 0, 20)),
       dikme: Math.floor(sayiAl(s.dikme, 0, 0, 8)),
       aski: !!s.aski,
+      kapakTuru: secenekAl(s.kapakTuru, Object.keys(KAPAK_TURLERI), 'panel'),
+      acilim: secenekAl(s.acilim, Object.keys(ACILIMLAR), 'yana'),
+      rafTipi: secenekAl(s.rafTipi, ['ahsap', 'cam'], 'ahsap'),
+      led: !!s.led,
     };
+  }
+
+  function sutunNormallestir(c) {
+    const x = c || {};
+    const w = sayiAl(x.genislik, null, 0, 10000);
+    return { genislik: w > 0 ? w : null, satirlar: (Array.isArray(x.satirlar) ? x.satirlar : []).slice(0, 20).map(satirNormallestir) };
   }
 
   function modulNormallestir(m, ayar) {
@@ -278,10 +364,16 @@
       if (x.hirdavat && HIRDAVAT_SECENEKLERI[k].secenekler[x.hirdavat[k]]) hirdavat[k] = x.hirdavat[k];
     }
     const baza = x.baza || {};
-    const lk = x.tip === 'lkose';
+    const tip = secenekAl(x.tip, ['normal', 'lkose', 'panel'], 'normal');
+    const lk = tip === 'lkose';
+    let sutunlar = [];
+    if (tip === 'normal') {
+      if (Array.isArray(x.sutunlar) && x.sutunlar.length) sutunlar = x.sutunlar.slice(0, 8).map(sutunNormallestir);
+      else sutunlar = [sutunNormallestir({ genislik: null, satirlar: x.satirlar })];
+    }
     return {
       id: kimlikAl(x.id, 'm'),
-      tip: lk ? 'lkose' : 'normal',
+      tip,
       ad: metinAl(x.ad, 'Modül', 80),
       adet: Math.floor(sayiAl(x.adet, 1, 1, 999)),
       genislik: sayiAl(x.genislik, 600, 0, 10000),
@@ -295,14 +387,24 @@
       arkalik: lk ? 'cakma' : secenekAl(x.arkalik, ['kanal', 'cakma', 'yok'], 'kanal'),
       kapakTipi: lk ? 'tam' : secenekAl(x.kapakTipi, ['tam', 'ic'], 'tam'),
       baza: {
-        tip: secenekAl(baza.tip, ['yok', 'ayak', 'panel'], 'yok'),
+        tip: secenekAl(baza.tip, ['yok', 'ayak', 'panel', 'tekerlek'], 'yok'),
         yukseklik: sayiAl(baza.yukseklik, 0, 0, 500),
         geriCekme: sayiAl(baza.geriCekme, 0, 0, 500),
       },
       korPanel: sayiAl(x.korPanel, 0, 0, 2000),
       korTaraf: secenekAl(x.korTaraf, ['sol', 'sag'], 'sol'),
+      onTipi: secenekAl(x.onTipi, ['normal', 'surgu'], 'normal'),
+      surguAdet: Math.floor(sayiAl(x.surguAdet, 2, 2, 4)),
+      surguTuru: secenekAl(x.surguTuru, Object.keys(SURGU_TURLERI), 'panel'),
       raf: Math.floor(sayiAl(x.raf, 0, 0, 20)),
-      satirlar: lk ? [] : (Array.isArray(x.satirlar) ? x.satirlar : []).slice(0, 20).map(satirNormallestir),
+      sutunlar,
+      // Panel modül alanları
+      panelTuru: secenekAl(x.panelTuru, Object.keys(PANEL_TURLERI), 'serbest'),
+      panelMalzeme: secenekAl(x.panelMalzeme, ['kapak', 'govde'], 'kapak'),
+      boy: sayiAl(x.boy, 720, 0, 10000),
+      en: sayiAl(x.en, 600, 0, 10000),
+      bantU: Math.floor(sayiAl(x.bantU, 0, 0, 2)),
+      bantK: Math.floor(sayiAl(x.bantK, 0, 0, 2)),
       malzeme,
       hirdavat,
     };
@@ -318,7 +420,6 @@
       else if (typeof v[k] === 'boolean') A[k] = g[k] == null ? v[k] : !!g[k];
     }
     A.malzemeler = (Array.isArray(g.malzemeler) && g.malzemeler.length ? g.malzemeler : v.malzemeler).slice(0, 100).map(malzemeNormallestir);
-    // Tekrarlanan kimlikleri ayır
     const gorulen = new Set();
     for (const m of A.malzemeler) {
       if (gorulen.has(m.id)) m.id = yeniId('mz');
@@ -327,7 +428,10 @@
     A.kullanim = {};
     for (const k of KULLANIMLAR) {
       const id = g.kullanim && g.kullanim[k];
-      A.kullanim[k] = A.malzemeler.some((m) => m.id === id) ? id : (A.malzemeler.find((m) => m.id === v.kullanim[k]) || A.malzemeler[0]).id;
+      const vars = A.malzemeler.find((m) => m.id === v.kullanim[k])
+        || A.malzemeler.find((m) => (k === 'cam' || k === 'camRaf' || k === 'ayna') === camMi(m))
+        || A.malzemeler[0];
+      A.kullanim[k] = A.malzemeler.some((m) => m.id === id) ? id : vars.id;
     }
     A.hirdavat = {};
     for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) {
@@ -378,6 +482,12 @@
         not: metinAl(t.not, '', 1000),
       },
     };
+  }
+
+  function yeniModul(presetAdi) {
+    const p = kopya(PRESETLER[presetAdi] || PRESETLER.alt);
+    delete p.id;
+    return modulNormallestir(p, VARSAYILAN_AYARLAR);
   }
 
   function yeniProje(ad) {
@@ -434,7 +544,8 @@
           return;
         }
         const m = M[kullanim];
-        parcalar.push({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: bant || { u: 0, k: 0 }, damar: !!m.damar });
+        const cam = camMi(m);
+        parcalar.push({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: cam ? { u: 0, k: 0 } : bant || { u: 0, k: 0 }, damar: !cam && !!m.damar, cam });
       },
       /**
        * kod: fiyat kataloğu anahtarı; fiyatMiktari: katalog birimindeki miktar
@@ -445,14 +556,17 @@
         const fm = fiyatMiktari == null ? adet : fiyatMiktari;
         const var_ = hirdavat.find((h) => h.ad === ad);
         if (var_) {
-          var_.adet = r1(var_.adet + adet);
+          var_.adet = r3(var_.adet + adet);
           var_.fiyatMiktari = r3(var_.fiyatMiktari + fm);
-        } else hirdavat.push({ kod, ad, adet: r1(adet), birim: birim || 'adet', fiyatMiktari: r3(fm) });
+        } else hirdavat.push({ kod, ad, adet: r3(adet), birim: birim || 'adet', fiyatMiktari: r3(fm) });
       },
     };
   }
 
-  /** Bağlantı elemanlarını birleşim sayısına göre ekler. */
+  /**
+   * Bağlantı elemanlarını birleşim sayısına göre ekler.
+   * tur: minifix | konfirmat | kavela | seffaf_kose | seffaf_t
+   */
   function baglantiEkle(T, tur, birlesim, derinlik, tekNoktali) {
     const basina = derinlik < 350 ? 2 : 3;
     const nokta = birlesim * basina + (tekNoktali || 0);
@@ -462,10 +576,21 @@
     } else if (tur === 'kavela') {
       T.hEkle('kavela', 'Kavela 8×35', nokta + birlesim);
       T.hEkle('tutkal', 'Ahşap tutkalı (birleşim)', birlesim + (tekNoktali ? 1 : 0), 'birleşim');
+    } else if (tur === 'seffaf_kose' || tur === 'seffaf_t') {
+      // Plastik şeffaf bağlantılar her biri 4 sunta vidasıyla tutturulur.
+      const ad = tur === 'seffaf_t' ? 'Şeffaf T bağlantı (plastik)' : 'Şeffaf köşe bağlantı (plastik)';
+      T.hEkle(tur, ad, nokta);
+      T.hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', 4 * nokta);
     } else {
       T.hEkle('minifix', 'Minifix (gövde + pim)', nokta, 'takım');
       T.hEkle('kavela', 'Kavela 8×35', nokta);
     }
+  }
+
+  /** Ara (T) birleşimlerde kullanılacak bağlantı türü. */
+  function araBaglantiTuru(HS) {
+    if (HS.araBaglanti !== 'ayni') return HS.araBaglanti;
+    return HS.baglanti === 'seffaf_kose' ? 'seffaf_t' : HS.baglanti;
   }
 
   /** Ön yüz (kapak/çekmece önü) için kulp ve benzeri ekler. */
@@ -486,6 +611,8 @@
   function bazaEkle(T, baza, hb, W, Ds, t, ayakTur, ayakAdedi) {
     if (baza.tip === 'ayak') {
       T.hEkle('ayak_' + ayakTur, `${HIRDAVAT_SECENEKLERI.ayak.secenekler[ayakTur].ad} (${hb} mm)`, ayakAdedi || (W > 1000 ? 6 : 4));
+    } else if (baza.tip === 'tekerlek') {
+      T.hEkle('tekerlek', `Tekerlek (${hb} mm)`, 4);
     } else if (baza.tip === 'panel') {
       const gc = say(baza.geriCekme, 0);
       // Baza çerçevesi: ön parça önden geri çekilir, yanlar gövdeyle aynı hizada.
@@ -496,8 +623,43 @@
   }
 
   /**
+   * Bir ön kapağın parçalarını kapak türüne göre ekler (panel, cam, profil, çerçeve, ayna).
+   * Dönüş: menteşe türü için camlı mı bilgisi.
+   */
+  function kapakParcalari(T, A, ad, h, w, n, kapakTuru) {
+    const { ekle, hEkle } = T;
+    if (kapakTuru === 'cam') {
+      ekle(`${ad} – cam`, 'cam', h, w, n);
+      return 'cam';
+    }
+    if (kapakTuru === 'ayna') {
+      ekle(`${ad} – ayna`, 'ayna', h, w, n);
+      return 'cam';
+    }
+    if (kapakTuru === 'cam_profil') {
+      const p = say(A.profilCamPay, 18);
+      ekle(`${ad} – profil camı`, 'cam', h - 2 * p, w - 2 * p, n);
+      hEkle('al_profil', 'Alüminyum kapak profili', (n * 2 * (h + w)) / 1000, 'm');
+      hEkle('profil_kose', 'Profil köşe birleştirme', 4 * n);
+      return 'panel';
+    }
+    if (kapakTuru === 'cam_cerceve') {
+      const e = say(A.cerceveEni, 70);
+      const lp = say(A.camLambaPayi, 8);
+      ekle(`${ad} – çerçeve dikmesi`, 'kapak', h, e, 2 * n, { u: 2, k: 2 });
+      ekle(`${ad} – çerçeve kaydı`, 'kapak', w - 2 * e, e, 2 * n, { u: 2, k: 0 });
+      ekle(`${ad} – çerçeve camı`, 'cam', h - 2 * e + 2 * lp - 2, w - 2 * e + 2 * lp - 2, n);
+      hEkle('kavela', 'Kavela 8×35', 8 * n);
+      if (w - 2 * e < 80 || h - 2 * e < 80) T.uyarilar.push(`${ad}: çerçeveli cam kapak için kapak çok küçük.`);
+      return 'panel';
+    }
+    ekle(ad, 'kapak', h, w, n, { u: 2, k: 2 });
+    return 'panel';
+  }
+
+  /**
    * Tek bir modülü hesaplar (modül adedi ile çarpılmamış, tek gövde için).
-   * Dönen parçalar: { ad, kullanim, malzeme(id), boy, en, adet, bant:{u,k}, damar }
+   * Dönen parçalar: { ad, kullanim, malzeme(id), boy, en, adet, bant:{u,k}, damar, cam }
    *  - boy: parçanın "uzunluk" yönü (damar yönü), en: diğer yön
    *  - bant.u: boy boyunca uzanan (uzun) kenarlardan bantlı olanların sayısı
    *  - bant.k: en boyunca uzanan (kısa) kenarlardan bantlı olanların sayısı
@@ -507,9 +669,11 @@
     const M = malzemeCoz(modul, A);
     const HS = hirdavatCoz(modul, A);
     if (modul.tip === 'lkose') return lKoseHesapla(modul, A, M, HS);
+    if (modul.tip === 'panel') return panelHesapla(modul, A, M, HS);
 
     const T = toplayici(M);
     const { ekle, hEkle, uyarilar } = T;
+    const bos = () => ({ parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS });
 
     const t = say(M.govde.kalinlik, 18);
     const ta = say(M.arkalik.kalinlik, 8);
@@ -525,15 +689,18 @@
     const hb = baza.tip === 'yok' ? 0 : say(baza.yukseklik, 0);
     const Hc = H - hb; // gövde (baza hariç) yüksekliği
     const iw = W - 2 * t; // iç genişlik
+    const surgu = modul.onTipi === 'surgu';
     const ic = modul.kapakTipi === 'ic';
+    // Sürgü kapaklı dolapta iç çekmeceler gövde içine gömme yerleşir.
+    const icDuzen = ic || surgu;
 
     if (!(t > 0) || !(tk > 0) || !(ta > 0) || !(tc > 0)) {
       uyarilar.push('Malzeme kalınlığı geçersiz; malzeme ayarlarını kontrol edin.');
-      return { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
+      return bos();
     }
     if (W < 2 * t + 50 || Hc < 2 * t + 50 || D < 100) {
       uyarilar.push('Ölçüler çok küçük: genişlik, yükseklik ve derinlik kontrol edilmeli.');
-      return { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
+      return bos();
     }
 
     // Yan derinliği: çakma arkalık gövdenin arkasına çakıldığı için yanlardan düşülür.
@@ -541,7 +708,7 @@
     // Ara tabla, dikme ve raflar için kullanılabilir derinlik
     let icDerinlik = Ds;
     if (modul.arkalik === 'kanal') icDerinlik = Ds - say(A.arkalikGeriPay, 10) - ta;
-    if (ic) icDerinlik -= tk;
+    if (icDuzen) icDerinlik -= tk;
 
     // ---------- Gövde ----------
     const usttam = modul.ust !== 'kusak';
@@ -566,8 +733,9 @@
         ekle('Arka kuşak', 'govde', iw, kusakEn, 1, { u: 0, k: 0 });
       }
     }
-    let birlesim = usttam ? 4 : 2; // alt + üst tablanın iki ucu
+    const birlesim = usttam ? 4 : 2; // köşe birleşimleri: alt + üst tablanın iki ucu
     const kusakNokta = usttam ? 0 : 4; // kuşaklar uç başına tek nokta
+    let araBirlesim = 0; // T birleşimleri: ara tabla ve dikme uçları
 
     // ---------- Arkalık ----------
     if (modul.arkalik === 'kanal') {
@@ -582,15 +750,15 @@
     bazaEkle(T, baza, hb, W, Ds, t, HS.ayak);
 
     // ---------- Ön yüz alanı ve kör köşe paneli ----------
-    let x0 = ic ? t + g : db;
-    let x1 = ic ? W - t - g : W - db;
-    const yUst = ic ? Hc - t - g : Hc - db;
-    const yAlt = ic ? t + g : db;
+    let x0 = icDuzen ? t + g : db;
+    let x1 = icDuzen ? W - t - g : W - db;
+    const yUst = icDuzen ? Hc - t - g : Hc - db;
+    const yAlt = icDuzen ? t + g : db;
     let korPanel = null;
     const kp = say(modul.korPanel, 0);
     if (kp > 0) {
-      if (ic) {
-        uyarilar.push('Kör köşe paneli yalnızca tam bini kapakla hesaplanır; gömme kapakta dikkate alınmadı.');
+      if (icDuzen) {
+        uyarilar.push('Kör köşe paneli yalnızca tam bini kapakla hesaplanır; dikkate alınmadı.');
       } else if (kp >= W - 200) {
         uyarilar.push(`Kör panel (${kp} mm) dolap genişliğine göre çok geniş.`);
       } else {
@@ -604,155 +772,255 @@
         }
         ekle('Kör köşe paneli', 'kapak', yUst - yAlt, kp, 1, { u: 2, k: 2 });
         ekle('Kör panel bağlantı çıtası', 'govde', Hc - 2 * t, 80, 1, { u: 0, k: 0 });
-        hEkle('kor_kosebent', 'Kör panel bağlantı köşebendi', 4);
+        hEkle('kosebent', 'Bağlantı köşebendi', 4);
       }
     }
 
-    // ---------- Ön düzen (satırlar, yukarıdan aşağı) ----------
-    const satirlar = (modul.satirlar || []).map((s) => Object.assign({}, s));
-    const geoSatirlar = [];
-    const sinirlar = [];
-    if (satirlar.length) {
-      const panelVar = [];
-      const ayrac = [];
-      for (let i = 0; i < satirlar.length - 1; i++) {
-        const p = !(satirlar[i].tip === 'cekmece' && satirlar[i + 1].tip === 'cekmece');
-        panelVar.push(p);
-        ayrac.push(ic && p ? t + 2 * g : g);
-      }
-      const toplamAyrac = ayrac.reduce((a, b) => a + b, 0);
-      const kullanilabilir = yUst - yAlt - toplamAyrac;
-      const yukseklikler = satirlar.map((s) => {
-        const h = Number(s.yukseklik);
-        return s.yukseklik === null || s.yukseklik === '' || !Number.isFinite(h) || h <= 0 ? null : h;
-      });
-      const sabit = yukseklikler.reduce((a, h) => a + (h || 0), 0);
-      const serbest = yukseklikler.filter((h) => h === null).length;
-      if (serbest > 0) {
-        const kalan = (kullanilabilir - sabit) / serbest;
-        if (kalan < 60) uyarilar.push(`Otomatik yükseklikli satırlara yalnızca ${r1(kalan)} mm kalıyor; sabit yükseklikleri azaltın.`);
-        for (let i = 0; i < yukseklikler.length; i++) if (yukseklikler[i] === null) yukseklikler[i] = kalan;
-      } else if (Math.abs(sabit - kullanilabilir) > 0.5) {
-        uyarilar.push(`Satır yükseklikleri toplamı (${r1(sabit)}) kullanılabilir yükseklikten (${r1(kullanilabilir)}) farklı; fark son satıra eklendi.`);
-        yukseklikler[yukseklikler.length - 1] += kullanilabilir - sabit;
-      }
+    // ---------- Dikey bölmeler (sütunlar) ----------
+    const sutunlar = modul.sutunlar && modul.sutunlar.length ? modul.sutunlar : [{ genislik: null, satirlar: [] }];
+    const ns = sutunlar.length;
+    const icToplam = iw - (ns - 1) * t;
+    const genislikler = sutunlar.map((c) => (c.genislik > 0 ? Number(c.genislik) : null));
+    const sabitG = genislikler.reduce((a, w) => a + (w || 0), 0);
+    const serbestG = genislikler.filter((w) => w === null).length;
+    if (serbestG > 0) {
+      const kalan = (icToplam - sabitG) / serbestG;
+      if (kalan < 100) uyarilar.push(`Genişliği otomatik bölmelere yalnızca ${r1(kalan)} mm kalıyor; bölme genişliklerini azaltın.`);
+      for (let i = 0; i < ns; i++) if (genislikler[i] === null) genislikler[i] = kalan;
+    } else if (Math.abs(sabitG - icToplam) > 0.5) {
+      uyarilar.push(`Bölme genişlikleri toplamı (${r1(sabitG)}) iç genişlikten (${r1(icToplam)}) farklı; fark son bölmeye eklendi.`);
+      genislikler[ns - 1] += icToplam - sabitG;
+    }
+    if (ns > 1) {
+      ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
+      araBirlesim += 2 * (ns - 1);
+    }
 
-      // Ön yüz konumları ve satır sınırları
-      let y = yUst;
-      const onlar = [];
-      for (let i = 0; i < satirlar.length; i++) {
-        const h = yukseklikler[i];
-        onlar.push({ y2: y, y1: y - h, h });
-        if (i < satirlar.length - 1) {
-          sinirlar.push({ y: y - h - ayrac[i] / 2, panel: panelVar[i] });
-          y = y - h - ayrac[i];
+    const ray = HIRDAVAT_SECENEKLERI.ray.secenekler[HS.ray];
+    const geoSutunlar = [];
+    const tumSatirlar = [];
+    const tumSinirlar = [];
+    const dikmeX = [];
+    let ledVar = false;
+    let cx = t;
+
+    for (let si = 0; si < ns; si++) {
+      const cw = genislikler[si];
+      const cx1 = cx;
+      const cx2 = cx + cw;
+      if (si < ns - 1) dikmeX.push(cx2);
+      cx = cx2 + t;
+      // Bu bölmenin ön yüz aralığı: tam binide dikme ortasında boşluk, gömmede dikmenin iç yüzleri
+      const fx0 = si === 0 ? x0 : icDuzen ? cx1 + g : cx1 - t / 2 + g / 2;
+      const fx1 = si === ns - 1 ? x1 : icDuzen ? cx2 - g : cx2 + t / 2 - g / 2;
+      const ek = (satirNo) => (ns > 1 ? `bölme ${si + 1}, satır ${satirNo}` : `satır ${satirNo}`);
+      if (cw < 100) uyarilar.push(`Bölme ${si + 1}: iç genişlik ${r1(cw)} mm, çok dar.`);
+
+      const satirlar = sutunlar[si].satirlar || [];
+      const geoSatirlar = [];
+      const sinirlar = [];
+      if (satirlar.length) {
+        // Satırlar arası yatay panel: art arda iki çekmece dışında her sınırda sabit raf
+        const panelVar = [];
+        const ayrac = [];
+        for (let i = 0; i < satirlar.length - 1; i++) {
+          const p = !(satirlar[i].tip === 'cekmece' && satirlar[i + 1].tip === 'cekmece');
+          panelVar.push(p);
+          ayrac.push(icDuzen && p ? t + 2 * g : g);
         }
-      }
-
-      const ray = HIRDAVAT_SECENEKLERI.ray.secenekler[HS.ray];
-      for (let i = 0; i < satirlar.length; i++) {
-        const s = satirlar[i];
-        const on = onlar[i];
-        const icUst = i === 0 ? Hc - t : sinirlar[i - 1].panel ? sinirlar[i - 1].y - t / 2 : sinirlar[i - 1].y;
-        const icAlt = i === satirlar.length - 1 ? t : sinirlar[i].panel ? sinirlar[i].y + t / 2 : sinirlar[i].y;
-        const icH = icUst - icAlt;
-        const n = Math.max(1, Math.floor(say(s.adet, 1)));
-        const dikme = s.tip === 'cekmece' ? n - 1 : Math.max(0, Math.floor(say(s.dikme, 0)));
-        const bolum = dikme + 1;
-        const secW = (iw - dikme * t) / bolum;
-        const bolumler = [];
-        for (let k = 0; k < bolum; k++) {
-          const bx = t + k * (secW + t);
-          bolumler.push({ x1: bx, x2: bx + secW });
+        const kullanilabilir = yUst - yAlt - ayrac.reduce((a, b) => a + b, 0);
+        const yukseklikler = satirlar.map((s) => {
+          const h = Number(s.yukseklik);
+          return s.yukseklik === null || s.yukseklik === '' || !Number.isFinite(h) || h <= 0 ? null : h;
+        });
+        const sabit = yukseklikler.reduce((a, h) => a + (h || 0), 0);
+        const serbest = yukseklikler.filter((h) => h === null).length;
+        if (serbest > 0) {
+          const kalan = (kullanilabilir - sabit) / serbest;
+          if (kalan < 60) uyarilar.push(`${ns > 1 ? `Bölme ${si + 1}: o` : 'O'}tomatik yükseklikli satırlara yalnızca ${r1(kalan)} mm kalıyor; sabit yükseklikleri azaltın.`);
+          for (let i = 0; i < yukseklikler.length; i++) if (yukseklikler[i] === null) yukseklikler[i] = kalan;
+        } else if (Math.abs(sabit - kullanilabilir) > 0.5) {
+          uyarilar.push(`${ns > 1 ? `Bölme ${si + 1}: s` : 'S'}atır yükseklikleri toplamı (${r1(sabit)}) kullanılabilir yükseklikten (${r1(kullanilabilir)}) farklı; fark son satıra eklendi.`);
+          yukseklikler[yukseklikler.length - 1] += kullanilabilir - sabit;
         }
-        const dikmeX = [];
-        for (let k = 0; k < dikme; k++) dikmeX.push(t + (k + 1) * secW + k * t);
 
-        const satirNo = i + 1;
-        const geo = { tip: s.tip, on, icUst, icAlt, icH, bolumler, dikmeX, onler: [], raflar: [], cekmeceler: [], aski: false };
-
-        if (dikme > 0) {
-          ekle(`Ara dikme (satır ${satirNo})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
-          birlesim += 2 * dikme;
-        }
-        if (secW > 0 && secW < 100) uyarilar.push(`Satır ${satirNo}: bölme iç genişliği ${r1(secW)} mm, çok dar.`);
-
-        // Ön yüzler (kapak / çekmece önü)
-        if (s.tip !== 'acik') {
-          const ayr = ic && n > 1 && dikme >= n - 1 ? t + 2 * g : g;
-          const fw = (x1 - x0 - (n - 1) * ayr) / n;
-          for (let k = 0; k < n; k++) {
-            const fx = x0 + k * (fw + ayr);
-            geo.onler.push({ x1: fx, x2: fx + fw });
-          }
-          const onAd = s.tip === 'kapak' ? 'Kapak' : 'Çekmece önü';
-          ekle(`${onAd} (satır ${satirNo})`, 'kapak', on.h, fw, n, { u: 2, k: 2 });
-          kulpEkle(T, HS.kulp, n, fw);
-          if (s.tip === 'kapak') {
-            if (fw > 600) uyarilar.push(`Satır ${satirNo}: kapak genişliği ${r1(fw)} mm; 600 mm üstü kapaklar sarkma yapabilir, kapak adedini artırın.`);
-            const yarim = !ic && dikme > 0 && n > 1;
-            mentesheEkle(T, HS.mentese, modul.kapakTipi, n * mentesheAdedi(on.h), yarim);
+        let y = yUst;
+        const onlar = [];
+        for (let i = 0; i < satirlar.length; i++) {
+          const h = yukseklikler[i];
+          onlar.push({ y2: y, y1: y - h, h });
+          if (i < satirlar.length - 1) {
+            sinirlar.push({ y: y - h - ayrac[i] / 2, panel: panelVar[i], x1: cx1, x2: cx2 });
+            y = y - h - ayrac[i];
           }
         }
 
-        // Raflar
-        if (s.tip === 'kapak' || s.tip === 'acik') {
-          const raf = Math.max(0, Math.floor(say(s.raf, 0)));
-          if (raf > 0) {
-            const yb = say(A.rafYanBosluk, 1);
-            ekle(`Raf (satır ${satirNo})`, 'govde', secW - 2 * yb, icDerinlik - say(A.rafOnGeriCekme, 20), raf * bolum, { u: 1, k: 0 });
-            hEkle('raf_pimi', 'Raf pimi', 4 * raf * bolum);
-            if (secW > 900) uyarilar.push(`Satır ${satirNo}: raf açıklığı ${r1(secW)} mm; ${t} mm rafta sehim olur, ara dikme ekleyin.`);
-            for (let j = 1; j <= raf; j++) geo.raflar.push(icAlt + (j * icH) / (raf + 1));
+        for (let i = 0; i < satirlar.length; i++) {
+          const s = satirlar[i];
+          const on = onlar[i];
+          const icUst = i === 0 ? Hc - t : sinirlar[i - 1].panel ? sinirlar[i - 1].y - t / 2 : sinirlar[i - 1].y;
+          const icAlt = i === satirlar.length - 1 ? t : sinirlar[i].panel ? sinirlar[i].y + t / 2 : sinirlar[i].y;
+          const icH = icUst - icAlt;
+          const n = Math.max(1, Math.floor(say(s.adet, 1)));
+          const dikme = s.tip === 'cekmece' ? n - 1 : s.tip === 'nis' ? 0 : Math.max(0, Math.floor(say(s.dikme, 0)));
+          const bolum = dikme + 1;
+          const secW = (cw - dikme * t) / bolum;
+          const bolumler = [];
+          for (let k = 0; k < bolum; k++) {
+            const bx = cx1 + k * (secW + t);
+            bolumler.push({ x1: bx, x2: bx + secW });
           }
-          if (s.aski) {
-            geo.aski = true;
-            hEkle('aski_borusu', `Askı borusu (${r1(secW - 2)} mm)`, bolum, 'adet', (bolum * (secW - 2)) / 1000);
-            hEkle('aski_flans', 'Askı borusu flanşı', 2 * bolum);
-            if (icDerinlik < 500) uyarilar.push(`Satır ${satirNo}: askı için iç derinlik ${r1(icDerinlik)} mm; en az 500 mm önerilir.`);
-            if (icH < 900) uyarilar.push(`Satır ${satirNo}: askı bölmesi yüksekliği ${r1(icH)} mm; kısa elbise için bile en az 900 mm önerilir.`);
+          const satirDikmeX = [];
+          for (let k = 0; k < dikme; k++) satirDikmeX.push(cx1 + (k + 1) * secW + k * t);
+
+          const kapakTuru = s.tip === 'kapak' ? s.kapakTuru || 'panel' : 'panel';
+          const acilim = s.tip === 'kapak' ? s.acilim || 'yana' : 'yana';
+          const geo = {
+            tip: s.tip, sutun: si, on, icUst, icAlt, icH, bolumler, dikmeX: satirDikmeX, onler: [], raflar: [], cekmeceler: [],
+            aski: false, kapakTuru, acilim, rafTipi: s.rafTipi || 'ahsap', led: !!s.led,
+          };
+
+          if (dikme > 0) {
+            ekle(`Ara dikme (${ek(i + 1)})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
+            araBirlesim += 2 * dikme;
           }
+          if (secW > 0 && secW < 100) uyarilar.push(`${ek(i + 1)}: bölme iç genişliği ${r1(secW)} mm, çok dar.`);
+
+          // Ön yüzler. Sürgü kapaklı dolapta kapak satırlarının ön yüzü yoktur (sürgü kapak kapatır).
+          const onVar = s.tip === 'cekmece' || (s.tip === 'kapak' && !surgu);
+          if (onVar) {
+            const ayr = icDuzen && n > 1 && dikme >= n - 1 ? t + 2 * g : g;
+            const fw = (fx1 - fx0 - (n - 1) * ayr) / n;
+            for (let k = 0; k < n; k++) {
+              const fx = fx0 + k * (fw + ayr);
+              geo.onler.push({ x1: fx, x2: fx + fw });
+            }
+            if (s.tip === 'kapak') {
+              const camli = kapakParcalari(T, A, `Kapak (${ek(i + 1)})`, on.h, fw, n, kapakTuru) === 'cam';
+              kulpEkle(T, HS.kulp, n, fw);
+              if (acilim === 'yukari') {
+                mentesheEkle(T, HS.mentese, modul.kapakTipi, 2 * n, false);
+                hEkle('kapak_kaldirma', 'Kapak kaldırma mekanizması', n, 'takım');
+                if (on.h > 600) uyarilar.push(`${ek(i + 1)}: yukarı kalkan kapak ${r1(on.h)} mm; 600 mm üstü için katlanır kaldırma sistemi gerekir.`);
+              } else if (acilim === 'asagi') {
+                hEkle('klapa_mentese', 'Klapa menteşesi', 2 * n);
+                hEkle('klapa_kol', 'Klapa taşıma kolu', n, 'takım');
+              } else {
+                if (fw > 600) uyarilar.push(`${ek(i + 1)}: kapak genişliği ${r1(fw)} mm; 600 mm üstü kapaklar sarkma yapabilir, kapak adedini artırın.`);
+                const adet = n * mentesheAdedi(on.h);
+                if (camli) hEkle('mentese_cam', 'Cam kapak menteşesi', adet);
+                else mentesheEkle(T, HS.mentese, modul.kapakTipi, adet, !icDuzen && dikme > 0 && n > 1);
+                if (!icDuzen && dikme > 0 && n > 1 && !camli) uyarilar.push(`${ek(i + 1)}: ara dikmeye bağlanan kapaklarda yarım bini menteşe kullanılmalı.`);
+              }
+            } else {
+              ekle(`Çekmece önü (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 });
+              kulpEkle(T, HS.kulp, n, fw);
+            }
+          }
+
+          // Raflar, askı, LED
+          if (s.tip === 'kapak' || s.tip === 'acik') {
+            const raf = Math.max(0, Math.floor(say(s.raf, 0)));
+            if (raf > 0) {
+              const yb = say(A.rafYanBosluk, 1);
+              const rafD = icDerinlik - say(A.rafOnGeriCekme, 20);
+              if (s.rafTipi === 'cam') {
+                ekle(`Cam raf (${ek(i + 1)})`, 'camRaf', secW - 2 * yb - 2, rafD, raf * bolum);
+                hEkle('cam_raf_pimi', 'Cam raf pimi', 4 * raf * bolum);
+                if (secW > 800) uyarilar.push(`${ek(i + 1)}: cam raf açıklığı ${r1(secW)} mm; 800 mm üstü için daha kalın cam veya ara dikme önerilir.`);
+              } else {
+                ekle(`Raf (${ek(i + 1)})`, 'govde', secW - 2 * yb, rafD, raf * bolum, { u: 1, k: 0 });
+                hEkle('raf_pimi', 'Raf pimi', 4 * raf * bolum);
+                if (secW > 900) uyarilar.push(`${ek(i + 1)}: raf açıklığı ${r1(secW)} mm; ${t} mm rafta sehim olur, ara dikme ekleyin.`);
+              }
+              for (let j = 1; j <= raf; j++) geo.raflar.push(icAlt + (j * icH) / (raf + 1));
+            }
+            if (s.aski) {
+              geo.aski = true;
+              hEkle('aski_borusu', `Askı borusu (${r1(secW - 2)} mm)`, bolum, 'adet', (bolum * (secW - 2)) / 1000);
+              hEkle('aski_flans', 'Askı borusu flanşı', 2 * bolum);
+              if (icDerinlik < 500) uyarilar.push(`${ek(i + 1)}: askı için iç derinlik ${r1(icDerinlik)} mm; en az 500 mm önerilir.`);
+              if (icH < 900) uyarilar.push(`${ek(i + 1)}: askı bölmesi yüksekliği ${r1(icH)} mm; kısa elbise için bile en az 900 mm önerilir.`);
+            }
+          }
+          if (s.led && s.tip !== 'cekmece') {
+            ledVar = true;
+            const m = (bolum * secW) / 1000;
+            hEkle('led_serit', 'LED şerit', m, 'm');
+            hEkle('led_profil', 'LED alüminyum profili', m, 'm');
+          }
+          if (s.tip === 'nis' && icDerinlik < 500 && on.h >= 450) uyarilar.push(`${ek(i + 1)}: cihaz nişi derinliği ${r1(icDerinlik)} mm; ankastre fırın için genelde 550 mm gerekir.`);
+
+          // Çekmeceler
+          if (s.tip === 'cekmece') {
+            const L = raySec(icDerinlik - 10);
+            const kutuH = Math.floor(Math.min(on.h - say(A.cekmeceUstBosluk, 40), icH - 15));
+            if (!L) {
+              uyarilar.push(`${ek(i + 1)}: iç derinlik (${r1(icDerinlik)} mm) en kısa ray (250 mm) için yetersiz.`);
+            } else if (kutuH < 50) {
+              uyarilar.push(`${ek(i + 1)}: çekmece kutusu yüksekliği ${kutuH} mm, çok düşük.`);
+            } else if (HS.ray === 'metal') {
+              // Metal yanlı sistem: yanlar hazır gelir, yalnızca taban ve arkalık kesilir.
+              const arkaH = kutuH >= 180 ? 167 : kutuH >= 110 ? 100 : 68;
+              ekle(`Çekmece tabanı (${ek(i + 1)})`, 'cekmece', L - ray.boyFark, secW - ray.tabanFark, bolum, { u: 0, k: 0 });
+              ekle(`Çekmece arkalığı (${ek(i + 1)})`, 'cekmece', secW - ray.arkaFark, arkaH, bolum, { u: 1, k: 0 });
+              hEkle('cekmece_metal', `Metal yanlı çekmece seti ${L} mm (arka yük. ${arkaH})`, bolum, 'takım');
+              uyarilar.push(`${ek(i + 1)}: metal yanlı çekmece ölçüleri genel değerlerdir; kullandığınız markanın kataloğuyla kontrol edin.`);
+              for (const b of bolumler) geo.cekmeceler.push({ x1: b.x1 + 5, x2: b.x2 - 5, y1: icAlt + 10, y2: icAlt + 10 + arkaH, L, kutuW: secW - 10, kutuH: arkaH });
+            } else {
+              const kutuW = secW - 2 * ray.yanBosluk;
+              const kutuL = L - ray.kutuBoyFark;
+              ekle(`Çekmece yanı (${ek(i + 1)})`, 'cekmece', kutuL, kutuH, 2 * bolum, { u: 1, k: 0 });
+              ekle(`Çekmece ön/arka (${ek(i + 1)})`, 'cekmece', kutuW - 2 * tc, kutuH, 2 * bolum, { u: 1, k: 0 });
+              ekle(`Çekmece tabanı (${ek(i + 1)})`, 'arkalik', kutuL, kutuW, bolum);
+              hEkle('ray_' + HS.ray, `${ray.ad} ${L} mm`, bolum, 'takım');
+              for (const b of bolumler) geo.cekmeceler.push({ x1: b.x1 + ray.yanBosluk, x2: b.x2 - ray.yanBosluk, y1: icAlt + 10, y2: icAlt + 10 + kutuH, L: kutuL, kutuW, kutuH });
+            }
+            if (HS.kulp === 'basac' && L) hEkle('basac_ray', 'Ray için bas-aç adaptörü', bolum);
+          }
+          geoSatirlar.push(geo);
+          tumSatirlar.push(geo);
         }
 
-        // Çekmeceler
-        if (s.tip === 'cekmece') {
-          const L = raySec(icDerinlik - 10);
-          const kutuH = Math.floor(Math.min(on.h - say(A.cekmeceUstBosluk, 40), icH - 15));
-          if (!L) {
-            uyarilar.push(`Satır ${satirNo}: iç derinlik (${r1(icDerinlik)} mm) en kısa ray (250 mm) için yetersiz.`);
-          } else if (kutuH < 50) {
-            uyarilar.push(`Satır ${satirNo}: çekmece kutusu yüksekliği ${kutuH} mm, çok düşük.`);
-          } else if (HS.ray === 'metal') {
-            // Metal yanlı sistem: yanlar hazır gelir, yalnızca taban ve arkalık kesilir.
-            const arkaH = kutuH >= 180 ? 167 : kutuH >= 110 ? 100 : 68;
-            ekle(`Çekmece tabanı (satır ${satirNo})`, 'cekmece', L - ray.boyFark, secW - ray.tabanFark, bolum, { u: 0, k: 0 });
-            ekle(`Çekmece arkalığı (satır ${satirNo})`, 'cekmece', secW - ray.arkaFark, arkaH, bolum, { u: 1, k: 0 });
-            hEkle('cekmece_metal', `Metal yanlı çekmece seti ${L} mm (arka yük. ${arkaH})`, bolum, 'takım');
-            uyarilar.push(`Satır ${satirNo}: metal yanlı çekmece ölçüleri genel değerlerdir; kullandığınız markanın kataloğuyla kontrol edin.`);
-            for (const b of bolumler) geo.cekmeceler.push({ x1: b.x1 + 5, x2: b.x2 - 5, y1: icAlt + 10, y2: icAlt + 10 + arkaH, L, kutuW: secW - 10, kutuH: arkaH });
-          } else {
-            const kutuW = secW - 2 * ray.yanBosluk;
-            const kutuL = L - ray.kutuBoyFark;
-            ekle(`Çekmece yanı (satır ${satirNo})`, 'cekmece', kutuL, kutuH, 2 * bolum, { u: 1, k: 0 });
-            ekle(`Çekmece ön/arka (satır ${satirNo})`, 'cekmece', kutuW - 2 * tc, kutuH, 2 * bolum, { u: 1, k: 0 });
-            ekle(`Çekmece tabanı (satır ${satirNo})`, 'arkalik', kutuL, kutuW, bolum);
-            hEkle('ray_' + HS.ray, `${ray.ad} ${L} mm`, bolum, 'takım');
-            for (const b of bolumler) geo.cekmeceler.push({ x1: b.x1 + ray.yanBosluk, x2: b.x2 - ray.yanBosluk, y1: icAlt + 10, y2: icAlt + 10 + kutuH, L: kutuL, kutuW, kutuH });
-          }
-          if (HS.kulp === 'basac' && L) hEkle('basac_ray', 'Ray için bas-aç adaptörü', bolum);
+        // Satırlar arası sabit raflar (ara tabla)
+        const araTabla = sinirlar.filter((b) => b.panel).length;
+        if (araTabla > 0) {
+          ekle(ns > 1 ? `Ara tabla (bölme ${si + 1})` : 'Ara tabla (sabit raf)', 'govde', cw, icDerinlik, araTabla, { u: 1, k: 0 });
+          araBirlesim += 2 * araTabla;
         }
-        geoSatirlar.push(geo);
       }
+      for (const b of sinirlar) tumSinirlar.push(b);
+      geoSutunlar.push({ x1: cx1, x2: cx2, fx0, fx1, satirlar: geoSatirlar, sinirlar });
+    }
+    if (ledVar) hEkle('led_adaptor', 'LED adaptörü', 1);
 
-      // Satırlar arası sabit raflar (ara tabla)
-      const araTabla = sinirlar.filter((b) => b.panel).length;
-      if (araTabla > 0) {
-        ekle('Ara tabla (sabit raf)', 'govde', iw, icDerinlik, araTabla, { u: 1, k: 0 });
-        birlesim += 2 * araTabla;
+    // ---------- Sürgü kapaklar ----------
+    let geoSurgu = null;
+    if (surgu) {
+      const n = Math.max(2, Math.floor(say(modul.surguAdet, 2)));
+      const bind = say(A.surguBindirme, 30);
+      const kH = Hc - say(A.surguYukseklikPay, 40);
+      const kW = (W + (n - 1) * bind) / n;
+      if (modul.surguTuru === 'ayna' || modul.surguTuru === 'cam_profil') {
+        const p = say(A.profilCamPay, 18);
+        ekle(modul.surguTuru === 'ayna' ? 'Sürgü kapak – ayna' : 'Sürgü kapak – cam', modul.surguTuru === 'ayna' ? 'ayna' : 'cam', kH - 2 * p, kW - 2 * p, n);
+        hEkle('al_profil', 'Alüminyum kapak profili', (n * 2 * (kH + kW)) / 1000, 'm');
+        hEkle('profil_kose', 'Profil köşe birleştirme', 4 * n);
+      } else {
+        ekle('Sürgü kapak', 'kapak', kH, kW, n, { u: 2, k: 2 });
       }
+      hEkle('surgu_ray', 'Sürgü kapak ray profili (alt + üst)', (2 * W) / 1000, 'm');
+      hEkle('surgu_takim', 'Sürgü kapak tekerlek takımı', n, 'kapak');
+      kulpEkle(T, HS.kulp === 'kulp' ? 'gomme' : HS.kulp, n, kW);
+      if (kW > 1200) uyarilar.push(`Sürgü kapak genişliği ${r1(kW)} mm; kapak adedini artırın.`);
+      if (D < 600) uyarilar.push(`Sürgü kapaklı dolapta askı için derinlik en az 600 mm önerilir (şu an ${D} mm).`);
+      const kapaklar = [];
+      for (let k = 0; k < n; k++) kapaklar.push({ x1: k * (kW - bind), x2: k * (kW - bind) + kW, arka: k % 2 === 0 });
+      geoSurgu = { kapaklar, y1: (Hc - kH) / 2, y2: (Hc + kH) / 2, tur: modul.surguTuru };
     }
 
     baglantiEkle(T, HS.baglanti, birlesim, Ds, kusakNokta);
+    baglantiEkle(T, araBaglantiTuru(HS), araBirlesim, Ds, 0);
 
     return {
       parcalar: T.parcalar,
@@ -761,12 +1029,15 @@
       malzemeler: M,
       hirdavatSecimi: HS,
       geo: {
-        W, H, D, Hc, hb, t, ta, Ds, icDerinlik, tk,
-        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: modul.ust, yapi: modul.yapi, db,
+        W, H, D, Hc, hb, t, ta, Ds, icDerinlik, tk, db,
+        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: modul.ust, yapi: modul.yapi,
         baza: { tip: baza.tip, yukseklik: hb, geriCekme: say(baza.geriCekme, 0) },
         korPanel,
-        satirlar: geoSatirlar,
-        sinirlar,
+        sutunlar: geoSutunlar,
+        dikmeX,
+        satirlar: tumSatirlar,
+        sinirlar: tumSinirlar,
+        surgu: geoSurgu,
       },
     };
   }
@@ -835,6 +1106,8 @@
       ekle('Baza arkası – B kolu', 'govde', LB - t, hb, 1);
       ekle('Baza yanı (kol ucu)', 'govde', on - 2 * t, hb, 2);
       if (on - 2 * t < 100) uyarilar.push('Baza yanı çok kısa; baza geri çekme değerini kontrol edin.');
+    } else if (baza.tip === 'tekerlek') {
+      hEkle('tekerlek', `Tekerlek (${hb} mm)`, 6);
     } else {
       bazaEkle(T, baza, hb, Math.max(LA, LB), Ds, t, HS.ayak, 6);
     }
@@ -848,7 +1121,7 @@
     ekle('Köşe kapağı – B kolu', 'kapak', kapakH, kapakB, 1, { u: 2, k: 2 });
     const mn = mentesheAdedi(kapakH);
     mentesheEkle(T, HS.mentese, 'tam', mn, false);
-    T.hEkle('mentese_katlanir', 'Katlanır kapak bağlantı menteşesi (kapak-kapak)', mn);
+    hEkle('mentese_katlanir', 'Katlanır kapak bağlantı menteşesi (kapak-kapak)', mn);
     kulpEkle(T, HS.kulp, 1, kapakA);
     if (kapakA > 600 || kapakB > 600) uyarilar.push('Köşe kapaklarından biri 600 mm\'den geniş; katlanır kapak sarkabilir.');
 
@@ -865,8 +1138,9 @@
       for (let j = 1; j <= raf; j++) raflar.push(t + (j * (Hc - 2 * t)) / (raf + 1));
     }
 
-    // Birleşim: 4 tabla ucu + 2 tabla eki (köşe)
-    baglantiEkle(T, HS.baglanti, 6, Ds, 0);
+    // Birleşim: 4 tabla ucu (köşe) + 2 tabla eki (ara)
+    baglantiEkle(T, HS.baglanti, 4, Ds, 0);
+    baglantiEkle(T, araBaglantiTuru(HS), 2, Ds, 0);
 
     return {
       parcalar: T.parcalar,
@@ -883,11 +1157,58 @@
     };
   }
 
-  /** Bant kalınlığı düşülmüş kesim ölçüsü. */
+  /**
+   * Tek parça panel modülü (yan kapama, dolgu, bulaşık makinesi kapağı, raf, tabla, baza bandı).
+   * Yerleşimde kapladığı yer ve görünüş, panel türüne göre yönlendirilir.
+   */
+  function panelHesapla(modul, A, M, HS) {
+    const T = toplayici(M);
+    const { ekle, hEkle, uyarilar } = T;
+    const tur = modul.panelTuru;
+    const kul = modul.panelMalzeme === 'govde' ? 'govde' : 'kapak';
+    const t = say(M[kul].kalinlik, 18);
+    const boy = say(modul.boy, 0);
+    const en = say(modul.en, 0);
+    const bos = { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
+    if (!(t > 0)) {
+      uyarilar.push('Malzeme kalınlığı geçersiz; malzeme ayarlarını kontrol edin.');
+      return bos;
+    }
+    if (boy < 20 || en < 20) {
+      uyarilar.push('Panel ölçüleri çok küçük.');
+      return bos;
+    }
+    ekle(PANEL_TURLERI[tur].ad, kul, boy, en, 1, { u: Math.floor(say(modul.bantU, 0)), k: Math.floor(say(modul.bantK, 0)) });
+    if (tur === 'bulasik') {
+      kulpEkle(T, HS.kulp, 1, en);
+      hEkle('bulasik_seti', 'Bulaşık makinesi kapak montaj seti', 1, 'takım');
+    } else if (tur === 'raf') {
+      hEkle('raf_tasiyici', 'Gizli raf taşıyıcı', Math.max(2, Math.ceil(boy / 400)));
+      if (boy > 900 && t < 25) uyarilar.push(`Duvar rafı ${boy} mm uzun; ${t} mm kalınlıkta sehim yapabilir.`);
+    } else if (tur === 'yan_kapama' || tur === 'dolgu') {
+      hEkle('kosebent', 'Bağlantı köşebendi', tur === 'yan_kapama' ? 4 : 2);
+      hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', tur === 'yan_kapama' ? 16 : 8);
+    } else if (tur === 'tabla') {
+      hEkle('kosebent', 'Bağlantı köşebendi', 4);
+      hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', 16);
+    }
+    // Yerleşim yönü: W duvar boyunca kapladığı yer, D duvardan dışarı, H yükseklik
+    let W = en;
+    let D = t;
+    let H = boy;
+    if (tur === 'yan_kapama') { W = t; D = en; H = boy; }
+    if (tur === 'raf' || tur === 'tabla') { W = boy; D = en; H = t; }
+    return {
+      parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, malzemeler: M, hirdavatSecimi: HS,
+      geo: { panel: true, tur, boy, en, t, W, D, H, bant: { u: modul.bantU, k: modul.bantK }, kullanim: kul, yerlesimDisi: tur === 'baza' },
+    };
+  }
+
+  /** Bant kalınlığı düşülmüş kesim ölçüsü (camda bant yoktur, net ölçü). */
   function kesimOlcusu(parca, ayar) {
     const A = ayar || VARSAYILAN_AYARLAR;
     const malz = malzemeBul(A, parca.malzeme);
-    const bt = A.bantDus && malz ? say(malz.bant, 0) : 0;
+    const bt = A.bantDus && malz && !camMi(malz) ? say(malz.bant, 0) : 0;
     return {
       boy: r1(parca.boy - parca.bant.k * bt),
       en: r1(parca.en - parca.bant.u * bt),
@@ -895,6 +1216,8 @@
   }
 
   const montajOf = (m) => Math.max(0, say(m.montajYuksekligi, 0));
+  // Zeminden 600 mm'den yüksekte duran modüller asılı (üst) sırada dizilir.
+  const ASILI_SINIR = 600;
 
   /**
    * Duvar yerleşimi. Düz yerleşimde tüm modüller A duvarına dizilir.
@@ -910,7 +1233,11 @@
     const uyarilar = [];
     const doluluk = {};
     for (const sira of ['zemin', 'duvar']) {
-      const secilen = proje.moduller.filter((m) => sonuclar[m.id] && sonuclar[m.id].geo && (sira === 'zemin' ? montajOf(m) === 0 : montajOf(m) > 0));
+      const secilen = proje.moduller.filter((m) => {
+        const s = sonuclar[m.id];
+        if (!s || !s.geo || s.geo.yerlesimDisi) return false;
+        return sira === 'zemin' ? montajOf(m) <= ASILI_SINIR : montajOf(m) > ASILI_SINIR;
+      });
       // Adedi birden fazla olan modül duvarda o kadar yer kaplar: her kopya ayrı dizilir.
       const kopyalar = new Map();
       const uygun = [];
@@ -974,7 +1301,7 @@
     const uyarilar = [];
     for (const m of A.malzemeler) {
       if (!(say(m.kalinlik, 0) > 0)) uyarilar.push(`Malzeme "${m.ad}": kalınlık geçersiz (${m.kalinlik}).`);
-      if (!(say(m.plakaUzun, 0) >= 100 && say(m.plakaKisa, 0) >= 100)) uyarilar.push(`Malzeme "${m.ad}": plaka ölçüsü geçersiz (${m.plakaUzun}×${m.plakaKisa}).`);
+      if (!camMi(m) && !(say(m.plakaUzun, 0) >= 100 && say(m.plakaKisa, 0) >= 100)) uyarilar.push(`Malzeme "${m.ad}": plaka ölçüsü geçersiz (${m.plakaUzun}×${m.plakaKisa}).`);
     }
     const modulSonuclari = {};
 
@@ -987,9 +1314,9 @@
       for (const h of sonuc.hirdavat) {
         const onceki = hirdavatMap.get(h.ad);
         if (onceki) {
-          onceki.adet = r1(onceki.adet + h.adet * adet);
+          onceki.adet = r3(onceki.adet + h.adet * adet);
           onceki.fiyatMiktari = r3(onceki.fiyatMiktari + h.fiyatMiktari * adet);
-        } else hirdavatMap.set(h.ad, { kod: h.kod, ad: h.ad, adet: r1(h.adet * adet), birim: h.birim, fiyatMiktari: r3(h.fiyatMiktari * adet) });
+        } else hirdavatMap.set(h.ad, { kod: h.kod, ad: h.ad, adet: r3(h.adet * adet), birim: h.birim, fiyatMiktari: r3(h.fiyatMiktari * adet) });
       }
     }
 
@@ -1005,7 +1332,7 @@
         grup.set(anahtar, Object.assign({}, p, { moduller: [p.modul] }));
       }
     }
-    // Malzeme sırası: ilk kullanıldığı kullanım türüne göre, sonra kütüphane sırası
+    // Malzeme sırası: ilk kullanıldığı kullanım türüne göre, sonra kütüphane sırası; cam en sonda
     const malzSira = (id) => {
       const i = A.malzemeler.findIndex((m) => m.id === id);
       return i < 0 ? 999 : i;
@@ -1029,10 +1356,10 @@
     const ozet = new Map();
     for (const p of kesimListesi) {
       const malz = malzemeBul(A, p.malzeme);
-      if (!ozet.has(p.malzeme)) ozet.set(p.malzeme, { malzemeId: p.malzeme, malzeme: malz.ad, alanM2: 0, bantM: 0, bantKalinlik: malz.bant, parcaAdedi: 0 });
+      if (!ozet.has(p.malzeme)) ozet.set(p.malzeme, { malzemeId: p.malzeme, malzeme: malz.ad, cam: camMi(malz), alanM2: 0, bantM: 0, bantKalinlik: malz.bant, parcaAdedi: 0 });
       const o = ozet.get(p.malzeme);
       o.alanM2 += (p.boy * p.en * p.adet) / 1e6;
-      if (say(malz.bant, 0) > 0) o.bantM += ((p.bant.u * p.boy + p.bant.k * p.en) * p.adet) / 1000;
+      if (!camMi(malz) && say(malz.bant, 0) > 0) o.bantM += ((p.bant.u * p.boy + p.bant.k * p.en) * p.adet) / 1000;
       o.parcaAdedi += p.adet;
     }
 
@@ -1054,14 +1381,23 @@
     KULLANIMLAR,
     KULLANIM_AD,
     MALZEME_TURLERI,
+    SATIR_TIPLERI,
+    KAPAK_TURLERI,
+    ACILIMLAR,
+    SURGU_TURLERI,
+    PANEL_TURLERI,
     HIRDAVAT_SECENEKLERI,
+    HIRDAVAT_KALEMLERI,
     PRESETLER,
+    KATALOG_GRUPLARI,
+    ASILI_SINIR,
+    camMi,
     varsayilanAyarlar,
     yeniModul,
     yeniMalzeme,
+    yeniSatir,
     yeniProje,
     projeyiNormallestir,
-    HIRDAVAT_KALEMLERI,
     malzemeBul,
     malzemeCoz,
     hirdavatCoz,

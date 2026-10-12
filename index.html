@@ -27,21 +27,7 @@
           <h2>Modüller</h2>
           <ul id="modulListesi" class="modul-listesi"></ul>
           <div class="ekle-satir">
-            <select id="presetSec" aria-label="Modül tipi">
-              <optgroup label="Mutfak">
-                <option value="alt">Alt dolap</option>
-                <option value="ust">Üst dolap</option>
-                <option value="lkose">L köşe alt dolap</option>
-                <option value="lkoseust">L köşe üst dolap</option>
-                <option value="korkose">Kör köşe alt dolap</option>
-              </optgroup>
-              <optgroup label="Diğer">
-                <option value="gardirop">Gardırop</option>
-                <option value="sifonyer">Şifonyer / çekmeceli</option>
-                <option value="kitaplik">Kitaplık / raflı</option>
-              </optgroup>
-            </select>
-            <button id="btnModulEkle">+ Ekle</button>
+            <button id="btnKatalog" class="genis-buton">+ Dolap kataloğundan ekle</button>
           </div>
         </section>
 
@@ -137,6 +123,11 @@
       </section>
     </main>
   </div>
+
+  <dialog id="katalog" aria-label="Dolap kataloğu">
+    <header class="k-baslik"><h2>Dolap kataloğu</h2><span class="not">Bir modül seçin; ölçülerini ve iç düzenini sonra değiştirebilirsiniz.</span><button id="katalogKapat" class="ikincil" aria-label="Kapat">✕</button></header>
+    <div id="katalogIcerik"></div>
+  </dialog>
 
   <div id="yazdirAlan" aria-hidden="true"></div>
 

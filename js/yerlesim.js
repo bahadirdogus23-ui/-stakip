@@ -108,7 +108,8 @@
     const gruplar = new Map();
     for (const p of kesimListesi) {
       const malz = ayarlar.malzemeler.find((m) => m.id === p.malzeme);
-      if (!malz) continue;
+      // Cam ve ayna plakadan kesilmez; camcıya net ölçüyle sipariş edilir.
+      if (!malz || malz.tur === 'Cam' || malz.tur === 'Ayna') continue;
       if (!gruplar.has(malz.id)) gruplar.set(malz.id, { malzeme: malz, parcalar: [] });
       gruplar.get(malz.id).parcalar.push({
         no: p.no, ad: p.ad, w: p.kesimBoy, h: p.kesimEn, adet: p.adet, damar: p.damar,
