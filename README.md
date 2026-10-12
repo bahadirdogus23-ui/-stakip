@@ -4,7 +4,10 @@
 
 ## Neler yapar?
 
-- **Modül tasarımı:** Alt dolap, üst dolap, gardırop, şifonyer, kitaplık şablonlarından başlayıp genişlik / yükseklik / derinlik / adet girilir.
+- **Modül tasarımı:** Alt dolap, üst dolap, L köşe (alt/üst), kör köşe, gardırop, şifonyer, kitaplık şablonlarından başlayıp genişlik / yükseklik / derinlik / adet girilir.
+- **Köşe dolaplar:** L köşe dolap iki kollu hesaplanır (katlanır kapaklar, iki parça L tabla ve raflar, kola göre arkalık). Normal dolaplara kör köşe paneli eklenebilir.
+- **Mutfak / yerleşim:** düz veya L yerleşim; duvar uzunlukları girilir, modüller A/B duvarına atanır. Kuşbakışı plan, iki duvar görünüşü, kalan boşluk ve taşma uyarısı.
+- **Malzeme ve hırdavat seçimi:** genişletilebilir malzeme kütüphanesi (suntalam, MDF lam, lake, akrilik, kontrplak, HDF…); gövde / kapak / çekmece / arkalık için proje varsayılanı ve modüle özel seçim. Bağlantı (minifix, konfirmat, kavela), menteşe (standart, frenli, bas-aç), ray (bilyeli, frenli, gizli, metal yanlı), kulp (kulp, gömme, gola, bas-aç) ve ayak tipi seçilir; ray tipi çekmece kutusu ölçüsünü değiştirir.
 - **Yapı seçenekleri:** yanlar boydan veya tablalar boydan birleşim, tam üst tabla veya kuşak (tezgah altı), kanala geçme / çakma / arkalıksız, tam bini veya gömme kapak, ayarlı ayak veya baza çerçevesi, duvara asılan dolaplar için montaj yüksekliği.
 - **Ön düzen:** yukarıdan aşağıya satırlar (kapak, çekmece, açık raf). Her satırda yükseklik (boş = kalan paylaştırılır), yan yana adet, raf sayısı, ara dikme ve askı borusu.
 - **Detaylı ölçü hesabı:**
@@ -19,7 +22,8 @@
 - **Plaka yerleşimi:** testere payı ve plaka kenar payı ile giyotin kesim planı, plaka sayısı ve doluluk oranı. Damar yönü işaretli malzemede parçalar döndürülmez.
 - **Hırdavat & özet:** menteşe (kapak yüksekliğine göre adet), kulp, ray, raf pimi, ayak, askı borusu, minifix; malzeme başına m² ve bant metrajı.
 - **Uyarılar:** sarkma riski olan geniş kapak, sehim yapacak uzun raf, yetersiz çekmece derinliği/yüksekliği, askı için yetersiz derinlik vb.
-- Proje tarayıcıda otomatik saklanır; JSON dosyasına kaydedilip tekrar açılabilir. Yazdır / PDF ile çizim, liste ve plaka planları çıktı alınır.
+- **PDF çıktı:** atölye için işaretleme kutulu kesim listesi, A4 3×7 (63,5×38,1 mm) parça etiketleri ve çizim + yerleşim + liste + hırdavat + plaka planlarını içeren tüm proje çıktısı. Tarayıcının yazdır penceresinde "PDF olarak kaydet" seçilir.
+- Proje tarayıcıda otomatik saklanır; JSON dosyasına kaydedilip tekrar açılabilir (eski sürüm dosyaları otomatik güncellenir).
 
 ## Ölçü kuralları
 

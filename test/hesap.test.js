@@ -34,14 +34,14 @@ test('alt dolap: çekmece kutusu, ray ve ara tabla', () => {
   assert.equal(bul(s, 'Ön kuşak').en, 100);
   assert.equal(bul(s, 'Ara tabla').adet, 1);
   // İç derinlik 560 - 10 - 8 = 542 -> en uzun ray 500
-  const ray = s.hirdavat.find((h) => h.ad.startsWith('Teleskopik'));
+  const ray = s.hirdavat.find((h) => h.ad.includes('ray'));
   assert.match(ray.ad, /500 mm/);
   const yan = bul(s, 'Çekmece yanı');
   assert.equal(yan.boy, 500); assert.equal(yan.en, 110); // 150 - 40
   // Kutu genişliği 564 - 26 = 538; ön/arka 538 - 2*16
   assert.equal(bul(s, 'Çekmece ön/arka').boy, 506);
   assert.equal(bul(s, 'Çekmece tabanı').en, 538);
-  assert.equal(s.hirdavat.find((h) => h.ad.startsWith('Ayarlı ayak')).adet, 4);
+  assert.equal(s.hirdavat.find((h) => h.ad.includes('ayarlı ayak')).adet, 4);
 });
 
 test('satır yükseklikleri ön yüz alanını tam doldurur', () => {
@@ -75,7 +75,7 @@ test('çakma arkalık yan derinliğini azaltır', () => {
 });
 
 test('kesim ölçüsünden bant kalınlığı düşülür', () => {
-  const p = { malzeme: 'kapak', boy: 700, en: 400, bant: { u: 2, k: 2 } };
+  const p = { malzeme: 'mdflam18', boy: 700, en: 400, bant: { u: 2, k: 2 } };
   assert.deepEqual(Hesap.kesimOlcusu(p, ayar), { boy: 698, en: 398 });
   const a2 = Object.assign({}, ayar, { bantDus: false });
   assert.deepEqual(Hesap.kesimOlcusu(p, a2), { boy: 700, en: 400 });
@@ -99,7 +99,7 @@ test('yerleşim: tüm parçalar plakaya sığar ve çakışmaz', () => {
   for (const g of y) {
     assert.equal(g.sigmayan.length, 0);
     const toplam = g.plakalar.reduce((a, p) => a + p.yerlesen.length, 0);
-    const beklenen = s.kesimListesi.filter((p) => ayar.malzemeler[p.malzeme].ad === g.malzemeAd).reduce((a, p) => a + p.adet, 0);
+    const beklenen = s.kesimListesi.filter((p) => p.malzeme === g.malzemeId).reduce((a, p) => a + p.adet, 0);
     assert.equal(toplam, beklenen);
     const PW = g.plaka.uzun - 2 * g.kenar;
     const PH = g.plaka.kisa - 2 * g.kenar;
@@ -124,4 +124,109 @@ test('yerleşim: damarlı parça döndürülmez, büyük parça sığmayan olara
   assert.equal(y.sigmayan.length, 2);
   const y2 = Yerlesim.yerlestir([{ no: 1, ad: 'A', w: 500, h: 2500, adet: 1, damar: false }], { uzun: 2800, kisa: 2100 }, { testere: 4, kenarPayi: 10 });
   assert.equal(y2.plakalar[0].yerlesen[0].dondu, true);
+});
+
+const proje = (moduller, ek) => Hesap.projeyiGuncelle(Object.assign({ ad: 'T', ayarlar: Hesap.varsayilanAyarlar(), moduller }, ek || {}));
+
+test('L köşe dolap: tablalar, kapaklar ve arkalıklar', () => {
+  const m = Hesap.yeniModul('lkose'); // A 900, B 900, Y 870, D 560, ayak 100, çakma arkalık 8
+  const s = Hesap.modulHesapla(m, ayar);
+  assert.deepEqual(s.uyarilar, []);
+  assert.equal(bul(s, 'Yan').boy, 770);
+  assert.equal(bul(s, 'Yan').en, 552);
+  assert.equal(bul(s, 'Alt tabla – A').boy, 900 - 8 - 18);
+  assert.equal(bul(s, 'Alt tabla – B').boy, 900 - 560 - 18);
+  // B kapağı x = D düzleminde; A kapağı onun kalınlığı + boşluk sonrasında başlar
+  assert.equal(bul(s, 'Köşe kapağı – A').en, 900 - 560 - 18 - 3 - 1.5);
+  assert.equal(bul(s, 'Köşe kapağı – B').en, 900 - 560 - 1.5);
+  assert.equal(bul(s, 'Arkalık – B').en, 900 - 8 - 2);
+  assert.ok(s.hirdavat.some((h) => h.ad.startsWith('Katlanır kapak')));
+  assert.equal(s.hirdavat.find((h) => h.ad.includes('ayarlı ayak')).adet, 6);
+});
+
+test('kör köşe paneli kapak alanını daraltır', () => {
+  const m = Hesap.yeniModul('korkose'); // 1000 genişlik, 560 kör panel solda, 1 kapak
+  const s = Hesap.modulHesapla(m, ayar);
+  assert.equal(bul(s, 'Kör köşe paneli').en, 560);
+  // Kapak: (1000 - 1.5) - (1.5 + 560 + 3)
+  assert.equal(bul(s, 'Kapak').en, 1000 - 1.5 - (1.5 + 560 + 3));
+});
+
+test('ray tipi çekmece kutusu ölçüsünü değiştirir', () => {
+  const m = Hesap.yeniModul('alt');
+  m.hirdavat = { ray: 'gizli' };
+  let s = Hesap.modulHesapla(m, ayar);
+  assert.equal(bul(s, 'Çekmece ön/arka').boy, 564 - 10 - 32);
+  assert.equal(bul(s, 'Çekmece yanı').boy, 490);
+  m.hirdavat = { ray: 'metal' };
+  s = Hesap.modulHesapla(m, ayar);
+  assert.equal(bul(s, 'Çekmece yanı'), undefined);
+  assert.equal(bul(s, 'Çekmece tabanı').en, 564 - 75);
+  assert.ok(s.hirdavat.some((h) => h.ad.startsWith('Metal yanlı')));
+});
+
+test('bağlantı, menteşe ve kulp türü seçimi hırdavat listesine yansır', () => {
+  const m = Hesap.yeniModul('ust');
+  const a2 = Hesap.varsayilanAyarlar();
+  a2.hirdavat = { baglanti: 'konfirmat', mentese: 'standart', ray: 'bilyeli', kulp: 'gola', ayak: 'metal' };
+  const s = Hesap.modulHesapla(m, a2);
+  assert.equal(s.hirdavat.find((h) => h.ad.startsWith('Konfirmat')).adet, 4 * 2);
+  assert.ok(!s.hirdavat.some((h) => h.ad.startsWith('Minifix')));
+  assert.match(s.hirdavat.find((h) => h.ad.startsWith('Menteşe')).ad, /standart/);
+  assert.equal(s.hirdavat.find((h) => h.ad === 'Gola profil').birim, 'm');
+});
+
+test('modüle özel malzeme seçimi', () => {
+  const m = Hesap.yeniModul('ust');
+  m.malzeme = { kapak: 'akrilik18', govde: 'sl18c' };
+  const s = Hesap.modulHesapla(m, ayar);
+  assert.equal(bul(s, 'Kapak').malzeme, 'akrilik18');
+  assert.equal(bul(s, 'Yan').malzeme, 'sl18c');
+  assert.equal(bul(s, 'Yan').damar, true);
+});
+
+test('eski sürüm proje dosyası güncellenir', () => {
+  const eski = {
+    ad: 'Eski', moduller: [{ id: 'x', ad: 'Üst', genislik: 600, yukseklik: 720, derinlik: 320, yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam', baza: { tip: 'yok', yukseklik: 0, geriCekme: 0 }, satirlar: [{ tip: 'kapak', yukseklik: null, adet: 2, raf: 1, dikme: 0, aski: false }], adet: 1 }],
+    ayarlar: { malzemeler: {
+      govde: { ad: 'Sunta X 18', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false },
+      kapak: { ad: 'MDF Y 18', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 1, damar: false },
+      arkalik: { ad: 'HDF 8', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false },
+      cekmece: { ad: 'Sunta X 18', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false },
+    } },
+  };
+  const p = Hesap.projeyiGuncelle(eski);
+  assert.ok(Array.isArray(p.ayarlar.malzemeler));
+  assert.equal(p.ayarlar.kullanim.govde, p.ayarlar.kullanim.cekmece);
+  const s = Hesap.projeHesapla(p);
+  assert.equal(s.kesimListesi.find((x) => x.ad === 'Yan').malzeme, p.ayarlar.kullanim.govde);
+  assert.equal(p.yerlesim.tip, 'duz');
+});
+
+test('L mutfak yerleşimi: köşe dolap köşeye, diğerleri duvarlara dizilir', () => {
+  const kose = Hesap.yeniModul('lkose');
+  const a1 = Hesap.yeniModul('alt');
+  const b1 = Hesap.yeniModul('alt'); b1.duvar = 'B'; b1.genislik = 800;
+  const u1 = Hesap.yeniModul('ust');
+  const p = proje([a1, kose, b1, u1], { yerlesim: { tip: 'L', duvarA: 2000, duvarB: 1500 } });
+  const s = Hesap.projeHesapla(p);
+  const yer = s.yerlesim;
+  const bulY = (m) => yer.yerler.find((y) => y.modul === m);
+  assert.equal(bulY(kose).duvar, 'kose');
+  assert.equal(bulY(a1).bas, 900);
+  assert.equal(bulY(b1).bas, 900);
+  assert.equal(bulY(u1).sira, 'duvar');
+  assert.equal(bulY(u1).bas, 0); // üst sırada köşe dolap yok
+  assert.equal(yer.doluluk.zemin.A, 1500);
+  assert.equal(yer.doluluk.zemin.B, 1700);
+  assert.ok(s.uyarilar.some((u) => u.includes('B duvarını 200')));
+});
+
+test('L yerleşimde köşe dolabı yoksa B duvarı köşe boşluğuyla başlar', () => {
+  const a1 = Hesap.yeniModul('alt');
+  const b1 = Hesap.yeniModul('alt'); b1.duvar = 'B';
+  const p = proje([a1, b1], { yerlesim: { tip: 'L', duvarA: 3000, duvarB: 3000 } });
+  const s = Hesap.projeHesapla(p);
+  assert.equal(s.yerlesim.yerler.find((y) => y.modul === b1).bas, 560);
+  assert.ok(s.uyarilar.some((u) => u.includes('köşe boşluğu')));
 });

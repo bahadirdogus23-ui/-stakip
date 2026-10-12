@@ -162,15 +162,69 @@ table.liste { width: 100%; border-collapse: collapse; font-size: 13px; }
   .cizim-izgara, .iki-kolon { grid-template-columns: 1fr; }
 }
 
+.cizim .kor-panel { fill: var(--c-kapak); stroke: var(--c-cizgi); stroke-width: 1.1; }
+.cizim .katlama { stroke: #a08f78; stroke-width: 1; stroke-dasharray: 3 4; }
+.cizim .duvar { fill: #f1eee8; stroke: none; }
+.cizim .duvar-plan { fill: #b9b2a6; stroke: #6e675c; stroke-width: 1; }
+.cizim .plan-govde { fill: var(--c-govde); stroke: var(--c-cizgi); stroke-width: 1.2; }
+.cizim .plan-ust { fill: rgba(31, 95, 168, .06); stroke: var(--c-olcu); stroke-width: 1; stroke-dasharray: 6 4; }
+.cizim .plan-yazi { fill: var(--metin); text-anchor: middle; dominant-baseline: middle; font-family: system-ui, sans-serif; }
+.cizim.plan { max-height: 80vh; }
+
+.bant-hucre { white-space: nowrap; }
+.bant-hucre svg { vertical-align: middle; margin-right: 6px; color: var(--metin); }
+.bant-hucre span { font-size: 12px; color: var(--soluk); }
+.ozel-secim { margin-top: 16px; border-top: 1px solid var(--cizgi); padding-top: 10px; }
+.ozel-secim summary { cursor: pointer; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+.ozel-secim .form-izgara { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.rozet { background: var(--vurgu); color: #fff; border-radius: 9px; padding: 0 7px; font-size: 11px; }
+.kucuk-buton { padding: 2px 8px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+.yerlesim-form { max-width: 640px; margin-bottom: 6px; grid-template-columns: repeat(3, 1fr); }
+
+#yazdirAlan { display: none; }
+
 @media print {
-  body { background: #fff; }
-  .ust-butonlar, .sol, .sekmeler, .cizim-arac, #btnCsv, #sekme-ayarlar, .uyarilar summary { display: none !important; }
-  .ust-bar { position: static; border: 0; }
-  .proje-ad { border: 0; font-size: 18px; }
-  .duzen { display: block; padding: 0; }
-  .sag { border: 0; padding: 0; }
-  .sekme { display: block !important; break-before: page; }
-  #sekme-cizim { break-before: auto; }
-  .uyarilar details { display: block; }
-  .cizim { max-height: 120mm; }
+  @page { size: A4; margin: 12mm; }
+  @page etiket { size: A4; margin: 0; }
+  body { background: #fff; font-size: 11px; }
+  #uygulama { display: none !important; }
+  #yazdirAlan { display: block; color: #000; }
+  .y-sayfa { break-after: page; }
+  .y-sayfa:last-child { break-after: auto; }
+  .y-baslik { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+  .y-baslik h1 { font-size: 18px; margin: 0; }
+  .y-baslik p { margin: 2px 0 0; font-size: 13px; font-weight: 600; }
+  .y-tarih { text-align: right; font-size: 11px; }
+  #yazdirAlan h2 { font-size: 13px; margin: 14px 0 6px; }
+  #yazdirAlan h3 { color: #000; }
+  .liste { font-size: 10.5px; }
+  .liste th { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .liste td, .liste th { padding: 3px 5px; border-bottom: 1px solid #bbb; }
+  .liste tr { break-inside: avoid; }
+  .liste tr.grup td { background: #e8e8e8 !important; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .liste.kesim .kalin { font-size: 12px; }
+  .kutu-sutun { width: 18px; text-align: center; }
+  .isaret { display: inline-block; width: 11px; height: 11px; border: 1.2px solid #000; }
+  .bant-hucre svg { color: #000; }
+  .y-uyari { font-size: 10px; }
+  .y-modul { display: grid; grid-template-columns: 2fr 1fr; gap: 8mm; break-inside: avoid; margin-bottom: 8mm; }
+  .cizim { max-height: 115mm; }
+  .cizim.plan { max-height: 150mm; }
+  .plaka-kart { border: 1px solid #999; }
+  .plaka-svg .yerlesen { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* A4 3×7 etiket (63,5 × 38,1 mm) */
+  .etiket-sayfa {
+    page: etiket; break-after: page;
+    display: grid; grid-template-columns: repeat(3, 63.5mm); grid-auto-rows: 38.1mm; column-gap: 2.5mm;
+    padding: 15.1mm 7.2mm 0; width: 210mm; height: 297mm; box-sizing: border-box; overflow: hidden;
+  }
+  .etiket-sayfa:last-child { break-after: auto; }
+  .etiket { padding: 2.5mm 3mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; font-size: 8pt; line-height: 1.2; }
+  .e-ust { display: flex; justify-content: space-between; font-size: 10pt; }
+  .e-ad { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .e-olcu { font-size: 15pt; font-weight: 800; letter-spacing: -.01em; }
+  .e-alt { display: flex; gap: 2mm; align-items: center; font-size: 6.5pt; color: #222; }
+  .e-alt svg { color: #000; flex: none; }
 }

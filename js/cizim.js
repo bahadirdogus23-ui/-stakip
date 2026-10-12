@@ -44,6 +44,7 @@
   /** Bir modülün ön görünüşünü (orijin sol-alt zemin) SVG parçası olarak üretir. */
   function modulGovde(geo, secenek) {
     const ic = !!(secenek && secenek.ic);
+    if (geo.lkose) return lKoseKol(geo, (secenek && secenek.kol) || 'A', ic);
     const { W, Hc, hb, t } = geo;
     let s = '';
 
@@ -77,6 +78,7 @@
     });
 
     // Ön yüzler
+    if (!ic && geo.korPanel) s += rect(geo.korPanel.x1, yb + 1.5, geo.korPanel.x2, yb + Hc - 1.5, 'kor-panel');
     if (!ic) {
       geo.satirlar.forEach((sat) => {
         if (sat.tip === 'acik') return;
@@ -107,8 +109,97 @@
     return s;
   }
 
+  /**
+   * L köşe dolabın bir kolunun görünüşü (o kolun duvarına bakarak).
+   * A kolu: köşe solda. B kolu: köşe sağda. Yerel x=0 kolun solu.
+   */
+  function lKoseKol(geo, kol, ic) {
+    const { Hc, hb, t, D, tk, db, g } = geo;
+    const L = kol === 'B' ? geo.W2 : geo.W;
+    const yb = hb;
+    // Kuşbakışı koordinattan (köşeye uzaklık) bu görünüşün yerel x'ine
+    const X = (u) => (kol === 'B' ? L - u : u);
+    const aralik = (u1, u2) => [Math.min(X(u1), X(u2)), Math.max(X(u1), X(u2))];
+    let s = '';
+    if (geo.baza.tip === 'ayak') for (const u of [D - 70, L - 70]) { const [a] = aralik(u, u + 30); s += rect(a, 0, a + 30, hb, 'ayak'); }
+    else if (geo.baza.tip === 'panel') s += rect(0, 0, L, hb, 'baza');
+    s += rect(0, yb, L, yb + Hc, 'govde');
+    // Diğer kolun ucu (yan panel yüzü) bu görünüşte köşe tarafında görünür
+    const [k1, k2] = aralik(0, D);
+    s += rect(k1, yb, k2, yb + Hc, 'govde');
+    const [i1, i2] = aralik(D, L - t);
+    if (ic) {
+      s += rect(i1, yb + t, i2, yb + Hc - t, 'ic');
+      for (const ry of geo.raflar) s += rect(i1, yb + ry - t / 2, i2, yb + ry + t / 2, 'raf');
+      return s;
+    }
+    const y1 = yb + db;
+    const y2 = yb + Hc - db;
+    if (kol === 'A') {
+      const [d1, d2] = aralik(D + tk + g, L - db);
+      s += rect(d1, y1, d2, y2, 'kapak');
+      const [e1, e2] = aralik(D, D + tk);
+      s += rect(e1, y1, e2, y2, 'kapak');
+      // Katlanma (menteşe) tarafı köşede, kulp serbest uçta
+      s += `<polyline class="acilis" points="${f(d2)},${f(-y2)} ${f(d1)},${f(-(y1 + y2) / 2)} ${f(d2)},${f(-y1)}"/>`;
+      const kh = Math.min(160, (y2 - y1) * 0.3);
+      s += rect(d2 - 41, (y1 + y2) / 2 - kh / 2, d2 - 29, (y1 + y2) / 2 + kh / 2, 'kulp');
+    } else {
+      const [d1, d2] = aralik(D, L - db);
+      s += rect(d1, y1, d2, y2, 'kapak');
+      s += `<polyline class="acilis" points="${f(d2)},${f(-y2)} ${f(d1)},${f(-(y1 + y2) / 2)} ${f(d2)},${f(-y1)}"/>`;
+      const [e1, e2] = aralik(D, D + tk);
+      s += rect(e1, y1, e2, y2, 'kapak');
+    }
+    return s;
+  }
+
+  function lKoseOnGorunus(modul, geo, secenek) {
+    const ic = !!(secenek && secenek.ic);
+    const { W, W2, H, hb } = geo;
+    const fs = Math.max(W + W2, H) / 34;
+    const ara = fs * 4;
+    const pay = fs * 6;
+    let s = lKoseKol(geo, 'B', ic);
+    s += `<g transform="translate(${f(W2 + ara)} 0)">${lKoseKol(geo, 'A', ic)}${olcuYatay(0, W, -fs * 2.2, fs)}${yazi(W / 2, H + fs * 0.6, 'A kolu', fs * 0.9, 'olcu-yazi')}</g>`;
+    s += olcuYatay(0, W2, -fs * 2.2, fs) + yazi(W2 / 2, H + fs * 0.6, 'B kolu', fs * 0.9, 'olcu-yazi');
+    s += cizgi(W2 + ara / 2, -fs, W2 + ara / 2, H + fs, 'katlama');
+    s += olcuDikey(0, H, -fs * 2.2, fs);
+    if (hb > 0) s += olcuDikey(0, hb, W2 + ara + W + fs * 1.6, fs * 0.8);
+    s += olcuDikey(hb + geo.db, hb + geo.Hc - geo.db, W2 + ara + W + fs * 1.6, fs * 0.8);
+    s += cizgi(-pay, 0, W2 + ara + W + pay, 0, 'zemin');
+    s += yazi((W2 + ara + W) / 2, H + fs * 2.2, `${modul.ad} – açılım${modul.adet > 1 ? ` (${modul.adet} adet)` : ''}`, fs * 1.1, 'baslik');
+    const vb = `${f(-pay)} ${f(-H - fs * 4)} ${f(W2 + ara + W + 2 * pay)} ${f(H + fs * 4 + pay)}`;
+    return `<svg class="cizim" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+
+  /** L köşe dolabın kuşbakışı planı (köşe sol üstte, SVG koordinatlarıyla). */
+  function lKosePlan(modul, geo) {
+    const { W, W2, D, ta, tk, db, g } = geo;
+    const fs = Math.max(W, W2) / 22;
+    const pay = fs * 5;
+    let s = `<polygon class="plan-govde" points="0,0 ${f(W)},0 ${f(W)},${f(D)} ${f(D)},${f(D)} ${f(D)},${f(W2)} 0,${f(W2)}"/>`;
+    s += `<rect class="arkalik" x="0" y="0" width="${f(W)}" height="${f(ta)}"/><rect class="arkalik" x="0" y="${f(ta)}" width="${f(ta)}" height="${f(W2 - ta)}"/>`;
+    s += `<rect class="kapak" x="${f(D + tk + g)}" y="${f(D)}" width="${f(W - db - D - tk - g)}" height="${f(tk)}"/>`;
+    s += `<rect class="kapak" x="${f(D)}" y="${f(D)}" width="${f(tk)}" height="${f(W2 - db - D)}"/>`;
+    const pl = (x1, y1, x2, y2, m) => {
+      const t = fs * 0.4;
+      const yatay = y1 === y2;
+      return `<line class="olcu" x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/>` +
+        (yatay
+          ? `<line class="olcu" x1="${f(x1)}" y1="${f(y1 - t)}" x2="${f(x1)}" y2="${f(y1 + t)}"/><line class="olcu" x1="${f(x2)}" y1="${f(y1 - t)}" x2="${f(x2)}" y2="${f(y1 + t)}"/><text class="olcu-yazi" x="${f((x1 + x2) / 2)}" y="${f(y1 - fs * 0.35)}" font-size="${f(fs)}">${m}</text>`
+          : `<line class="olcu" x1="${f(x1 - t)}" y1="${f(y1)}" x2="${f(x1 + t)}" y2="${f(y1)}"/><line class="olcu" x1="${f(x1 - t)}" y1="${f(y2)}" x2="${f(x1 + t)}" y2="${f(y2)}"/><text class="olcu-yazi" x="${f(x1 - fs * 0.35)}" y="${f((y1 + y2) / 2)}" font-size="${f(fs)}" transform="rotate(-90 ${f(x1 - fs * 0.35)} ${f((y1 + y2) / 2)})">${m}</text>`);
+    };
+    s += pl(0, -fs * 2, W, -fs * 2, f(W));
+    s += pl(-fs * 2, 0, -fs * 2, W2, f(W2));
+    s += pl(W + fs * 2, 0, W + fs * 2, D, f(D));
+    s += `<text class="baslik" x="${f(W / 2 + D / 2)}" y="${f(D + fs * 3)}" font-size="${f(fs)}">Kuşbakışı</text>`;
+    return `<svg class="cizim" viewBox="${f(-pay)} ${f(-pay)} ${f(W + 2 * pay)} ${f(W2 + 2 * pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+
   function onGorunus(modul, geo, secenek) {
     if (!geo) return '<p class="bos">Çizim için geçerli ölçü girin.</p>';
+    if (geo.lkose) return lKoseOnGorunus(modul, geo, secenek);
     const ic = !!(secenek && secenek.ic);
     const { W, H, hb } = geo;
     const fs = Math.max(W, H) / 32;
@@ -143,6 +234,7 @@
   /** Yan kesit: derinlik, arkalık, kapak kalınlığı ve tablalar. */
   function yanKesit(modul, geo) {
     if (!geo) return '';
+    if (geo.lkose) return lKosePlan(modul, geo);
     const { D, H, Hc, hb, t, ta, Ds, tk } = geo;
     const fs = Math.max(D + tk, H) / 32;
     const pay = fs * 6;
@@ -180,40 +272,103 @@
   }
 
   /**
-   * Tüm modülleri yan yana dizer (adet > 1 olsa da bir kez çizilir).
-   * Montaj yüksekliği olan modüller (üst dolaplar) ayrı bir sırada,
-   * zeminden o yüksekliğe asılmış olarak çizilir.
+   * Bir duvarın görünüşü (o duvara bakarak). A duvarında köşe solda,
+   * B duvarında köşe sağda kalır. Asılı dolaplar montaj yüksekliğinde çizilir.
    */
-  function projeGorunus(moduller, sonuclar) {
-    const gecerli = moduller.filter((m) => sonuclar[m.id] && sonuclar[m.id].geo);
-    if (!gecerli.length) return '<p class="bos">Henüz modül yok.</p>';
-    const montaj = (m) => Math.max(0, Number(m.montajYuksekligi) || 0);
-    const sira = { alt: gecerli.filter((m) => !montaj(m)), ust: gecerli.filter((m) => montaj(m) > 0) };
-    const genislik = (L) => L.reduce((a, m) => a + sonuclar[m.id].geo.W, 0);
-    const toplam = Math.max(genislik(sira.alt), genislik(sira.ust));
+  function duvarGorunus(yer, duvar) {
+    const ogeler = yer.yerler.filter((y) => y.duvar === duvar || (y.duvar === 'kose' && yer.tip === 'L'));
+    if (!ogeler.length) return '<p class="bos">Bu duvarda modül yok.</p>';
+    const genislik = (y) => (y.duvar === 'kose' ? (duvar === 'B' ? y.W2 : y.W) : y.W);
+    const doluMax = Math.max(...ogeler.map((y) => y.bas + genislik(y)));
+    const duvarL = (duvar === 'B' ? yer.duvarB : yer.duvarA) || doluMax;
+    const L = Math.max(duvarL, doluMax);
+    // B duvarında görünüş köşe sağda olacak şekilde ters çevrilir
+    const konum = (y) => (duvar === 'B' ? duvarL - (y.duvar === 'kose' ? 0 : y.bas) - genislik(y) : y.bas);
     let Hmax = 0;
-    for (const m of gecerli) Hmax = Math.max(Hmax, montaj(m) + sonuclar[m.id].geo.H);
-    const fs = Math.max(toplam, Hmax) / 45;
+    for (const y of ogeler) Hmax = Math.max(Hmax, y.montaj + y.geo.H);
+    const fs = Math.max(L, Hmax) / 45;
     let s = '';
-    for (const anahtar of ['alt', 'ust']) {
-      let x = 0;
-      for (const m of sira[anahtar]) {
-        const geo = sonuclar[m.id].geo;
-        const y0 = montaj(m);
-        s += `<g transform="translate(${f(x)} ${f(-y0)})">${modulGovde(geo, {})}${yazi(geo.W / 2, geo.H + fs * 0.6, m.ad + (m.adet > 1 ? ` ×${m.adet}` : ''), fs, 'baslik')}`;
-        s += anahtar === 'alt' ? olcuYatay(0, geo.W, -fs * 2, fs * 0.9) : olcuYatay(0, geo.W, geo.H + fs * 2.2, fs * 0.9);
-        s += '</g>';
-        x += geo.W;
+    s += `<rect class="duvar" x="0" y="${f(-Hmax - fs * 2)}" width="${f(duvarL)}" height="${f(Hmax + fs * 2)}"/>`;
+    for (const y of ogeler) {
+      const x = konum(y);
+      const w = genislik(y);
+      s += `<g transform="translate(${f(x)} ${f(-y.montaj)})">${modulGovde(y.geo, { kol: duvar })}${yazi(w / 2, y.geo.H + fs * 0.6, y.modul.ad, fs * 0.9, 'baslik')}</g>`;
+      if (y.sira === 'zemin') s += olcuYatay(x, x + w, -fs * 2, fs * 0.85);
+      else s += olcuYatay(x, x + w, y.montaj + y.geo.H + fs * 2.2, fs * 0.85);
+    }
+    // Montaj yükseklikleri
+    const montajlar = [...new Set(ogeler.filter((y) => y.montaj > 0).map((y) => y.montaj))].sort((a, b) => a - b);
+    montajlar.forEach((m, i) => { s += olcuDikey(0, m, -fs * (2 + 2 * i), fs * 0.8); });
+    // Duvar uzunluğu ve kalan boşluk (zemin sırası)
+    s += olcuYatay(0, duvarL, -fs * 6.5, fs, `${duvar} duvarı ${f(duvarL)}`);
+    const dz = yer.doluluk.zemin;
+    const zDolu = duvar === 'B' ? dz.B : dz.A;
+    if (zDolu > 0 && duvarL - zDolu > 1) {
+      const a1 = duvar === 'B' ? 0 : zDolu;
+      const a2 = duvar === 'B' ? duvarL - zDolu : duvarL;
+      s += olcuYatay(a1, a2, -fs * 4.2, fs * 0.85, `boş ${f(a2 - a1)}`);
+    }
+    const pay = fs * (4 + 2 * montajlar.length);
+    s += cizgi(-pay, 0, L + pay, 0, 'zemin');
+    const vb = `${f(-pay)} ${f(-Hmax - fs * 6)} ${f(L + 2 * pay)} ${f(Hmax + fs * 14)}`;
+    return `<svg class="cizim" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+
+  /** Kuşbakışı yerleşim planı. Köşe sol üstte; A duvarı sağa, B duvarı aşağı. */
+  function planCizimi(yer) {
+    if (!yer.yerler.length) return '<p class="bos">Henüz modül yok.</p>';
+    const L = yer.tip === 'L';
+    const uzA = Math.max(yer.duvarA || 0, yer.doluluk.zemin.A, yer.doluluk.duvar.A);
+    const uzB = L ? Math.max(yer.duvarB || 0, yer.doluluk.zemin.B, yer.doluluk.duvar.B, 700) : 700;
+    const fs = Math.max(uzA, uzB) / 50;
+    const dk = fs * 2.5; // duvar kalınlığı (çizim için)
+    let s = `<rect class="duvar-plan" x="${f(-dk)}" y="${f(-dk)}" width="${f((yer.duvarA || uzA) + dk)}" height="${f(dk)}"/>`;
+    if (L) s += `<rect class="duvar-plan" x="${f(-dk)}" y="0" width="${f(dk)}" height="${f(yer.duvarB || uzB)}"/>`;
+    const sirali = [...yer.yerler].sort((a, b) => (a.sira === 'zemin' ? 0 : 1) - (b.sira === 'zemin' ? 0 : 1));
+    for (const y of sirali) {
+      const cls = y.sira === 'zemin' ? 'plan-govde' : 'plan-ust';
+      const D = y.geo.D;
+      if (y.duvar === 'kose') {
+        s += `<polygon class="${cls}" points="0,0 ${f(y.W)},0 ${f(y.W)},${f(D)} ${f(D)},${f(D)} ${f(D)},${f(y.W2)} 0,${f(y.W2)}"/>`;
+        if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(D / 2)}" y="${f(D / 2)}" font-size="${f(fs * 0.8)}">${esc(y.modul.ad)}</text>`;
+      } else if (y.duvar === 'B') {
+        s += `<rect class="${cls}" x="0" y="${f(y.bas)}" width="${f(D)}" height="${f(y.W)}"/>`;
+        if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(D / 2)}" y="${f(y.bas + y.W / 2)}" font-size="${f(fs * 0.8)}" transform="rotate(-90 ${f(D / 2)} ${f(y.bas + y.W / 2)})">${esc(y.modul.ad)}</text>`;
+      } else {
+        s += `<rect class="${cls}" x="${f(y.bas)}" y="0" width="${f(y.W)}" height="${f(D)}"/>`;
+        if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(y.bas + y.W / 2)}" y="${f(D / 2)}" font-size="${f(fs * 0.8)}">${esc(y.modul.ad)}</text>`;
       }
     }
-    // Farklı montaj yükseklikleri çizimin solunda ölçülendirilir.
-    const montajlar = [...new Set(sira.ust.map(montaj))].sort((a, b) => a - b);
-    montajlar.forEach((y0, i) => { s += olcuDikey(0, y0, -fs * (2 + 2 * i), fs * 0.8); });
-    const pay = fs * (4 + 2 * montajlar.length);
-    if (sira.alt.length) s += olcuYatay(0, genislik(sira.alt), -fs * 4.5, fs, `Toplam ${f(genislik(sira.alt))}`);
-    s += cizgi(-pay, 0, toplam + pay, 0, 'zemin');
-    const vb = `${f(-pay)} ${f(-Hmax - fs * 5)} ${f(toplam + 2 * pay)} ${f(Hmax + fs * 11)}`;
-    return `<svg class="cizim" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    // Ölçüler (zemin sırası modül genişlikleri ve duvar boyları)
+    const t = fs * 0.4;
+    const yat = (x1, x2, y, m) => `<line class="olcu" x1="${f(x1)}" y1="${f(y)}" x2="${f(x2)}" y2="${f(y)}"/><line class="olcu" x1="${f(x1)}" y1="${f(y - t)}" x2="${f(x1)}" y2="${f(y + t)}"/><line class="olcu" x1="${f(x2)}" y1="${f(y - t)}" x2="${f(x2)}" y2="${f(y + t)}"/><text class="olcu-yazi" x="${f((x1 + x2) / 2)}" y="${f(y - fs * 0.3)}" font-size="${f(fs)}">${m}</text>`;
+    const dik = (y1, y2, x, m) => `<line class="olcu" x1="${f(x)}" y1="${f(y1)}" x2="${f(x)}" y2="${f(y2)}"/><line class="olcu" x1="${f(x - t)}" y1="${f(y1)}" x2="${f(x + t)}" y2="${f(y1)}"/><line class="olcu" x1="${f(x - t)}" y1="${f(y2)}" x2="${f(x + t)}" y2="${f(y2)}"/><text class="olcu-yazi" x="${f(x - fs * 0.3)}" y="${f((y1 + y2) / 2)}" font-size="${f(fs)}" transform="rotate(-90 ${f(x - fs * 0.3)} ${f((y1 + y2) / 2)})">${m}</text>`;
+    if (yer.duvarA) s += yat(0, yer.duvarA, -dk - fs * 1.5, `A duvarı ${f(yer.duvarA)}`);
+    if (L && yer.duvarB) s += dik(0, yer.duvarB, -dk - fs * 1.5, `B duvarı ${f(yer.duvarB)}`);
+    const zemin = yer.yerler.filter((y) => y.sira === 'zemin');
+    const dA = Math.max(0, ...zemin.filter((y) => y.duvar !== 'B').map((y) => y.geo.D));
+    const dB = Math.max(0, ...zemin.filter((y) => y.duvar !== 'A').map((y) => y.geo.D));
+    for (const y of zemin) {
+      if (y.duvar === 'kose') {
+        s += yat(0, y.W, dA + fs * 2, f(y.W));
+        s += dik(0, y.W2, dB + fs * 2.5, f(y.W2));
+      } else if (y.duvar === 'B') s += dik(y.bas, y.bas + y.W, dB + fs * 2.5, f(y.W));
+      else s += yat(y.bas, y.bas + y.W, dA + fs * 2, f(y.W));
+    }
+    const pay = fs * 5;
+    const vb = `${f(-dk - pay)} ${f(-dk - pay)} ${f(uzA + dk + 2 * pay)} ${f(uzB + dk + 2 * pay)}`;
+    return `<svg class="cizim plan" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+
+  /** Bantlı kenarları kalın gösteren küçük parça simgesi. Uzun kenar yatay çizilir. */
+  function bantSimgesi(bant, boyut) {
+    const w = boyut || 34;
+    const h = Math.round(w * 0.55);
+    const p = 3;
+    const k = (x1, y1, x2, y2, var_) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="${var_ ? 3.2 : 0.8}"${var_ ? '' : ' stroke-dasharray="2 2"'}/>`;
+    return `<svg class="bant-simge" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-label="Bant: ${bant.u} uzun, ${bant.k} kısa kenar">` +
+      k(p, h - p, w - p, h - p, bant.u >= 1) + k(p, p, w - p, p, bant.u >= 2) +
+      k(p, p, p, h - p, bant.k >= 1) + k(w - p, p, w - p, h - p, bant.k >= 2) + '</svg>';
   }
 
   /** Plaka kesim planı. Plaka sol üst köşesi (0,0), SVG y aşağı. */
@@ -239,5 +394,5 @@
     return `<svg class="plaka-svg" viewBox="-10 -10 ${W + 20} ${H + 20}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { onGorunus, yanKesit, projeGorunus, plakaCizimi };
+  return { onGorunus, yanKesit, duvarGorunus, planCizimi, plakaCizimi, bantSimgesi };
 });

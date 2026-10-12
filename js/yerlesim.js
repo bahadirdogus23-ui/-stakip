@@ -107,20 +107,21 @@
   function projeYerlesimi(kesimListesi, ayarlar) {
     const gruplar = new Map();
     for (const p of kesimListesi) {
-      const malz = ayarlar.malzemeler[p.malzeme];
-      if (!gruplar.has(malz.ad)) gruplar.set(malz.ad, { malzeme: malz, parcalar: [] });
-      gruplar.get(malz.ad).parcalar.push({
+      const malz = ayarlar.malzemeler.find((m) => m.id === p.malzeme);
+      if (!malz) continue;
+      if (!gruplar.has(malz.id)) gruplar.set(malz.id, { malzeme: malz, parcalar: [] });
+      gruplar.get(malz.id).parcalar.push({
         no: p.no, ad: p.ad, w: p.kesimBoy, h: p.kesimEn, adet: p.adet, damar: p.damar,
       });
     }
     const sonuc = [];
-    for (const [ad, g] of gruplar) {
+    for (const g of gruplar.values()) {
       const plaka = { uzun: Number(g.malzeme.plakaUzun), kisa: Number(g.malzeme.plakaKisa) };
       const y = yerlestir(g.parcalar, plaka, {
         testere: Number(ayarlar.testereKalinligi) || 0,
         kenarPayi: Number(ayarlar.plakaKenarPayi) || 0,
       });
-      sonuc.push(Object.assign({ malzemeAd: ad }, y));
+      sonuc.push(Object.assign({ malzemeId: g.malzeme.id, malzemeAd: g.malzeme.ad, kalinlik: g.malzeme.kalinlik }, y));
     }
     return sonuc;
   }

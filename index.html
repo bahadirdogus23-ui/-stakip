@@ -7,92 +7,117 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="ust-bar">
-    <div class="marka">
-      <strong>Mobilya Ölçü</strong>
-      <input id="projeAd" class="proje-ad" aria-label="Proje adı">
-    </div>
-    <div class="ust-butonlar">
-      <button id="btnYeniProje" class="ikincil">Yeni proje</button>
-      <button id="btnKaydet" class="ikincil">Dosyaya kaydet</button>
-      <label class="ikincil buton-label">Dosyadan aç<input id="dosyaAc" type="file" accept=".json,application/json" hidden></label>
-      <button id="btnYazdir">Yazdır / PDF</button>
-    </div>
-  </header>
+  <div id="uygulama">
+    <header class="ust-bar">
+      <div class="marka">
+        <strong>Mobilya Ölçü</strong>
+        <input id="projeAd" class="proje-ad" aria-label="Proje adı">
+      </div>
+      <div class="ust-butonlar">
+        <button id="btnYeniProje" class="ikincil">Yeni proje</button>
+        <button id="btnKaydet" class="ikincil">Dosyaya kaydet</button>
+        <label class="ikincil buton-label">Dosyadan aç<input id="dosyaAc" type="file" accept=".json,application/json" hidden></label>
+        <button id="btnYazdirTumu">Tüm proje PDF</button>
+      </div>
+    </header>
 
-  <main class="duzen">
-    <aside class="sol">
-      <section class="kutu">
-        <h2>Modüller</h2>
-        <ul id="modulListesi" class="modul-listesi"></ul>
-        <div class="ekle-satir">
-          <select id="presetSec" aria-label="Modül tipi">
-            <option value="alt">Alt dolap (mutfak)</option>
-            <option value="ust">Üst dolap (mutfak)</option>
-            <option value="gardirop">Gardırop</option>
-            <option value="sifonyer">Şifonyer / çekmeceli</option>
-            <option value="kitaplik">Kitaplık / raflı</option>
-          </select>
-          <button id="btnModulEkle">+ Ekle</button>
+    <main class="duzen">
+      <aside class="sol">
+        <section class="kutu">
+          <h2>Modüller</h2>
+          <ul id="modulListesi" class="modul-listesi"></ul>
+          <div class="ekle-satir">
+            <select id="presetSec" aria-label="Modül tipi">
+              <optgroup label="Mutfak">
+                <option value="alt">Alt dolap</option>
+                <option value="ust">Üst dolap</option>
+                <option value="lkose">L köşe alt dolap</option>
+                <option value="lkoseust">L köşe üst dolap</option>
+                <option value="korkose">Kör köşe alt dolap</option>
+              </optgroup>
+              <optgroup label="Diğer">
+                <option value="gardirop">Gardırop</option>
+                <option value="sifonyer">Şifonyer / çekmeceli</option>
+                <option value="kitaplik">Kitaplık / raflı</option>
+              </optgroup>
+            </select>
+            <button id="btnModulEkle">+ Ekle</button>
+          </div>
+        </section>
+
+        <section class="kutu" id="modulForm"></section>
+      </aside>
+
+      <section class="sag">
+        <nav class="sekmeler" role="tablist">
+          <button data-sekme="cizim" class="aktif">Çizim</button>
+          <button data-sekme="yerlesim">Mutfak / yerleşim</button>
+          <button data-sekme="kesim">Kesim listesi</button>
+          <button data-sekme="plaka">Plaka yerleşimi</button>
+          <button data-sekme="hirdavat">Hırdavat & özet</button>
+          <button data-sekme="ayarlar">Malzeme & ayarlar</button>
+        </nav>
+
+        <div id="uyarilar" class="uyarilar"></div>
+
+        <div class="sekme aktif" id="sekme-cizim">
+          <div class="cizim-arac">
+            <label><input type="checkbox" id="icGorunus"> İç görünüş (kapakları gizle)</label>
+          </div>
+          <div class="cizim-izgara">
+            <div id="cizimOn" class="cizim-kutu"></div>
+            <div id="cizimYan" class="cizim-kutu dar"></div>
+          </div>
+        </div>
+
+        <div class="sekme" id="sekme-yerlesim">
+          <div id="yerlesimForm" class="form-izgara yerlesim-form"></div>
+          <p class="not">L yerleşimde köşe sol üsttedir: <b>A duvarı</b> köşeden sağa, <b>B duvarı</b> köşeden aşağı uzanır. Modüller listedeki sırayla köşeden başlayarak dizilir; her modülün duvarı modül formundan seçilir. L köşe dolap otomatik olarak köşeye yerleşir.</p>
+          <h3>Kuşbakışı plan</h3>
+          <div id="cizimPlan" class="cizim-kutu"></div>
+          <h3>A duvarı görünüşü</h3>
+          <div id="cizimDuvarA" class="cizim-kutu"></div>
+          <div id="duvarBKap">
+            <h3>B duvarı görünüşü</h3>
+            <div id="cizimDuvarB" class="cizim-kutu"></div>
+          </div>
+        </div>
+
+        <div class="sekme" id="sekme-kesim">
+          <div class="arac-satir">
+            <button id="btnYazdirKesim">Kesim listesi PDF</button>
+            <button id="btnYazdirEtiket" class="ikincil">Parça etiketleri PDF</button>
+            <button id="btnCsv" class="ikincil">CSV indir (Excel)</button>
+          </div>
+          <p class="not">Ölçüler mm. <b>Boy</b> damar/uzunluk yönüdür. Kesim ölçüsünden bant kalınlığı düşülmüştür (ayarlardan değiştirilebilir). Simgede kalın çizgi bantlı kenardır; uzun kenar yatay gösterilir. Etiketler A4 3×7 (63,5×38,1 mm) etiket kağıdına göredir.</p>
+          <div id="kesimTablo" class="tablo-kap"></div>
+        </div>
+
+        <div class="sekme" id="sekme-plaka">
+          <div id="plakaAlan"></div>
+        </div>
+
+        <div class="sekme" id="sekme-hirdavat">
+          <div class="iki-kolon">
+            <div>
+              <h3>Hırdavat listesi</h3>
+              <div id="hirdavatTablo" class="tablo-kap"></div>
+            </div>
+            <div>
+              <h3>Malzeme özeti</h3>
+              <div id="ozetTablo" class="tablo-kap"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sekme" id="sekme-ayarlar">
+          <div id="ayarForm"></div>
         </div>
       </section>
+    </main>
+  </div>
 
-      <section class="kutu" id="modulForm"></section>
-    </aside>
-
-    <section class="sag">
-      <nav class="sekmeler" role="tablist">
-        <button data-sekme="cizim" class="aktif">Çizim</button>
-        <button data-sekme="kesim">Kesim listesi</button>
-        <button data-sekme="plaka">Plaka yerleşimi</button>
-        <button data-sekme="hirdavat">Hırdavat & özet</button>
-        <button data-sekme="ayarlar">Malzeme & ayarlar</button>
-      </nav>
-
-      <div id="uyarilar" class="uyarilar"></div>
-
-      <div class="sekme aktif" id="sekme-cizim">
-        <div class="cizim-arac">
-          <label><input type="checkbox" id="icGorunus"> İç görünüş (kapakları gizle)</label>
-        </div>
-        <div class="cizim-izgara">
-          <div id="cizimOn" class="cizim-kutu"></div>
-          <div id="cizimYan" class="cizim-kutu dar"></div>
-        </div>
-        <h3>Proje görünüşü</h3>
-        <div id="cizimProje" class="cizim-kutu"></div>
-      </div>
-
-      <div class="sekme" id="sekme-kesim">
-        <div class="arac-satir">
-          <button id="btnCsv" class="ikincil">CSV indir (Excel)</button>
-          <span class="not">Ölçüler mm. <b>Boy</b> damar/uzunluk yönüdür. Kesim ölçüsünden bant kalınlığı düşülmüştür (ayarlardan değiştirilebilir).</span>
-        </div>
-        <div id="kesimTablo" class="tablo-kap"></div>
-      </div>
-
-      <div class="sekme" id="sekme-plaka">
-        <div id="plakaAlan"></div>
-      </div>
-
-      <div class="sekme" id="sekme-hirdavat">
-        <div class="iki-kolon">
-          <div>
-            <h3>Hırdavat listesi</h3>
-            <div id="hirdavatTablo" class="tablo-kap"></div>
-          </div>
-          <div>
-            <h3>Malzeme özeti</h3>
-            <div id="ozetTablo" class="tablo-kap"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sekme" id="sekme-ayarlar">
-        <div id="ayarForm"></div>
-      </div>
-    </section>
-  </main>
+  <div id="yazdirAlan" aria-hidden="true"></div>
 
   <script src="js/hesap.js"></script>
   <script src="js/yerlesim.js"></script>
