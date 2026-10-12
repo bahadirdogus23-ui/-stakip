@@ -9,6 +9,9 @@
 - **Kapak türleri:** düz panel, çerçevesiz cam, alüminyum profil + cam, MDF çerçeve + cam, ayna; açılım: yana, yukarı kalkan (amortisörlü), aşağı devrilen (klapa); sürgü kapak (düz, aynalı, camlı).
 - **Köşe dolaplar:** L köşe dolap iki kollu hesaplanır (katlanır kapaklar, iki parça L tabla ve raflar, kola göre arkalık). Normal dolaplara kör köşe paneli eklenebilir.
 - **Mutfak / yerleşim:** düz veya L yerleşim; duvar uzunlukları girilir, modüller A/B duvarına atanır. Kuşbakışı plan, iki duvar görünüşü, kalan boşluk ve taşma uyarısı.
+- **Şekilli parçalar:** eğimli (yamuk), köşe radyüsü, pah, oval, daire, yarım daire, kemerli üst. Plakadan kaba kesim ölçüsü, gerçek alan, düz/eğri kenar uzunluğu, bant metrajı, eğim açısı ve yay yarıçapı hesaplanır; CNC/şablon kesim ücreti maliyete eklenir.
+- **Atölye notları:** kapaklarda menteşe çanak delik konumları (Ø35, kenardan 22,5 mm, üstten mesafeler), yan ve dikmelerde 32 mm sistem raf pimi delik notu.
+- **Kullanım:** geri al / yinele (Ctrl+Z / Ctrl+Y), yazarken canlı çizim, uyarıya tıklayınca ilgili modüle gitme, ilk açılışta kısa yardım.
 - **Cam listesi:** kapak camı, cam raf ve aynalar plakaya yerleştirilmez; camcıya verilecek net ölçülerle ayrı listelenir ve m² fiyatıyla hesaplanır.
 - **Malzeme ve hırdavat seçimi:** genişletilebilir malzeme kütüphanesi (suntalam, MDF lam, lake, akrilik, kontrplak, HDF…); gövde / kapak / çekmece / arkalık için proje varsayılanı ve modüle özel seçim. Gövde bağlantısı (minifix, konfirmat, kavela, şeffaf köşe bağlantı) ve ara bağlantı (sabit raf ve dikmeler için şeffaf T bağlantı, minifix, konfirmat, kavela), menteşe (standart, frenli, bas-aç), ray (bilyeli, frenli, gizli, metal yanlı), kulp (kulp, gömme, gola, bas-aç) ve ayak tipi seçilir; ray tipi çekmece kutusu ölçüsünü değiştirir.
 - **Yapı seçenekleri:** yanlar boydan veya tablalar boydan birleşim, tam üst tabla veya kuşak (tezgah altı), kanala geçme / çakma / arkalıksız, tam bini veya gömme kapak, ayarlı ayak veya baza çerçevesi, duvara asılan dolaplar için montaj yüksekliği.
@@ -46,4 +49,4 @@ js/cizim.js     SVG teknik çizimler
 js/app.js       arayüz
 ```
 
-Testler: `npm test` (Node 18+). Tek dosya paketi: `npm run paketle` → `dist/MobilyaOlcu.html`.
+Testler: `npm test` (Node 18+). Tutarlılık denetimi (binlerce rastgele dolapta fiziksel kurallar): `npm run denetim`. Tek dosya paketi: `npm run paketle` → `dist/MobilyaOlcu.html`.

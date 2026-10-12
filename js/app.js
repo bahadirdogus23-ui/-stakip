@@ -31,8 +31,63 @@
     return yeniProje();
   }
 
+  // ---------------- Geri al / yinele ----------------
+  // Her kayıtta proje anlık görüntüsü tutulur; art arda hızlı değişiklikler tek adımda birleşir.
+  const gecmis = [];
+  let ileri = [];
+  let sonKayitZamani = 0;
+  function gecmiseEkle(json) {
+    const simdi = Date.now();
+    if (gecmis.length && gecmis[gecmis.length - 1] === json) return;
+    if (gecmis.length > 1 && simdi - sonKayitZamani < 700) gecmis[gecmis.length - 1] = json;
+    else gecmis.push(json);
+    if (gecmis.length > 80) gecmis.shift();
+    sonKayitZamani = simdi;
+    ileri = [];
+    gecmisDugmeleri();
+  }
+  function gecmisDugmeleri() {
+    $('#btnGeriAl').disabled = gecmis.length < 2;
+    $('#btnYinele').disabled = !ileri.length;
+  }
+  function gecmisYukle(json) {
+    proje = Hesap.projeyiNormallestir(JSON.parse(json));
+    if (!proje.moduller.some((m) => m.id === seciliId)) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
+    $('#projeAd').value = proje.ad;
+    gecmisAtla = true;
+    tumunuCiz(true);
+    ayarFormCiz();
+    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); }
+    gecmisDugmeleri();
+  }
+  let gecmisAtla = false;
+  function geriAl() {
+    if (gecmis.length < 2) return;
+    ileri.push(gecmis.pop());
+    sonKayitZamani = 0;
+    gecmisYukle(gecmis[gecmis.length - 1]);
+  }
+  function yinele() {
+    if (!ileri.length) return;
+    const j = ileri.pop();
+    gecmis.push(j);
+    sonKayitZamani = 0;
+    gecmisYukle(j);
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const yazi = e.target.matches('input[type="text"], input:not([type]), textarea');
+    if (yazi) return; // metin alanında tarayıcının kendi geri alması çalışsın
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); geriAl(); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); yinele(); }
+  });
+
   function kaydet() {
-    try { localStorage.setItem(KAYIT_ANAHTARI, JSON.stringify(proje)); } catch (e) { /* depolama kapalı olabilir */ }
+    const json = JSON.stringify(proje);
+    try { localStorage.setItem(KAYIT_ANAHTARI, json); } catch (e) { /* depolama kapalı olabilir */ }
+    if (gecmisAtla) gecmisAtla = false;
+    else gecmiseEkle(json);
   }
 
   const seciliModul = () => proje.moduller.find((m) => m.id === seciliId);
@@ -50,7 +105,7 @@
       const duvar = L ? (m.tip === 'lkose' ? ' · köşe' : ` · ${m.duvar} duvarı`) : '';
       return `
       <li class="${m.id === seciliId ? 'secili' : ''}" data-id="${esc(m.id)}">
-        <span class="m-ad">${esc(m.ad)}</span>
+        <span class="m-ad">${esc(m.ad)}${sonuc && sonuc.modulSonuclari[m.id] && sonuc.modulSonuclari[m.id].uyarilar.length ? ` <span class="uyari-rozet" title="${esc(sonuc.modulSonuclari[m.id].uyarilar.join('\n'))}">⚠ ${sonuc.modulSonuclari[m.id].uyarilar.length}</span>` : ''}</span>
         <span class="m-olcu">${esc(olcu)}${m.adet > 1 ? ` · ${esc(m.adet)} ad.` : ''}${duvar}</span>
         <span class="m-arac">
           <button data-islem="yukari" title="Yukarı taşı">↑</button>
@@ -108,6 +163,11 @@
     $('#katalog').showModal();
   });
   $('#katalogKapat').addEventListener('click', () => $('#katalog').close());
+  $('#btnYardim').addEventListener('click', () => $('#yardim').showModal());
+  $('#yardimKapat').addEventListener('click', () => $('#yardim').close());
+  $('#yardim').addEventListener('click', (e) => { if (e.target === $('#yardim')) $('#yardim').close(); });
+  $('#btnGeriAl').addEventListener('click', geriAl);
+  $('#btnYinele').addEventListener('click', yinele);
   $('#katalog').addEventListener('click', (e) => {
     if (e.target === $('#katalog')) { $('#katalog').close(); return; }
     const kart = e.target.closest('[data-preset]');
@@ -212,11 +272,16 @@
           <label>Boy (mm)${sayiGir('boy', m.boy, 'min="20"')}</label>
           <label>En (mm)${sayiGir('en', m.en, 'min="20"')}</label>
           <label>Adet${sayiGir('adet', m.adet, 'min="1"')}</label>
-          <label title="Boy yönündeki bantlı kenar sayısı">Bant – uzun kenar${secim('bantU', m.bantU, [[0, '0'], [1, '1'], [2, '2']])}</label>
-          <label title="En yönündeki bantlı kenar sayısı">Bant – kısa kenar${secim('bantK', m.bantK, [[0, '0'], [1, '1'], [2, '2']])}</label>
+          <label>Şekil${secim('sekil', m.sekil, Object.entries(Hesap.SEKILLER).map(([k, v]) => [k, v.ad]))}</label>
+          ${Hesap.SEKILLER[m.sekil].param ? `<label>${esc(Hesap.SEKILLER[m.sekil].param)}${sayiGir('sekilParam', m.sekilParam, 'min="0"')}</label>` : ''}
+          ${Hesap.SEKILLER[m.sekil].kose ? `<label title="Sol üstten saat yönünde">Köşe sayısı${secim('koseSayisi', m.koseSayisi, [[1, '1'], [2, '2 (üst)'], [3, '3'], [4, '4']])}</label>` : ''}
+          ${m.sekil === 'dikdortgen'
+            ? `<label title="Boy yönündeki bantlı kenar sayısı">Bant – uzun kenar${secim('bantU', m.bantU, [[0, '0'], [1, '1'], [2, '2']])}</label>
+               <label title="En yönündeki bantlı kenar sayısı">Bant – kısa kenar${secim('bantK', m.bantK, [[0, '0'], [1, '1'], [2, '2']])}</label>`
+            : `<label>Kenar bandı${secim('sekilBant', m.sekilBant, [['tum', 'Tüm çevre'], ['egri', 'Yalnız şekilli kenar'], ['yok', 'Bantsız']])}</label>`}
           ${montaj}${duvarSecimi}
         </div>
-        <p class="not">${esc(Hesap.PANEL_TURLERI[m.panelTuru].aciklama)}.</p>
+        <p class="not">${esc(Hesap.PANEL_TURLERI[m.panelTuru].aciklama)}.${Hesap.SEKILLER[m.sekil].aciklama ? ' ' + esc(Hesap.SEKILLER[m.sekil].aciklama) : ''} Şekilli parça plakadan dikdörtgen kaba ölçüyle kesilir, sonra CNC veya şablonla şekillenir; maliyette gerçek alan ve kenar uzunluğu kullanılır.</p>
         ${malzemeHirdavatFormu(m)}`;
       return;
     }
@@ -273,6 +338,7 @@
   }
 
   $('#modulForm').addEventListener('change', (e) => {
+    clearTimeout(canliZamanlayici);
     const m = seciliModul();
     const el = e.target;
     const alan = el.dataset.alan;
@@ -281,7 +347,7 @@
     const bolme = el.closest('[data-sutun]');
     let deger = el.type === 'checkbox' ? el.checked : el.value;
     if (el.type === 'number') deger = el.value === '' ? null : Number(el.value);
-    if (['surguAdet', 'bantU', 'bantK'].includes(alan)) deger = Number(deger);
+    if (['surguAdet', 'bantU', 'bantK', 'koseSayisi'].includes(alan)) deger = Number(deger);
     if (kart) {
       const s = m.sutunlar[Number(kart.dataset.sutun)].satirlar[Number(kart.dataset.satir)];
       s[alan] = deger;
@@ -299,6 +365,29 @@
     }
     if (alan === 'adet' && !kart) m.adet = Math.max(1, Number(m.adet) || 1);
     tumunuCiz(true);
+  });
+
+  // Yazarken canlı güncelleme: form yeniden çizilmez (odak kaybolmaz), çizim ve listeler güncellenir.
+  let canliZamanlayici = null;
+  $('#modulForm').addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.type !== 'number' || !el.dataset.alan) return;
+    clearTimeout(canliZamanlayici);
+    canliZamanlayici = setTimeout(() => {
+      const m = seciliModul();
+      if (!m) return;
+      const alan = el.dataset.alan;
+      const deger = el.value === '' ? null : Number(el.value);
+      if (deger !== null && !Number.isFinite(deger)) return;
+      const kart = el.closest('[data-satir]');
+      const bolme = el.closest('[data-sutun]');
+      if (kart) m.sutunlar[Number(kart.dataset.sutun)].satirlar[Number(kart.dataset.satir)][alan] = deger;
+      else if (alan === 'sutunGenislik' && bolme) m.sutunlar[Number(bolme.dataset.sutun)].genislik = deger > 0 ? deger : null;
+      else if (alan.includes('.')) { const [a, b] = alan.split('.'); m[a][b] = deger; }
+      else if (alan === 'adet') m.adet = Math.max(1, deger || 1);
+      else m[alan] = deger;
+      tumunuCiz(false);
+    }, 250);
   });
 
   $('#modulForm').addEventListener('click', (e) => {
@@ -325,9 +414,26 @@
 
   // ---------------- Hesap & çizim ----------------
   function uyarilariCiz() {
-    const u = sonuc.uyarilar;
-    $('#uyarilar').innerHTML = u.length ? `<details ${u.length <= 4 ? 'open' : ''}><summary>⚠ ${u.length} uyarı</summary><ul>${u.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>` : '';
+    const satirlar = [];
+    for (const m of proje.moduller) {
+      for (const x of (sonuc.modulSonuclari[m.id] || { uyarilar: [] }).uyarilar) {
+        satirlar.push(`<li><a href="#" data-modul="${esc(m.id)}">${esc(m.ad)}</a>: ${esc(x)}</li>`);
+      }
+    }
+    const modulUyarisi = new Set(proje.moduller.flatMap((m) => (sonuc.modulSonuclari[m.id] || { uyarilar: [] }).uyarilar.map((x) => `${m.ad}: ${x}`)));
+    for (const x of sonuc.uyarilar) if (!modulUyarisi.has(x)) satirlar.push(`<li>${esc(x)}</li>`);
+    const n = satirlar.length;
+    $('#uyarilar').innerHTML = n ? `<details ${n <= 4 ? 'open' : ''}><summary>⚠ ${n} uyarı</summary><ul>${satirlar.join('')}</ul></details>` : '';
   }
+  $('#uyarilar').addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-modul]');
+    if (!a) return;
+    e.preventDefault();
+    seciliId = a.dataset.modul;
+    if (aktifSekme !== 'cizim') document.querySelector('.sekmeler button[data-sekme="cizim"]').click();
+    tumunuCiz(true);
+    $('#modulForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 
   function cizimleriCiz() {
     const m = seciliModul();
@@ -386,7 +492,7 @@
           ? `<tr class="grup cam-grup"><td colspan="${kolon}">Cam listesi: ${esc(malz.ad)} · ${toplam} adet · ${sayiYaz(L.filter((x) => x.malzeme === p.malzeme).reduce((a, x) => a + (x.boy * x.en * x.adet) / 1e6, 0), 2)} m² · camcıya verilecek net ölçüler (kenar rodajlı)</td></tr>`
           : `<tr class="grup"><td colspan="${kolon}">${esc(malz.ad)} · ${sayiYaz(malz.kalinlik)} mm · plaka ${malz.plakaUzun}×${malz.plakaKisa} · ${toplam} parça${malz.bant > 0 ? ` · bant ${sayiYaz(malz.bant)} mm` : ' · bantsız'}</td></tr>`;
       }
-      html += `<tr>${yazdir ? '<td class="kutu-sutun"><span class="isaret"></span></td>' : ''}<td>${p.no}</td><td>${esc(p.ad)}</td><td class="sag kalin">${p.adet}</td>
+      html += `<tr>${yazdir ? '<td class="kutu-sutun"><span class="isaret"></span></td>' : ''}<td>${p.no}</td><td>${esc(p.ad)}${p.not ? `<div class="parca-not">${esc(p.not)}</div>` : ''}</td><td class="sag kalin">${p.adet}</td>
         ${yazdir ? '' : `<td class="sag">${sayiYaz(p.boy)}</td><td class="sag">${sayiYaz(p.en)}</td>`}
         <td class="sag kalin">${sayiYaz(p.kesimBoy)}</td><td class="sag kalin">${sayiYaz(p.kesimEn)}</td>
         <td class="bant-hucre">${Cizim.bantSimgesi(p.bant, 30)}<span>${bantYazi(p.bant)}</span></td><td>${p.damar ? 'Var' : '—'}</td><td class="kucuk">${esc(p.moduller.join(', '))}</td></tr>`;
@@ -527,6 +633,7 @@
     ['bantCekmeM', 'Bant çekme (TL/m)'],
     ['atolyeIscilikModul', 'Atölye işçiliği (TL/modül)'],
     ['montajModul', 'Montaj (TL/modül)'],
+    ['panelIscilik', 'Panel işçiliği (TL/panel)'],
     ['nakliye', 'Nakliye (TL/proje)'],
     ['bantFire', 'Bant firesi (%)'],
     ['alanFire', 'Alan firesi (%)'],
@@ -620,7 +727,7 @@
     $('#maliyetOzet').innerHTML = `
       ${r.eksikFiyat.length ? `<p class="hata">Fiyatı girilmemiş kalemler: ${esc(r.eksikFiyat.join(', '))}</p>` : ''}
       <div class="m-kartlar">
-        ${kart('Toplam maliyet', r.maliyet, `${r.modulAdedi} modül`)}
+        ${kart('Toplam maliyet', r.maliyet, `${r.modulAdedi} dolap${r.panelAdedi ? ` + ${r.panelAdedi} panel` : ''}`)}
         ${kart('Kâr', r.kar, `%${sayiYaz(r.karOrani)}`)}
         ${kart('Satış (KDV hariç)', r.satisKdvHaric)}
         ${kart('KDV', r.kdv, `%${sayiYaz(r.kdvOrani)}`)}
@@ -733,7 +840,7 @@
         const m = malzeme(p.malzeme);
         html += `<div class="etiket">
           <div class="e-ust"><b>#${p.no}</b><span>${i}/${p.adet}</span></div>
-          <div class="e-ad">${esc(p.ad)}</div>
+          <div class="e-ad">${esc(p.ad)}</div>${p.not ? `<div class="e-not">${esc(p.not)}</div>` : ''}
           <div class="e-olcu">${sayiYaz(p.kesimBoy)} × ${sayiYaz(p.kesimEn)}</div>
           <div class="e-alt"><span class="e-bant">${Cizim.bantSimgesi(p.bant, 26)}</span><span>${esc(m.ad)}${p.damar ? ' · damar ↔' : ''}<br>${esc(p.moduller.join(', '))} · ${esc(proje.ad || '')}</span></div>
         </div>`;
@@ -791,10 +898,10 @@
 
   $('#btnCsv').addEventListener('click', () => {
     const sayi = (x) => String(x).replace('.', ',');
-    const satirlar = [['No', 'Malzeme', 'Kalınlık', 'Parça', 'Adet', 'Net boy', 'Net en', 'Kesim boy', 'Kesim en', 'Bant uzun kenar', 'Bant kısa kenar', 'Damar', 'Modüller']];
+    const satirlar = [['No', 'Malzeme', 'Kalınlık', 'Parça', 'Adet', 'Net boy', 'Net en', 'Kesim boy', 'Kesim en', 'Bant uzun kenar', 'Bant kısa kenar', 'Damar', 'Modüller', 'Not']];
     for (const p of sonuc.kesimListesi) {
       const m = malzeme(p.malzeme);
-      satirlar.push([p.no, m.ad, sayi(m.kalinlik), p.ad, p.adet, sayi(p.boy), sayi(p.en), sayi(p.kesimBoy), sayi(p.kesimEn), p.bant.u, p.bant.k, p.damar ? 'Var' : 'Yok', p.moduller.join(', ')]);
+      satirlar.push([p.no, m.ad, sayi(m.kalinlik), p.ad, p.adet, sayi(p.boy), sayi(p.en), sayi(p.kesimBoy), sayi(p.kesimEn), p.bant.u, p.bant.k, p.damar ? 'Var' : 'Yok', p.moduller.join(', '), p.not || '']);
     }
     // Excel'in hücreyi formül olarak çalıştırmaması için = + - @ ile başlayan metinler etkisizleştirilir.
     const hucre = (c) => {
@@ -857,9 +964,12 @@
     kaydet();
   }
 
+  let ilkAcilis = false;
+  try { ilkAcilis = !localStorage.getItem(KAYIT_ANAHTARI); } catch (e) { /* yok say */ }
   proje = yukle();
   seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
   $('#projeAd').value = proje.ad;
   ayarFormCiz();
   tumunuCiz(true);
+  if (ilkAcilis) $('#yardim').showModal();
 })();

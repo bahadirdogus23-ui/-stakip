@@ -14,6 +14,9 @@
         <input id="projeAd" class="proje-ad" aria-label="Proje adı">
       </div>
       <div class="ust-butonlar">
+        <button id="btnGeriAl" class="ikincil" title="Geri al (Ctrl+Z)" disabled>↶ Geri al</button>
+        <button id="btnYinele" class="ikincil" title="Yinele (Ctrl+Y)" disabled>↷ Yinele</button>
+        <button id="btnYardim" class="ikincil" title="Nasıl kullanılır?">?</button>
         <button id="btnYeniProje" class="ikincil">Yeni proje</button>
         <button id="btnKaydet" class="ikincil">Dosyaya kaydet</button>
         <label class="ikincil buton-label">Dosyadan aç<input id="dosyaAc" type="file" accept=".json,application/json" hidden></label>
@@ -127,6 +130,23 @@
   <dialog id="katalog" aria-label="Dolap kataloğu">
     <header class="k-baslik"><h2>Dolap kataloğu</h2><span class="not">Bir modül seçin; ölçülerini ve iç düzenini sonra değiştirebilirsiniz.</span><button id="katalogKapat" class="ikincil" aria-label="Kapat">✕</button></header>
     <div id="katalogIcerik"></div>
+  </dialog>
+
+  <dialog id="yardim" aria-label="Nasıl kullanılır">
+    <header class="k-baslik"><h2>Nasıl kullanılır?</h2><button id="yardimKapat" class="ikincil" aria-label="Kapat">✕</button></header>
+    <div class="yardim-icerik">
+      <ol>
+        <li><b>Dolap ekleyin:</b> soldaki "Dolap kataloğundan ekle" ile hazır bir modül seçin.</li>
+        <li><b>Ölçüleri girin:</b> genişlik, yükseklik (zeminden, ayak dahil) ve derinlik (kapak hariç). Çizim yazarken güncellenir.</li>
+        <li><b>İçini düzenleyin:</b> "Bölmeler ve iç düzen" bölümünde dikey bölme ekleyin; her bölmeye kapak, çekmece, açık raf veya cihaz nişi satırları ekleyin. Yükseklik boş bırakılırsa kalan yer paylaştırılır.</li>
+        <li><b>Mutfak / yerleşim:</b> duvar ölçülerini girin, L mutfakta her modülün duvarını seçin; taşma ve boşluklar gösterilir.</li>
+        <li><b>Kesim listesi:</b> net ve kesim ölçüleri, bant, menteşe delik yerleri ve cam listesi. PDF, etiket ve Excel (CSV) çıktısı alın.</li>
+        <li><b>Plaka yerleşimi:</b> kaç plaka gerektiğini ve kesim planını görün.</li>
+        <li><b>Fiyat & maliyet:</b> kendi fiyatlarınızı girin, müşteriye fiyat teklifi PDF'i çıkarın.</li>
+        <li><b>Malzeme & ayarlar:</b> malzeme kütüphanesi, bağlantı tipi (minifix, şeffaf T…) ve atölyenizin payları.</li>
+      </ol>
+      <p><b>İpuçları:</b> Ctrl+Z geri alır, Ctrl+Y yineler. Uyarıya tıklayınca ilgili modül seçilir. Çalışma tarayıcıya otomatik kaydedilir; yedek için "Dosyaya kaydet"i kullanın. Eğimli, oval, radyüslü parçalar için katalogdan bir panel ekleyip "Şekil" seçin.</p>
+    </div>
   </dialog>
 
   <div id="yazdirAlan" aria-hidden="true"></div>

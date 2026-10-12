@@ -64,6 +64,9 @@
       const bantCekme = kurus(bantM * sayi(F.bantCekmeM));
       if (ebatlama > 0) kalemler.hizmet.push({ ad: `Ebatlama – ${m.ad}`, miktar: tamPlaka, birim: 'plaka', birimFiyat: sayi(F.ebatlamaPlaka), tutar: ebatlama, malzemeId: m.id, tur: 'ebatlama' });
       if (bantCekme > 0) kalemler.hizmet.push({ ad: `Bant çekme – ${m.ad}`, miktar: Math.round(bantM * 10) / 10, birim: 'm', birimFiyat: sayi(F.bantCekmeM), tutar: bantCekme, malzemeId: m.id, tur: 'bant' });
+      // Şekilli kesim (CNC/şablon) hizmeti: eğri ve eğik kenar metresi
+      const sekilliKesim = kurus(sayi(o.sekilliKenarM) * sayi(F.sekilliKesimM));
+      if (sekilliKesim > 0) kalemler.hizmet.push({ ad: `Şekilli kesim (CNC) – ${m.ad}`, miktar: Math.round(sayi(o.sekilliKenarM) * 10) / 10, birim: 'm', birimFiyat: sayi(F.sekilliKesimM), tutar: sekilliKesim, malzemeId: m.id, tur: 'sekil' });
       malzemeBirim[m.id] = {
         m2: o.alanM2 > 0 ? (plakaTutar + islemTutar + ebatlama) / o.alanM2 : 0,
         bantM: o.bantM > 0 ? (bantTutar + bantCekme) / o.bantM : 0,
@@ -83,9 +86,13 @@
     }
 
     // ---------- İşçilik ----------
-    const modulAdedi = proje.moduller.reduce((a, m) => a + Math.max(1, Math.floor(sayi(m.adet) || 1)), 0);
-    if (sayi(F.atolyeIscilikModul) > 0) kalemler.iscilik.push({ ad: 'Atölye işçiliği', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.atolyeIscilikModul), tutar: kurus(modulAdedi * sayi(F.atolyeIscilikModul)) });
-    if (sayi(F.montajModul) > 0) kalemler.iscilik.push({ ad: 'Montaj (yerinde kurulum)', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.montajModul), tutar: kurus(modulAdedi * sayi(F.montajModul)) });
+    // Dolap işçiliği yalnızca gövdeli modüllere; tek parça paneller ayrı (düşük) birim fiyatla
+    const adetOf = (m) => Math.max(1, Math.floor(sayi(m.adet) || 1));
+    const modulAdedi = proje.moduller.filter((m) => m.tip !== 'panel').reduce((a, m) => a + adetOf(m), 0);
+    const panelAdedi = proje.moduller.filter((m) => m.tip === 'panel').reduce((a, m) => a + adetOf(m), 0);
+    if (modulAdedi && sayi(F.atolyeIscilikModul) > 0) kalemler.iscilik.push({ ad: 'Atölye işçiliği', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.atolyeIscilikModul), tutar: kurus(modulAdedi * sayi(F.atolyeIscilikModul)) });
+    if (modulAdedi && sayi(F.montajModul) > 0) kalemler.iscilik.push({ ad: 'Montaj (yerinde kurulum)', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.montajModul), tutar: kurus(modulAdedi * sayi(F.montajModul)) });
+    if (panelAdedi && sayi(F.panelIscilik) > 0) kalemler.iscilik.push({ ad: 'Panel işçiliği ve montajı', miktar: panelAdedi, birim: 'panel', birimFiyat: sayi(F.panelIscilik), tutar: kurus(panelAdedi * sayi(F.panelIscilik)) });
 
     // ---------- Proje geneli: nakliye ve ek kalemler ----------
     if (sayi(F.nakliye) > 0) kalemler.diger.push({ ad: 'Nakliye', tutar: kurus(F.nakliye) });
@@ -112,11 +119,13 @@
       for (const p of s.parcalar) {
         const b = malzemeBirim[p.malzeme];
         if (!b) continue;
-        malz += ((p.boy * p.en * p.adet) / 1e6) * b.m2 + (((p.bant.u * p.boy + p.bant.k * p.en) * p.adet) / 1000) * b.bantM;
+        malz += Hesap.parcaAlanM2(p) * p.adet * b.m2 + Hesap.parcaBantM(p) * p.adet * b.bantM;
+        // CNC/şablon kesim ücreti yalnızca şekilli parçaya
+        if (p.sekil) malz += (((p.sekil.egri || 0) + (p.sekil.tur === 'egimli' || p.sekil.tur === 'pah' ? p.sekil.cevre - p.sekil.duz : 0)) / 1000) * p.adet * sayi(F.sekilliKesimM);
       }
       let hird = 0;
       for (const h of s.hirdavat) hird += h.fiyatMiktari * hirdavatFiyati(A, h.kod);
-      const isc = sayi(F.atolyeIscilikModul) + sayi(F.montajModul);
+      const isc = m.tip === 'panel' ? sayi(F.panelIscilik) : sayi(F.atolyeIscilikModul) + sayi(F.montajModul);
       const birim = kurus(malz + hird + isc);
       modulMaliyetleri.push({ id: m.id, ad: m.ad, adet, malzeme: kurus(malz), hirdavat: kurus(hird), iscilik: kurus(isc), birim, toplam: kurus(birim * adet) });
     }
@@ -127,7 +136,9 @@
     const karCarpan = 1 + sayi(F.karOrani) / 100;
     const teklifSatirlari = modulMaliyetleri.map((x) => {
       const m = proje.moduller.find((k) => k.id === x.id);
-      const olcu = m.tip === 'lkose' ? `L ${m.genislik}+${m.genislik2}×${m.yukseklik}×${m.derinlik}` : `${m.genislik}×${m.yukseklik}×${m.derinlik}`;
+      const olcu = m.tip === 'lkose' ? `L ${m.genislik}+${m.genislik2}×${m.yukseklik}×${m.derinlik}`
+        : m.tip === 'panel' ? `${m.boy}×${m.en}` + (m.sekil && m.sekil !== 'dikdortgen' ? ' (şekilli)' : '')
+        : `${m.genislik}×${m.yukseklik}×${m.derinlik}`;
       const birimFiyat = kurus(x.birim * karCarpan);
       return { ad: m.ad, aciklama: olcu, adet: x.adet, birimFiyat, tutar: kurus(birimFiyat * x.adet) };
     });
@@ -154,6 +165,7 @@
       teklifSatirlari,
       eksikFiyat: [...new Set(eksikFiyat)],
       modulAdedi,
+      panelAdedi,
     };
   }
 

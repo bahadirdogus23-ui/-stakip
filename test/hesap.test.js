@@ -484,3 +484,95 @@ test('600 mm üstü montaj yüksekliği asılı sırada sayılır', () => {
   assert.equal(s.yerlesim.yerler.find((y) => y.modul.id === b.id).sira, 'zemin');
   assert.equal(s.yerlesim.yerler.find((y) => y.modul.id === u.id).sira, 'duvar');
 });
+
+// ---------- Şekilli parçalar: formüller bağımsız sayısal yöntemle doğrulanır ----------
+
+/** Şekil yolunu çokgene çevirip alan (shoelace) ve çevre ölçer. */
+function ornekle(g) {
+  const nokta = [];
+  let x = 0, y = 0;
+  for (const k of g.yol) {
+    if (k[0] === 'M' || k[0] === 'L') { x = k[1]; y = k[2]; nokta.push([x, y]); }
+    else if (k[0] === 'Q') { // köşe: radyüs için çeyrek daire
+      const [cx, cy, ex, ey] = k.slice(1);
+      const r = Math.max(Math.abs(ex - x), Math.abs(ey - y));
+      // merkez: köşeden r içeride
+      const mx = cx === x ? ex : x, my = cy === y ? ey : y;
+      const merk = [cx === x ? ex : x, cy === y ? ey : y];
+      const a0 = Math.atan2(y - merk[1], x - merk[0]);
+      let a1 = Math.atan2(ey - merk[1], ex - merk[0]);
+      let d = a1 - a0; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+      for (let i = 1; i <= 200; i++) nokta.push([merk[0] + r * Math.cos(a0 + (d * i) / 200), merk[1] + r * Math.sin(a0 + (d * i) / 200)]);
+      x = ex; y = ey; void mx; void my;
+    } else if (k[0] === 'A') { // üst yay: (x,y)'den sol tarafa, tepe noktası k[4] yüksekliği kadar yukarıda
+      const R = k[1];
+      const sol = 0, sag = x, tabanY = y, f = k[4] === undefined ? 0 : 0;
+      void f;
+      const W = sag - sol;
+      const yayF = R - Math.sqrt(R * R - (W / 2) * (W / 2));
+      const merk = [W / 2, tabanY + yayF - R];
+      const a0 = Math.atan2(tabanY - merk[1], sag - merk[0]);
+      const a1 = Math.PI - a0;
+      for (let i = 1; i <= 2000; i++) { const a = a0 + ((a1 - a0) * i) / 2000; nokta.push([merk[0] + R * Math.cos(a), merk[1] + R * Math.sin(a)]); }
+      x = sol; y = tabanY;
+    } else if (k[0] === 'E') {
+      for (let i = 0; i < 20000; i++) { const a = (2 * Math.PI * i) / 20000; nokta.push([k[1] + k[1] * Math.cos(a), k[2] + k[2] * Math.sin(a)]); }
+    }
+  }
+  let alan = 0, cevre = 0;
+  for (let i = 0; i < nokta.length; i++) {
+    const [x1, y1] = nokta[i], [x2, y2] = nokta[(i + 1) % nokta.length];
+    alan += x1 * y2 - x2 * y1;
+    cevre += Math.hypot(x2 - x1, y2 - y1);
+  }
+  return { alan: Math.abs(alan) / 2, cevre };
+}
+
+test('şekil formülleri: alan ve çevre sayısal örneklemeyle tutarlı', () => {
+  const durumlar = [
+    ['egimli', 1000, 2000, 1000, 0], ['egimli', 800, 600, 900, 0],
+    ['radyus', 600, 400, 50, 4], ['radyus', 600, 400, 120, 2],
+    ['pah', 600, 400, 40, 4], ['oval', 600, 400, 0, 0], ['oval', 1200, 300, 0, 0],
+    ['daire', 500, 0, 0, 0], ['yarim_daire', 800, 0, 0, 0], ['kemer', 1000, 800, 200, 0], ['kemer', 600, 1800, 300, 0],
+  ];
+  for (const [tur, W, H, p, n] of durumlar) {
+    const g = Hesap.sekilGeometrisi(tur, W, H, p, n);
+    const o = ornekle(g);
+    assert.ok(Math.abs(o.alan - g.alan) / g.alan < 0.002, `${tur} alan ${g.alan.toFixed(0)} ≠ ${o.alan.toFixed(0)}`);
+    assert.ok(Math.abs(o.cevre - g.cevre) / g.cevre < 0.002, `${tur} çevre ${g.cevre.toFixed(1)} ≠ ${o.cevre.toFixed(1)}`);
+  }
+  // Bilinen değerler
+  const e = Hesap.sekilGeometrisi('egimli', 1000, 2000, 1000);
+  assert.equal(e.kutuH, 2000);
+  assert.ok(e.bilgi.includes('eğim açısı 45°'), e.bilgi.join());
+  const k = Hesap.sekilGeometrisi('kemer', 1000, 800, 200);
+  assert.ok(k.bilgi.includes('yay yarıçapı R725'));
+});
+
+test('şekilli panel: kaba kesim kutusu, net alan, bant ve CNC maliyeti', () => {
+  const m = Hesap.yeniModul('tabla');
+  m.sekil = 'oval'; m.boy = 1200; m.en = 800; // tabla: boy × en
+  const s = Hesap.modulHesapla(m, ayar);
+  const p = s.parcalar[0];
+  assert.equal(p.ad, 'Tabla – oval');
+  assert.deepEqual([p.boy, p.en], [1200, 800]); // kaba kesim kutusu = boy × en
+  const kes = Hesap.kesimOlcusu(p, ayar);
+  assert.deepEqual(kes, { boy: p.boy, en: p.en }, 'şekilli parçada bant düşülmez, kaba kutu kesilir');
+  assert.ok(Math.abs(Hesap.parcaAlanM2(p) - Math.PI * 0.6 * 0.4) < 1e-6);
+  assert.ok(p.not.includes('CNC'));
+  const pr = Hesap.projeyiNormallestir(proje([m]));
+  const { r } = maliyetKur(pr);
+  const cnc = r.kalemler.hizmet.find((h) => h.tur === 'sekil');
+  assert.ok(cnc && Math.abs(cnc.miktar - 3.2) < 0.1, 'oval çevresi ≈ 3,2 m CNC');
+  assert.ok(Math.abs(r.dagitimFarki) < 0.05);
+});
+
+test('kapak notunda menteşe delik konumları, yanlarda raf pimi notu', () => {
+  const s = Hesap.modulHesapla(Hesap.yeniModul('gardirop'), ayar);
+  const k = s.parcalar.find((p) => p.ad === 'Kapak (satır 2)');
+  // 1914 mm kapak → 4 menteşe: 100, 671.3, 1242.7, 1814
+  assert.match(k.not, /üstten 100 \/ 671\.3 \/ 1242\.7 \/ 1814 mm/);
+  const u = Hesap.modulHesapla(Hesap.yeniModul('ust'), ayar);
+  assert.match(u.parcalar.find((p) => p.ad === 'Yan').not, /32 mm aralıkla/);
+  assert.deepEqual(Hesap.mentesheKonumlari(717, 2), [100, 617]);
+});

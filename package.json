@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "test": "node --test test/*.test.js",
-    "paketle": "node tools/paketle.js"
+    "paketle": "node tools/paketle.js",
+    "denetim": "node tools/denetim.js 3000"
   }
 }

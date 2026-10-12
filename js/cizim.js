@@ -48,7 +48,7 @@
   /** Panel modülün görünüşü (orijin sol-alt): duvara bakınca görünen yüz. */
   function panelGovde(geo) {
     const cls = geo.kullanim === 'govde' ? 'govde' : 'kapak';
-    let s = rect(0, 0, geo.W, geo.H, cls);
+    let s = geo.sekil && geo.tur !== 'raf' && geo.tur !== 'tabla' && geo.tur !== 'yan_kapama' ? sekilYolu(geo.sekil, cls) : rect(0, 0, geo.W, geo.H, cls);
     if (geo.tur === 'bulasik') {
       const kw = Math.min(160, geo.W * 0.4);
       s += rect(geo.W / 2 - kw / 2, geo.H - 50, geo.W / 2 + kw / 2, geo.H - 38, 'kulp');
@@ -250,8 +250,43 @@
     return `<svg class="cizim" viewBox="${f(-pay)} ${f(-pay)} ${f(W + 2 * pay)} ${f(W2 + 2 * pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
+  /** Şekil yolunu SVG'ye çevirir (yol orijini sol-alt, y yukarı). */
+  function sekilYolu(g, cls) {
+    const e = g.yol.find((k) => k[0] === 'E');
+    if (e) return `<ellipse class="${cls}" cx="${f(e[1])}" cy="${f(-e[2])}" rx="${f(e[1])}" ry="${f(e[2])}"/>`;
+    let d = '';
+    let x = 0;
+    let y = 0;
+    for (const k of g.yol) {
+      if (k[0] === 'M' || k[0] === 'L') { d += `${k[0]}${f(k[1])},${f(-k[2])} `; x = k[1]; y = k[2]; }
+      else if (k[0] === 'Q') {
+        // Köşe yayı: kontrol noktası köşe; çeyrek daireye yakın görünüm için kübik eğri
+        const [cx, cy, ex, ey] = k.slice(1);
+        const c = 0.5523;
+        d += `C${f(x + (cx - x) * c)},${f(-(y + (cy - y) * c))} ${f(ex + (cx - ex) * c)},${f(-(ey + (cy - ey) * c))} ${f(ex)},${f(-ey)} `;
+        x = ex; y = ey;
+      } else if (k[0] === 'A') { d += `A${f(k[1])},${f(k[2])} 0 0 0 ${f(k[3])},${f(-k[4])} `; x = k[3]; y = k[4]; }
+      else if (k[0] === 'Z') d += 'Z';
+    }
+    return `<path class="${cls}" d="${d.trim()}"/>`;
+  }
+
   /** Panel modülün parça görünüşü: bantlı kenarlar kalın. */
   function panelOnGorunus(modul, geo) {
+    if (geo.sekil) {
+      const g = geo.sekil;
+      const w = g.kutuW;
+      const h = g.kutuH;
+      const fs = Math.max(w, h) / 26;
+      const pay = fs * 5;
+      let s = rect(0, 0, w, h, 'kaba-kesim');
+      s += sekilYolu(g, (geo.kullanim === 'govde' ? 'govde' : 'kapak') + ' sekil');
+      s += olcuYatay(0, w, -fs * 2, fs) + olcuDikey(0, h, -fs * 2, fs);
+      g.bilgi.forEach((b, i) => { s += yazi(w / 2, -fs * (4 + 1.3 * i), b, fs * 0.8, 'olcu-yazi'); });
+      s += yazi(w / 2, h + fs * 1.4, `${modul.ad} · ${geo.t} mm`, fs, 'baslik');
+      const alt = fs * (5 + 1.3 * g.bilgi.length);
+      return `<svg class="cizim" viewBox="${f(-pay)} ${f(-h - fs * 3)} ${f(w + 2 * pay)} ${f(h + fs * 3 + alt)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    }
     const yatay = geo.tur === 'raf' || geo.tur === 'tabla' || geo.tur === 'baza';
     const w = yatay ? geo.boy : geo.en;
     const h = yatay ? geo.en : geo.boy;
