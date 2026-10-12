@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mobilya Ölçü</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="ust-bar">
+    <div class="marka">
+      <strong>Mobilya Ölçü</strong>
+      <input id="projeAd" class="proje-ad" aria-label="Proje adı">
+    </div>
+    <div class="ust-butonlar">
+      <button id="btnYeniProje" class="ikincil">Yeni proje</button>
+      <button id="btnKaydet" class="ikincil">Dosyaya kaydet</button>
+      <label class="ikincil buton-label">Dosyadan aç<input id="dosyaAc" type="file" accept=".json,application/json" hidden></label>
+      <button id="btnYazdir">Yazdır / PDF</button>
+    </div>
+  </header>
+
+  <main class="duzen">
+    <aside class="sol">
+      <section class="kutu">
+        <h2>Modüller</h2>
+        <ul id="modulListesi" class="modul-listesi"></ul>
+        <div class="ekle-satir">
+          <select id="presetSec" aria-label="Modül tipi">
+            <option value="alt">Alt dolap (mutfak)</option>
+            <option value="ust">Üst dolap (mutfak)</option>
+            <option value="gardirop">Gardırop</option>
+            <option value="sifonyer">Şifonyer / çekmeceli</option>
+            <option value="kitaplik">Kitaplık / raflı</option>
+          </select>
+          <button id="btnModulEkle">+ Ekle</button>
+        </div>
+      </section>
+
+      <section class="kutu" id="modulForm"></section>
+    </aside>
+
+    <section class="sag">
+      <nav class="sekmeler" role="tablist">
+        <button data-sekme="cizim" class="aktif">Çizim</button>
+        <button data-sekme="kesim">Kesim listesi</button>
+        <button data-sekme="plaka">Plaka yerleşimi</button>
+        <button data-sekme="hirdavat">Hırdavat & özet</button>
+        <button data-sekme="ayarlar">Malzeme & ayarlar</button>
+      </nav>
+
+      <div id="uyarilar" class="uyarilar"></div>
+
+      <div class="sekme aktif" id="sekme-cizim">
+        <div class="cizim-arac">
+          <label><input type="checkbox" id="icGorunus"> İç görünüş (kapakları gizle)</label>
+        </div>
+        <div class="cizim-izgara">
+          <div id="cizimOn" class="cizim-kutu"></div>
+          <div id="cizimYan" class="cizim-kutu dar"></div>
+        </div>
+        <h3>Proje görünüşü</h3>
+        <div id="cizimProje" class="cizim-kutu"></div>
+      </div>
+
+      <div class="sekme" id="sekme-kesim">
+        <div class="arac-satir">
+          <button id="btnCsv" class="ikincil">CSV indir (Excel)</button>
+          <span class="not">Ölçüler mm. <b>Boy</b> damar/uzunluk yönüdür. Kesim ölçüsünden bant kalınlığı düşülmüştür (ayarlardan değiştirilebilir).</span>
+        </div>
+        <div id="kesimTablo" class="tablo-kap"></div>
+      </div>
+
+      <div class="sekme" id="sekme-plaka">
+        <div id="plakaAlan"></div>
+      </div>
+
+      <div class="sekme" id="sekme-hirdavat">
+        <div class="iki-kolon">
+          <div>
+            <h3>Hırdavat listesi</h3>
+            <div id="hirdavatTablo" class="tablo-kap"></div>
+          </div>
+          <div>
+            <h3>Malzeme özeti</h3>
+            <div id="ozetTablo" class="tablo-kap"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sekme" id="sekme-ayarlar">
+        <div id="ayarForm"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/hesap.js"></script>
+  <script src="js/yerlesim.js"></script>
+  <script src="js/cizim.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
