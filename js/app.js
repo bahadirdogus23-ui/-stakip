@@ -221,11 +221,21 @@
           ${rafli ? `<label title="Her bölmedeki raf sayısı">Raf${sayiGir('raf', s.raf, 'min="0" max="20"')}</label>` : ''}
           <span class="sk-arac"><button data-islem="satirYukari" title="Yukarı">↑</button><button data-islem="satirAsagi" title="Aşağı">↓</button><button data-islem="satirSil" title="Sil">✕</button></span>
         </div>
+        ${s.tip === 'cekmece' ? `<div class="sk-alt">
+          <label title="Çekmece kutusunun (yan) yüksekliği; boş = önden 40 mm kısa">Kutu yük.${sayiGir('kutuYukseklik', s.kutuYukseklik, 'min="50" placeholder="oto"')}</label>
+          <label title="Ray boyu; boş = sığan en uzun">Ray${secim('rayBoyu', s.rayBoyu || '', [['', 'Oto'], ...Hesap.RAY_BOYLARI.map((b) => [b, b + ' mm'])])}</label>
+          <label>Çekmece içi${secim('cekmeceIc', s.cekmeceIc, Object.entries(Hesap.CEKMECE_ICLERI))}</label>
+        </div>` : ''}
         ${rafli || kapak ? `<div class="sk-alt">
           ${rafli ? `<label title="Satır içi dikey ara bölme (yalnızca bu satırda)">Dikme${sayiGir('dikme', s.dikme, 'min="0" max="8"')}</label>` : ''}
           ${kapak && !surgu ? `<label>Kapak${secim('kapakTuru', s.kapakTuru, Object.entries(Hesap.KAPAK_TURLERI))}</label>` : ''}
           ${kapak && !surgu ? `<label>Açılım${secim('acilim', s.acilim, Object.entries(Hesap.ACILIMLAR))}</label>` : ''}
+          ${kapak && !surgu && s.adet === 1 && s.acilim === 'yana' ? `<label>Menteşe${secim('menteseYonu', s.menteseYonu, Object.entries(Hesap.MENTESE_YONLERI))}</label>` : ''}
+          ${kapak ? `<label title="Kapak arkasında gizli çekmece sayısı (satırın altına)">İç çekmece${sayiGir('icCekmece', s.icCekmece, 'min="0" max="4"')}</label>` : ''}
+          ${kapak && s.icCekmece > 0 ? `<label title="Her iç çekmece önünün yüksekliği">İç ç. yük.${sayiGir('icCekmeceH', s.icCekmeceH, 'min="60" placeholder="140"')}</label>
+            <label>Çekmece içi${secim('cekmeceIc', s.cekmeceIc, Object.entries(Hesap.CEKMECE_ICLERI))}</label>` : ''}
           ${rafli && s.raf > 0 ? `<label>Raf tipi${secim('rafTipi', s.rafTipi, [['ahsap', 'Ahşap'], ['cam', 'Cam']])}</label>` : ''}
+          ${rafli && s.raf > 0 && s.rafTipi !== 'cam' ? `<label title="Sabit raf ara bağlantıyla (ör. şeffaf T) vidalanır">Montaj${secim('rafSabit', String(!!s.rafSabit), [['false', 'Hareketli (pim)'], ['true', 'Sabit']])}</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="aski" type="checkbox" ${s.aski ? 'checked' : ''}> Askı</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="led" type="checkbox" ${s.led ? 'checked' : ''}> LED</label>` : ''}
         </div>` : ''}
@@ -289,7 +299,8 @@
     const bazaAlanlari = `
         <label>Baza${secim('baza.tip', m.baza.tip, [['yok', 'Yok'], ['ayak', 'Ayarlı ayak'], ['panel', 'Baza çerçevesi'], ['tekerlek', 'Tekerlek']])}</label>
         <label>Baza yük. (mm)${sayiGir('baza.yukseklik', m.baza.yukseklik, `min="0" ${m.baza.tip === 'yok' ? 'disabled' : ''}`)}</label>
-        <label>Baza geri çekme${sayiGir('baza.geriCekme', m.baza.geriCekme, `min="0" ${m.baza.tip !== 'panel' ? 'disabled' : ''}`)}</label>`;
+        <label>Baza geri çekme${sayiGir('baza.geriCekme', m.baza.geriCekme, `min="0" ${m.baza.tip !== 'panel' ? 'disabled' : ''}`)}</label>
+        ${m.tip === 'normal' && (m.baza.tip === 'ayak' || m.baza.tip === 'panel') ? `<label class="onay" title="Süpürgelikte bas-aç ile açılan gizli çekmece (baza en az 100 mm)"><input data-alan="bazaCekmece" type="checkbox" ${m.bazaCekmece ? 'checked' : ''}> Baza çekmecesi (gizli)</label>` : ''}`;
 
     let html = `
       <h2>${lk ? 'L köşe dolap ölçüleri' : 'Modül ölçüleri'}</h2>
@@ -348,6 +359,8 @@
     let deger = el.type === 'checkbox' ? el.checked : el.value;
     if (el.type === 'number') deger = el.value === '' ? null : Number(el.value);
     if (['surguAdet', 'bantU', 'bantK', 'koseSayisi'].includes(alan)) deger = Number(deger);
+    if (alan === 'rayBoyu') deger = deger === '' ? null : Number(deger);
+    if (alan === 'rafSabit') deger = deger === 'true';
     if (kart) {
       const s = m.sutunlar[Number(kart.dataset.sutun)].satirlar[Number(kart.dataset.satir)];
       s[alan] = deger;
@@ -549,6 +562,7 @@
     ['kapakBoslugu', 'Kapaklar arası boşluk (mm)'],
     ['disBosluk', 'Kapak dış kenar boşluğu (mm)'],
     ['cekmeceUstBosluk', 'Çekmece önü − kutu yük. farkı (mm)'],
+    ['icCekmeceYukseklik', 'İç çekmece önü yüksekliği (mm)'],
     ['arkalikKanalDerinligi', 'Arkalık kanal derinliği (mm)'],
     ['arkalikGeriPay', 'Kanalın arkaya mesafesi (mm)'],
     ['arkalikCakmaPay', 'Çakma arkalık kenar payı (mm)'],
@@ -592,6 +606,7 @@
       <h3>Üretim payları</h3>
       <div class="form-izgara">
         ${AYAR_ALANLARI.map(([k, t]) => `<label>${t}<input data-ayar="${k}" type="number" step="0.5" min="0" value="${A[k]}"></label>`).join('')}
+        <label>Çekmece tabanı<select data-ayar="cekmeceTabani"><option value="cakma"${A.cekmeceTabani === 'cakma' ? ' selected' : ''}>Alttan çakma</option><option value="kanal"${A.cekmeceTabani === 'kanal' ? ' selected' : ''}>Kanala geçme</option></select></label>
         <label class="onay"><input data-ayar="bantDus" type="checkbox" ${A.bantDus ? 'checked' : ''}> Bant kalınlığını kesim ölçüsünden düş</label>
       </div>
       <button id="btnAyarSifirla" class="ikincil">Varsayılanlara dön</button>`;

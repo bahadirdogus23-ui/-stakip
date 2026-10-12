@@ -266,7 +266,10 @@ test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
   assert.equal(p.ayarlar.malzemeler[0].kalinlik, 18);
   assert.equal(m.arkalik, 'kanal');
   assert.equal(m.baza.tip, 'yok');
-  assert.deepEqual(m.sutunlar[0].satirlar[0], { tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false });
+  assert.deepEqual(m.sutunlar[0].satirlar[0], {
+    tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false,
+    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null,
+  });
   assert.deepEqual(m.malzeme, {});
   assert.equal(p.yerlesim.tip, 'duz');
   assert.equal(p.yerlesim.duvarA, 3000);
@@ -575,4 +578,103 @@ test('kapak notunda menteşe delik konumları, yanlarda raf pimi notu', () => {
   const u = Hesap.modulHesapla(Hesap.yeniModul('ust'), ayar);
   assert.match(u.parcalar.find((p) => p.ad === 'Yan').not, /32 mm aralıkla/);
   assert.deepEqual(Hesap.mentesheKonumlari(717, 2), [100, 617]);
+});
+
+// ---------- Çekmece özelleştirmeleri, gizli çekmeceler, sabit raf, menteşe yönü ----------
+
+test('çekmece kutu yüksekliği ve ray boyu elle seçilir, sığmazsa sınırlanır', () => {
+  const m = Hesap.yeniModul('alt_cekmece3'); // 3. çekmece önü büyük
+  const s3 = m.sutunlar[0].satirlar[2];
+  s3.kutuYukseklik = 120;
+  s3.rayBoyu = 400;
+  let s = Hesap.modulHesapla(m, ayar);
+  const yan = s.parcalar.find((p) => p.ad === 'Çekmece yanı (satır 3)');
+  assert.deepEqual([yan.boy, yan.en], [400, 120]);
+  assert.ok(s.hirdavat.some((h) => h.ad === 'Bilyeli teleskopik ray 400 mm'));
+  s3.kutuYukseklik = 900; // sığmaz
+  s3.rayBoyu = 600;       // iç derinlik 542 → sığmaz
+  s = Hesap.modulHesapla(m, ayar);
+  const y2 = s.parcalar.find((p) => p.ad === 'Çekmece yanı (satır 3)');
+  assert.ok(y2.en < 900 && y2.boy === 500);
+  assert.ok(s.uyarilar.some((u) => u.includes('sığmıyor; en fazla')));
+  assert.ok(s.uyarilar.some((u) => u.includes('600 mm ray sığmıyor')));
+});
+
+test('çekmece tabanı kanala geçme seçeneği', () => {
+  const a2 = Hesap.varsayilanAyarlar();
+  a2.cekmeceTabani = 'kanal';
+  const s = Hesap.modulHesapla(Hesap.yeniModul('alt'), a2); // kutu 538 × 500, 16 mm yan
+  const t = s.parcalar.find((p) => p.ad.startsWith('Çekmece tabanı'));
+  assert.deepEqual([t.boy, t.en], [500 - 32 + 14, 538 - 32 + 14]);
+  assert.match(t.not, /kanal/);
+});
+
+test('iç (gizli) çekmece: dolgu paneli, iç ön, kutu ve raflar üstte', () => {
+  const m = Hesap.yeniModul('alt_kapak'); // 600 alt dolap, 2 kapak, 1 raf
+  const sat = m.sutunlar[0].satirlar[0];
+  sat.icCekmece = 2;
+  sat.icCekmeceH = 150;
+  const s = Hesap.modulHesapla(m, ayar);
+  const dolgu = s.parcalar.find((p) => p.ad.startsWith('İç çekmece dolgu paneli'));
+  assert.equal(dolgu.adet, 2);
+  assert.equal(dolgu.boy, 2 * 150 + 3 + 5);
+  const on = s.parcalar.find((p) => p.ad.startsWith('İç çekmece önü'));
+  assert.deepEqual([on.adet, on.boy, on.en], [2, 147, 564 - 36 - 4]);
+  const yan = s.parcalar.find((p) => p.ad.startsWith('Çekmece yanı') && p.ad.includes('iç çekmece'));
+  assert.equal(yan.en, 110); // 150 - 40
+  assert.equal(s.geo.satirlar[0].icCekmeceler.length, 2);
+  // Raf iç çekmece bölgesinin üstünde
+  assert.ok(s.geo.satirlar[0].raflar[0] > s.geo.satirlar[0].icCekmeceler[1].y2);
+  assert.ok(s.hirdavat.some((h) => h.kod === 'kulp_gomme'));
+});
+
+test('iç çekmece sığmazsa eklenmez ve uyarı verir', () => {
+  const m = Hesap.yeniModul('ust_klapa'); // 360 yükseklik
+  m.sutunlar[0].satirlar[0].icCekmece = 3;
+  const s = Hesap.modulHesapla(m, ayar);
+  assert.ok(!s.parcalar.some((p) => p.ad.startsWith('İç çekmece')));
+  assert.ok(s.uyarilar.some((u) => u.includes('iç çekmece') && u.includes('sığmıyor')));
+});
+
+test('baza çekmecesi: süpürgelikte, bas-aç, baza önü yerine geçer', () => {
+  const m = Hesap.yeniModul('kitaplik'); // baza çerçevesi 60 → yetersiz
+  m.bazaCekmece = true;
+  let s = Hesap.modulHesapla(m, ayar);
+  assert.ok(s.uyarilar.some((u) => u.includes('en az 100 mm')));
+  m.baza = { tip: 'panel', yukseklik: 120, geriCekme: 30 };
+  s = Hesap.modulHesapla(m, ayar); // 300 derinlikte ray sığmaz: hiçbir baza çekmecesi parçası eklenmemeli
+  assert.ok(s.uyarilar.some((u) => u.includes('baza çekmecesi') && u.includes('ray')));
+  assert.ok(!s.parcalar.some((p) => p.ad.startsWith('Baza çekmecesi')), 'sığmayan çekmecenin önü listeye girmemeli');
+  m.derinlik = 560;
+  s = Hesap.modulHesapla(m, ayar);
+  const on = s.parcalar.find((p) => p.ad === 'Baza çekmecesi önü');
+  assert.deepEqual([on.boy, on.en], [110, 800 - 3]);
+  assert.ok(!s.parcalar.some((p) => p.ad === 'Baza ön/arka'));
+  assert.equal(s.parcalar.find((p) => p.ad === 'Baza arkası').adet, 1);
+  assert.ok(s.hirdavat.some((h) => h.kod === 'basac'));
+  assert.ok(s.geo.bazaCekmece);
+});
+
+test('sabit raf ara bağlantıyla bağlanır, raf pimi kullanılmaz', () => {
+  const a2 = Hesap.varsayilanAyarlar();
+  a2.hirdavat.araBaglanti = 'seffaf_t';
+  const m = Hesap.yeniModul('ust'); // 2 raf, D 320 → bağlantı başına 2
+  m.sutunlar[0].satirlar[0].rafSabit = true;
+  const s = Hesap.modulHesapla(m, a2);
+  const raf = s.parcalar.find((p) => p.ad.startsWith('Sabit raf'));
+  assert.deepEqual([raf.boy, raf.adet], [564, 2]);
+  assert.ok(!s.hirdavat.some((h) => h.kod === 'raf_pimi'));
+  assert.equal(s.hirdavat.find((h) => h.kod === 'seffaf_t').adet, 2 * 2 * 2);
+});
+
+test('çatal-kaşıklık çekmece içine eklenir; menteşe yönü nota ve çizime yansır', () => {
+  const m = Hesap.yeniModul('alt');
+  m.sutunlar[0].satirlar[0].cekmeceIc = 'catal';
+  let s = Hesap.modulHesapla(m, ayar);
+  assert.ok(s.hirdavat.some((h) => h.kod === 'catal_kasiklik'));
+  const t = Hesap.yeniModul('ust_tek');
+  t.sutunlar[0].satirlar[0].menteseYonu = 'sag';
+  s = Hesap.modulHesapla(t, ayar);
+  assert.match(s.parcalar.find((p) => p.ad.startsWith('Kapak')).not, /sağ kenarda/);
+  assert.equal(s.geo.satirlar[0].menteseYonu, 'sag');
 });

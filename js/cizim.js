@@ -75,6 +75,11 @@
       s += rect(0, 0, W, hb, 'baza');
     }
 
+    if (geo.bazaCekmece && !ic) {
+      const b = geo.bazaCekmece;
+      s += rect(b.x1, b.y1, b.x2, b.y2, 'cekmece-on baza-cekmece');
+      s += `<circle class="basac-isaret" cx="${f((b.x1 + b.x2) / 2)}" cy="${f(-(b.y1 + b.y2) / 2)}" r="${f(Math.min(10, (b.y2 - b.y1) / 4))}"/>`;
+    }
     s += rect(0, yb, W, yb + Hc, 'govde');
     s += rect(t, yb + t, W - t, yb + Hc - t, 'ic');
 
@@ -102,6 +107,11 @@
         s += yazi((b.x1 + b.x2) / 2, yb + (sat.icAlt + sat.icUst) / 2 - fsN / 3, 'Cihaz nişi', fsN, 'nis-yazi');
       }
       for (const c of sat.cekmeceler) s += rect(c.x1, yb + c.y1, c.x2, yb + c.y2, 'cekmece-kutu');
+      for (const c of sat.icCekmeceler || []) {
+        s += rect(c.x1, yb + c.y1, c.x2, yb + c.y2, 'ic-cekmece');
+        const kw = Math.min(100, (c.x2 - c.x1) * 0.25);
+        s += rect((c.x1 + c.x2) / 2 - kw / 2, yb + c.y2 - 22, (c.x1 + c.x2) / 2 + kw / 2, yb + c.y2 - 14, 'kulp');
+      }
     }
 
     // Ön yüzler (sürgü kapaklı dolapta iç çekmece önleri yalnızca iç görünüşte)
@@ -114,7 +124,8 @@
         const n = sat.onler.length;
         sat.onler.forEach((o, k) => {
           if (sat.tip !== 'kapak') {
-            s += rect(o.x1, y1, o.x2, y2, 'cekmece-on');
+            s += rect(o.x1, y1, o.x2, y2, sat.sahteOn ? 'cekmece-on sahte' : 'cekmece-on');
+            if (sat.sahteOn) return;
             const kw = Math.min(160, (o.x2 - o.x1) * 0.4);
             const cx = (o.x1 + o.x2) / 2;
             const ky = y2 - Math.min(50, (y2 - y1) / 3);
@@ -134,7 +145,7 @@
             s += rect(mx - kw / 2, y2 - 42, mx + kw / 2, y2 - 30, 'kulp');
           } else {
             // Menteşe tarafı: tek kapak solda, çiftlerde dışlarda
-            const solMentese = n === 1 ? true : k % 2 === 0;
+            const solMentese = n === 1 ? sat.menteseYonu !== 'sag' : k % 2 === 0;
             const hx = solMentese ? o.x1 : o.x2;
             const ax = solMentese ? o.x2 : o.x1;
             s += `<polyline class="acilis" points="${f(ax)},${f(-y2)} ${f(hx)},${f(-(y1 + y2) / 2)} ${f(ax)},${f(-y1)}"/>`;

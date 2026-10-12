@@ -4,8 +4,11 @@
 
 ## Neler yapar?
 
-- **Dolap kataloğu (49 hazır modül, resimli):** mutfak alt (çekmeceli, evye, ankastre fırın, şişelik, kör köşe, L köşe, ada), mutfak üst (camlı vitrin, kaldırmalı kapak, aspiratör üstü, buzdolabı üstü, açık raf, L köşe), mutfak boy (fırın + mikrodalga, kiler, kahve köşesi, buzdolabı kabini), yatak odası (2/3/4 kapaklı ve sürgülü/aynalı gardırop, şifonyer, komodin, makyaj ünitesi), banyo (lavabo altı, boy dolap, aynalı dolap), salon (TV ünitesi, vitrin, büfe, kitaplık), antre (ayakkabılık, vestiyer), ofis (dosya dolabı, keson) ve paneller (yan kapama, dolgu, bulaşık makinesi kapağı, duvar rafı, tabla, baza bandı).
+- **Dolap kataloğu (51 hazır modül, resimli):** mutfak alt (çekmeceli, iç çekmeceli, baza çekmeceli, evye, ankastre fırın, şişelik, kör köşe, L köşe, ada), mutfak üst (camlı vitrin, kaldırmalı kapak, aspiratör üstü, buzdolabı üstü, açık raf, L köşe), mutfak boy (fırın + mikrodalga, kiler, kahve köşesi, buzdolabı kabini), yatak odası (2/3/4 kapaklı ve sürgülü/aynalı gardırop, şifonyer, komodin, makyaj ünitesi), banyo (lavabo altı, boy dolap, aynalı dolap), salon (TV ünitesi, vitrin, büfe, kitaplık), antre (ayakkabılık, vestiyer), ofis (dosya dolabı, keson) ve paneller (yan kapama, dolgu, bulaşık makinesi kapağı, duvar rafı, tabla, baza bandı).
 - **Elle tasarım:** her dolap dikey bölmelere ayrılır (boydan dikme), her bölmenin içi yukarıdan aşağı satırlarla düzenlenir: kapak, çekmece, açık raf, cihaz nişi. Satır başına raf (ahşap/cam), satır içi dikme, askı borusu ve LED. Çizim canlı güncellenir.
+- **Çekmece seçenekleri:** kutu yüksekliği ve ray boyu elle seçilebilir (sığmazsa sınırlanır ve uyarılır), çekmece içi (çatal-kaşıklık, bölücü), taban alttan çakma veya kanala geçme. Ray sığmayan çekmece yerine "sabit ön" çıkar.
+- **Gizli çekmeceler:** kapak arkasında iç çekmece (menteşeyi aşan dolgu panelleriyle) ve süpürgelikte bas-aç baza çekmecesi.
+- **Raf ve kapak:** sabit raf (ara bağlantıyla, ör. şeffaf T) veya hareketli raf (pim); tek kapakta menteşe yönü.
 - **Kapak türleri:** düz panel, çerçevesiz cam, alüminyum profil + cam, MDF çerçeve + cam, ayna; açılım: yana, yukarı kalkan (amortisörlü), aşağı devrilen (klapa); sürgü kapak (düz, aynalı, camlı).
 - **Köşe dolaplar:** L köşe dolap iki kollu hesaplanır (katlanır kapaklar, iki parça L tabla ve raflar, kola göre arkalık). Normal dolaplara kör köşe paneli eklenebilir.
 - **Mutfak / yerleşim:** düz veya L yerleşim; duvar uzunlukları girilir, modüller A/B duvarına atanır. Kuşbakışı plan, iki duvar görünüşü, kalan boşluk ve taşma uyarısı.

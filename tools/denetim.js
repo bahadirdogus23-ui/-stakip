@@ -48,11 +48,15 @@ function rastgeleModul() {
       s.yukseklik = rnd() < 0.5 ? null : ara(100, 600);
       if (tip === 'kapak' || tip === 'cekmece') s.adet = ara(1, 3);
       if (tip === 'kapak') { s.kapakTuru = sec(Object.keys(H.KAPAK_TURLERI)); s.acilim = sec(['yana', 'yana', 'yukari', 'asagi']); }
-      if (tip === 'kapak' || tip === 'acik') { s.raf = ara(0, 3); s.rafTipi = sec(['ahsap', 'cam']); s.dikme = rnd() < 0.2 ? 1 : 0; s.led = rnd() < 0.3; }
+      if (tip === 'kapak' || tip === 'acik') { s.raf = ara(0, 3); s.rafTipi = sec(['ahsap', 'cam']); s.dikme = rnd() < 0.2 ? 1 : 0; s.led = rnd() < 0.3; s.rafSabit = rnd() < 0.3; }
+      if (tip === 'kapak') { s.icCekmece = rnd() < 0.3 ? ara(1, 3) : 0; s.icCekmeceH = rnd() < 0.5 ? ara(80, 250) : null; s.menteseYonu = sec(['oto', 'sol', 'sag']); }
+      if (tip === 'cekmece' || tip === 'kapak') { s.kutuYukseklik = rnd() < 0.3 ? ara(40, 400) : null; s.rayBoyu = rnd() < 0.3 ? sec(H.RAY_BOYLARI) : null; s.cekmeceIc = sec(['yok', 'catal', 'bolucu']); }
     }
     m.sutunlar.push({ genislik: rnd() < 0.3 ? ara(200, 700) : null, satirlar });
   }
   m.korPanel = rnd() < 0.1 ? ara(300, 600) : 0;
+  m.bazaCekmece = rnd() < 0.3;
+  if (rnd() < 0.3) m.baza = { tip: sec(['ayak', 'panel']), yukseklik: ara(60, 160), geriCekme: ara(0, 60) };
   return m;
 }
 
@@ -95,8 +99,19 @@ function denetle(m, A) {
     }
     if (sat.icH <= 0 && !uyarili) ihlal('Uyarısız negatif iç yükseklik', m, `${sat.icH}`);
   }
+  // Yetim parça: çekmece önü olan her çekmecenin kutusu da olmalı
+  const kutuSayisi = s.parcalar.filter((p) => p.ad.startsWith('Çekmece yanı') || p.ad.startsWith('Çekmece arkalığı')).reduce((a, p) => a + (p.ad.startsWith('Çekmece yanı') ? p.adet / 2 : p.adet), 0);
+  const onSayisi = s.parcalar.filter((p) => p.ad.startsWith('Çekmece önü') || p.ad.startsWith('İç çekmece önü') || p.ad === 'Baza çekmecesi önü').reduce((a, p) => a + p.adet, 0);
+  if (onSayisi > kutuSayisi) ihlal('Kutusu olmayan çekmece önü (yetim parça)', m, `${onSayisi} ön, ${kutuSayisi} kutu`);
+  // İç çekmeceler satırın iç yüksekliğinde ve raflar üstlerinde
+  for (const sat of g.satirlar) {
+    for (const c of sat.icCekmeceler || []) if (c.y2 > sat.icUst + E || c.y1 < sat.icAlt - E) ihlal('İç çekmece satır dışında', m, `${c.y1}-${c.y2} / ${sat.icAlt}-${sat.icUst}`);
+    const ust = Math.max(0, ...(sat.icCekmeceler || []).map((c) => c.y2));
+    for (const ry of sat.raflar) if (ust && ry < ust) ihlal('Raf iç çekmecenin içinde', m, `${ry} < ${ust}`);
+    for (const c of sat.cekmeceler) if (c.kutuH > sat.on.h + E && sat.tip === 'cekmece') ihlal('Kutu çekmece önünden yüksek', m, `${c.kutuH} > ${sat.on.h}`);
+  }
   // Raflar bölme genişliğinden kısa
-  for (const p of s.parcalar.filter((x) => /^(Raf|Cam raf)/.test(x.ad))) {
+  for (const p of s.parcalar.filter((x) => /^(Raf|Cam raf|Sabit raf)/.test(x.ad))) {
     const maxW = Math.max(...g.sutunlar.map((c) => c.x2 - c.x1));
     if (p.boy > maxW + E) ihlal('Raf bölmeden uzun', m, `${p.boy} > ${maxW}`);
     if (p.en > g.icDerinlik + E) ihlal('Raf iç derinlikten derin', m, `${p.en} > ${g.icDerinlik}`);

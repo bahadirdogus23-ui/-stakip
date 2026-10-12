@@ -272,6 +272,11 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 .yardim-icerik { padding: 6px 22px 18px; line-height: 1.55; }
 .yardim-icerik li { margin-bottom: 6px; }
 
+.cizim .ic-cekmece { fill: #ead9bc; stroke: #7b6a52; stroke-width: 1; }
+.cizim .cekmece-on.sahte { fill: #e9e2d4; stroke-dasharray: 6 4; }
+.cizim .basac-isaret { fill: none; stroke: #6f6658; stroke-width: 1; }
+.form-izgara label.onay { flex-direction: row; align-items: center; gap: 6px; color: var(--metin); }
+
 #yazdirAlan { display: none; }
 
 @media print {
