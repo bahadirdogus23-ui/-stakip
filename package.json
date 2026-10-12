@@ -1,9 +1,10 @@
 {
   "name": "mobilya-olcu",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Mobilya tasarım, ölçü ve kesim listesi programı",
   "private": true,
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "paketle": "node tools/paketle.js"
   }
 }

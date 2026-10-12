@@ -1,6 +1,6 @@
 # Mobilya Ölçü
 
-İmal edilecek mobilyayı modül modül tasarlayıp **tüm parça ölçülerini, kesim listesini, plaka yerleşimini ve hırdavat listesini** otomatik çıkaran program. Kurulum gerektirmez: `index.html` dosyasını tarayıcıda açmanız yeterli (internet bağlantısı da gerekmez).
+İmal edilecek mobilyayı modül modül tasarlayıp **tüm parça ölçülerini, kesim listesini, plaka yerleşimini ve hırdavat listesini** otomatik çıkaran program. Kurulum gerektirmez: `dist/MobilyaOlcu.html` tek dosyasını (veya `index.html`'i) tarayıcıda açmanız yeterli; internet bağlantısı da gerekmez.
 
 ## Neler yapar?
 
@@ -43,4 +43,4 @@ js/cizim.js     SVG teknik çizimler
 js/app.js       arayüz
 ```
 
-Testler: `npm test` (Node 18+).
+Testler: `npm test` (Node 18+). Tek dosya paketi: `npm run paketle` → `dist/MobilyaOlcu.html`.
