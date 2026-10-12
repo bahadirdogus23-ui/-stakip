@@ -61,20 +61,68 @@
     },
   };
 
+  /**
+   * Fiyatlandırılan hırdavat kalemleri. Fiyatlar ÖRNEK değerlerdir (TL, KDV hariç);
+   * kullanıcı kendi güncel fiyatlarını "Fiyat & maliyet" sekmesinden girer.
+   */
+  const HIRDAVAT_KALEMLERI = {
+    minifix: { ad: 'Minifix (gövde + pim)', birim: 'takım', fiyat: 6 },
+    kavela: { ad: 'Kavela 8×35', birim: 'adet', fiyat: 0.5 },
+    konfirmat: { ad: 'Konfirmat vida 7×50', birim: 'adet', fiyat: 1.5 },
+    tutkal: { ad: 'Ahşap tutkalı', birim: 'birleşim', fiyat: 2 },
+    mentese_standart: { ad: 'Menteşe standart', birim: 'adet', fiyat: 35 },
+    mentese_frenli: { ad: 'Menteşe frenli', birim: 'adet', fiyat: 85 },
+    mentese_yaysiz: { ad: 'Menteşe yaysız', birim: 'adet', fiyat: 60 },
+    mentese_katlanir: { ad: 'Katlanır kapak bağlantı menteşesi', birim: 'adet', fiyat: 120 },
+    ray_bilyeli: { ad: 'Bilyeli teleskopik ray', birim: 'takım', fiyat: 220 },
+    ray_bilyeli_frenli: { ad: 'Frenli bilyeli teleskopik ray', birim: 'takım', fiyat: 450 },
+    ray_gizli: { ad: 'Gizli frenli ray', birim: 'takım', fiyat: 850 },
+    cekmece_metal: { ad: 'Metal yanlı çekmece seti', birim: 'takım', fiyat: 2200 },
+    basac: { ad: 'Bas-aç mekanizması', birim: 'adet', fiyat: 120 },
+    basac_ray: { ad: 'Ray için bas-aç adaptörü', birim: 'adet', fiyat: 250 },
+    kulp: { ad: 'Kulp', birim: 'adet', fiyat: 75 },
+    kulp_gomme: { ad: 'Gömme kulp', birim: 'adet', fiyat: 60 },
+    gola: { ad: 'Gola profil', birim: 'm', fiyat: 280 },
+    ayak_plastik: { ad: 'Plastik ayarlı ayak', birim: 'adet', fiyat: 15 },
+    ayak_metal: { ad: 'Metal ayarlı ayak', birim: 'adet', fiyat: 60 },
+    raf_pimi: { ad: 'Raf pimi', birim: 'adet', fiyat: 1 },
+    raf_baglanti: { ad: 'Raf birleştirme bağlantısı', birim: 'adet', fiyat: 10 },
+    aski_borusu: { ad: 'Askı borusu', birim: 'm', fiyat: 160 },
+    aski_flans: { ad: 'Askı borusu flanşı', birim: 'adet', fiyat: 15 },
+    arkalik_vida: { ad: 'Arkalık vidası / zımba çivisi', birim: 'adet', fiyat: 0.4 },
+    kor_kosebent: { ad: 'Kör panel köşebendi', birim: 'adet', fiyat: 5 },
+  };
+
   const VARSAYILAN_AYARLAR = {
     malzemeler: [
-      { id: 'sl18', ad: 'Suntalam Beyaz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false },
-      { id: 'sl18c', ad: 'Suntalam Ceviz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: true },
-      { id: 'sl16', ad: 'Suntalam Beyaz 16mm', tur: 'Suntalam', kalinlik: 16, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false },
-      { id: 'mdflam18', ad: 'MDF Lam Beyaz 18mm', tur: 'MDF Lam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 1, damar: false },
-      { id: 'lake18', ad: 'MDF Lake 18mm (boyalı)', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false },
-      { id: 'akrilik18', ad: 'Akrilik Parlak 18mm', tur: 'Akrilik / parlak', kalinlik: 18, plakaUzun: 2800, plakaKisa: 1220, bant: 1, damar: false },
-      { id: 'kp18', ad: 'Kontrplak 18mm', tur: 'Kontrplak', kalinlik: 18, plakaUzun: 2440, plakaKisa: 1220, bant: 0.5, damar: true },
-      { id: 'hdf8', ad: 'HDF Beyaz 8mm', tur: 'HDF', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false },
-      { id: 'hdf4', ad: 'HDF Beyaz 4mm', tur: 'HDF', kalinlik: 4, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false },
+      { id: 'sl18', ad: 'Suntalam Beyaz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false , plakaFiyati: 2200, bantFiyati: 12, islemFiyatiM2: 0 },
+      { id: 'sl18c', ad: 'Suntalam Ceviz 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: true , plakaFiyati: 2600, bantFiyati: 14, islemFiyatiM2: 0 },
+      { id: 'sl16', ad: 'Suntalam Beyaz 16mm', tur: 'Suntalam', kalinlik: 16, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false , plakaFiyati: 2000, bantFiyati: 12, islemFiyatiM2: 0 },
+      { id: 'mdflam18', ad: 'MDF Lam Beyaz 18mm', tur: 'MDF Lam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 1, damar: false , plakaFiyati: 3200, bantFiyati: 18, islemFiyatiM2: 0 },
+      { id: 'lake18', ad: 'MDF Lake 18mm (boyalı)', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false , plakaFiyati: 2600, bantFiyati: 0, islemFiyatiM2: 1400 },
+      { id: 'akrilik18', ad: 'Akrilik Parlak 18mm', tur: 'Akrilik / parlak', kalinlik: 18, plakaUzun: 2800, plakaKisa: 1220, bant: 1, damar: false , plakaFiyati: 9000, bantFiyati: 30, islemFiyatiM2: 0 },
+      { id: 'kp18', ad: 'Kontrplak 18mm', tur: 'Kontrplak', kalinlik: 18, plakaUzun: 2440, plakaKisa: 1220, bant: 0.5, damar: true , plakaFiyati: 3800, bantFiyati: 15, islemFiyatiM2: 0 },
+      { id: 'hdf8', ad: 'HDF Beyaz 8mm', tur: 'HDF', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false , plakaFiyati: 950, bantFiyati: 0, islemFiyatiM2: 0 },
+      { id: 'hdf4', ad: 'HDF Beyaz 4mm', tur: 'HDF', kalinlik: 4, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false , plakaFiyati: 650, bantFiyati: 0, islemFiyatiM2: 0 },
     ],
     kullanim: { govde: 'sl18', kapak: 'mdflam18', cekmece: 'sl16', arkalik: 'hdf8' },
     hirdavat: { baglanti: 'minifix', mentese: 'frenli', ray: 'bilyeli', kulp: 'kulp', ayak: 'plastik' },
+    // Fiyat ve maliyet (TL, KDV hariç). Tüm fiyatlar örnektir.
+    fiyat: {
+      hirdavat: {},             // kod -> birim fiyat (boşsa katalog örnek fiyatı)
+      plakaHesabi: 'tam',       // 'tam': yerleşimdeki tam plaka sayısı, 'alan': net alan + fire
+      alanFire: 15,             // % (alan hesabında)
+      bantFire: 10,             // %
+      ebatlamaPlaka: 150,       // plaka başı kesim (ebatlama) ücreti
+      bantCekmeM: 12,           // metre başı bant çekme ücreti
+      atolyeIscilikModul: 1500, // modül başı atölye işçiliği
+      montajModul: 750,         // modül başı yerinde montaj
+      nakliye: 2000,            // proje başı
+      ekKalemler: [],           // [{ ad, tutar }] tezgah, cam, LED vb.
+      karOrani: 30,             // %
+      kdvOrani: 20,             // %
+    },
+    firma: { ad: '', telefon: '', adres: '' },
     testereKalinligi: 4,      // kesim bıçağı payı
     plakaKenarPayi: 10,       // plaka kenarından kırpılan pay
     bantDus: true,            // bant kalınlığını kesim ölçüsünden düş
@@ -145,6 +193,7 @@
 
   const kopya = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (x) => Math.round(x * 10) / 10;
+  const r3 = (x) => Math.round(x * 1000) / 1000;
   const say = (v, vars) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : vars;
@@ -172,50 +221,167 @@
   }
 
   function yeniMalzeme() {
-    return { id: yeniId('mz'), ad: 'Yeni malzeme 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false };
+    return { id: yeniId('mz'), ad: 'Yeni malzeme 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false, plakaFiyati: 0, bantFiyati: 0, islemFiyatiM2: 0 };
   }
 
-  /**
-   * Eski sürüm kayıtlarını ve eksik alanları günceller.
-   * v1'de "malzemeler" kullanım adına göre bir nesneydi; artık bir kütüphane dizisidir.
-   */
-  function projeyiGuncelle(p) {
+  // ---------- Veri doğrulama ----------
+  // Proje dosyası ve tarayıcı kaydı dışarıdan gelir: her alan beklenen türe
+  // zorlanır, bilinmeyen alanlar atılır. Böylece arayüze yalnızca sayı, izinli
+  // seçenek ve güvenli kimlik ulaşır.
+  const sayiAl = (v, vars, min, max) => {
+    const n = Number(v);
+    if (v === null || v === '' || typeof v === 'boolean' || !Number.isFinite(n)) return vars;
+    return Math.min(max == null ? Infinity : max, Math.max(min == null ? -Infinity : min, n));
+  };
+  const metinAl = (v, vars, uzunluk) => (typeof v === 'string' || typeof v === 'number' ? String(v).slice(0, uzunluk || 120) : vars);
+  const secenekAl = (v, izinli, vars) => (izinli.includes(v) ? v : vars);
+  const ID_DESENI = /^[A-Za-z0-9_-]{1,40}$/;
+  const kimlikAl = (v, on) => (typeof v === 'string' && ID_DESENI.test(v) ? v : yeniId(on));
+
+  function malzemeNormallestir(m) {
+    const v = yeniMalzeme();
+    return {
+      id: kimlikAl(m && m.id, 'mz'),
+      ad: metinAl(m && m.ad, v.ad, 80),
+      tur: secenekAl(m && m.tur, MALZEME_TURLERI, 'Diğer'),
+      kalinlik: sayiAl(m && m.kalinlik, 18, 1, 100),
+      plakaUzun: sayiAl(m && m.plakaUzun, 2800, 100, 10000),
+      plakaKisa: sayiAl(m && m.plakaKisa, 2100, 100, 10000),
+      bant: sayiAl(m && m.bant, 0, 0, 5),
+      damar: !!(m && m.damar),
+      plakaFiyati: sayiAl(m && m.plakaFiyati, 0, 0),
+      bantFiyati: sayiAl(m && m.bantFiyati, 0, 0),
+      islemFiyatiM2: sayiAl(m && m.islemFiyatiM2, 0, 0),
+    };
+  }
+
+  function satirNormallestir(r) {
+    const s = r || {};
+    const h = sayiAl(s.yukseklik, null, 0, 5000);
+    return {
+      tip: secenekAl(s.tip, ['kapak', 'cekmece', 'acik'], 'kapak'),
+      yukseklik: h > 0 ? h : null,
+      adet: Math.floor(sayiAl(s.adet, 1, 1, 8)),
+      raf: Math.floor(sayiAl(s.raf, 0, 0, 20)),
+      dikme: Math.floor(sayiAl(s.dikme, 0, 0, 8)),
+      aski: !!s.aski,
+    };
+  }
+
+  function modulNormallestir(m, ayar) {
+    const x = m || {};
+    const malzIdleri = ayar.malzemeler.map((k) => k.id);
+    const malzeme = {};
+    const hirdavat = {};
+    for (const k of KULLANIMLAR) if (x.malzeme && malzIdleri.includes(x.malzeme[k])) malzeme[k] = x.malzeme[k];
+    for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) {
+      if (x.hirdavat && HIRDAVAT_SECENEKLERI[k].secenekler[x.hirdavat[k]]) hirdavat[k] = x.hirdavat[k];
+    }
+    const baza = x.baza || {};
+    const lk = x.tip === 'lkose';
+    return {
+      id: kimlikAl(x.id, 'm'),
+      tip: lk ? 'lkose' : 'normal',
+      ad: metinAl(x.ad, 'Modül', 80),
+      adet: Math.floor(sayiAl(x.adet, 1, 1, 999)),
+      genislik: sayiAl(x.genislik, 600, 0, 10000),
+      genislik2: sayiAl(x.genislik2, 900, 0, 10000),
+      yukseklik: sayiAl(x.yukseklik, 720, 0, 5000),
+      derinlik: sayiAl(x.derinlik, 560, 0, 3000),
+      montajYuksekligi: sayiAl(x.montajYuksekligi, 0, 0, 5000),
+      duvar: secenekAl(x.duvar, ['A', 'B'], 'A'),
+      yapi: secenekAl(x.yapi, ['yanlar_boydan', 'tabla_boydan'], 'yanlar_boydan'),
+      ust: secenekAl(x.ust, ['tam', 'kusak'], 'tam'),
+      arkalik: lk ? 'cakma' : secenekAl(x.arkalik, ['kanal', 'cakma', 'yok'], 'kanal'),
+      kapakTipi: lk ? 'tam' : secenekAl(x.kapakTipi, ['tam', 'ic'], 'tam'),
+      baza: {
+        tip: secenekAl(baza.tip, ['yok', 'ayak', 'panel'], 'yok'),
+        yukseklik: sayiAl(baza.yukseklik, 0, 0, 500),
+        geriCekme: sayiAl(baza.geriCekme, 0, 0, 500),
+      },
+      korPanel: sayiAl(x.korPanel, 0, 0, 2000),
+      korTaraf: secenekAl(x.korTaraf, ['sol', 'sag'], 'sol'),
+      raf: Math.floor(sayiAl(x.raf, 0, 0, 20)),
+      satirlar: lk ? [] : (Array.isArray(x.satirlar) ? x.satirlar : []).slice(0, 20).map(satirNormallestir),
+      malzeme,
+      hirdavat,
+    };
+  }
+
+  /** Projeyi doğrular ve eksik alanları varsayılanla tamamlar (yeni nesne döner). */
+  function projeyiNormallestir(p) {
     const v = varsayilanAyarlar();
-    const A = Object.assign({}, v, p.ayarlar || {});
-    if (A.malzemeler && !Array.isArray(A.malzemeler)) {
-      const eski = A.malzemeler;
-      A.malzemeler = [];
-      A.kullanim = {};
-      for (const k of KULLANIMLAR) {
-        const m = eski[k];
-        if (!m) { A.kullanim[k] = v.kullanim[k]; continue; }
-        let var_ = A.malzemeler.find((x) => x.ad === m.ad && Number(x.kalinlik) === Number(m.kalinlik));
-        if (!var_) {
-          var_ = Object.assign({ id: 'eski_' + k, tur: 'Diğer' }, m);
-          A.malzemeler.push(var_);
-        }
-        A.kullanim[k] = var_.id;
-      }
-      for (const m of v.malzemeler) if (!A.malzemeler.some((x) => x.ad === m.ad)) A.malzemeler.push(m);
+    const g = (p && p.ayarlar) || {};
+    const A = {};
+    for (const k of Object.keys(v)) {
+      if (typeof v[k] === 'number') A[k] = sayiAl(g[k], v[k], 0, 1000);
+      else if (typeof v[k] === 'boolean') A[k] = g[k] == null ? v[k] : !!g[k];
     }
-    if (!Array.isArray(A.malzemeler) || !A.malzemeler.length) A.malzemeler = v.malzemeler;
-    A.kullanim = Object.assign({}, v.kullanim, A.kullanim);
-    for (const k of KULLANIMLAR) if (!A.malzemeler.some((m) => m.id === A.kullanim[k])) A.kullanim[k] = A.malzemeler[0].id;
-    A.hirdavat = Object.assign({}, v.hirdavat, A.hirdavat);
-    p.ayarlar = A;
-    p.yerlesim = Object.assign({ tip: 'duz', duvarA: 3600, duvarB: 2400 }, p.yerlesim || {});
-    for (const m of p.moduller || []) {
-      if (!m.tip) m.tip = 'normal';
-      if (m.montajYuksekligi == null) m.montajYuksekligi = 0;
-      if (m.korPanel == null) m.korPanel = 0;
-      if (!m.korTaraf) m.korTaraf = 'sol';
-      if (!m.duvar) m.duvar = 'A';
-      if (!m.malzeme) m.malzeme = {};
-      if (!m.hirdavat) m.hirdavat = {};
-      if (!m.satirlar) m.satirlar = [];
-      if (!m.baza) m.baza = { tip: 'yok', yukseklik: 0, geriCekme: 0 };
+    A.malzemeler = (Array.isArray(g.malzemeler) && g.malzemeler.length ? g.malzemeler : v.malzemeler).slice(0, 100).map(malzemeNormallestir);
+    // Tekrarlanan kimlikleri ayır
+    const gorulen = new Set();
+    for (const m of A.malzemeler) {
+      if (gorulen.has(m.id)) m.id = yeniId('mz');
+      gorulen.add(m.id);
     }
-    return p;
+    A.kullanim = {};
+    for (const k of KULLANIMLAR) {
+      const id = g.kullanim && g.kullanim[k];
+      A.kullanim[k] = A.malzemeler.some((m) => m.id === id) ? id : (A.malzemeler.find((m) => m.id === v.kullanim[k]) || A.malzemeler[0]).id;
+    }
+    A.hirdavat = {};
+    for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) {
+      const x = g.hirdavat && g.hirdavat[k];
+      A.hirdavat[k] = HIRDAVAT_SECENEKLERI[k].secenekler[x] ? x : v.hirdavat[k];
+    }
+    const gf = g.fiyat || {};
+    const F = {};
+    for (const k of Object.keys(v.fiyat)) if (typeof v.fiyat[k] === 'number') F[k] = sayiAl(gf[k], v.fiyat[k], 0, k.endsWith('Orani') || k.endsWith('Fire') ? 1000 : undefined);
+    F.plakaHesabi = secenekAl(gf.plakaHesabi, ['tam', 'alan'], 'tam');
+    F.hirdavat = {};
+    for (const k of Object.keys(HIRDAVAT_KALEMLERI)) {
+      const f = sayiAl(gf.hirdavat && gf.hirdavat[k], null, 0);
+      if (f !== null) F.hirdavat[k] = f;
+    }
+    F.ekKalemler = (Array.isArray(gf.ekKalemler) ? gf.ekKalemler : []).slice(0, 50).map((e) => ({
+      ad: metinAl(e && e.ad, 'Ek kalem', 80),
+      tutar: sayiAl(e && e.tutar, 0, 0),
+    }));
+    A.fiyat = F;
+    const gfi = g.firma || {};
+    A.firma = { ad: metinAl(gfi.ad, '', 80), telefon: metinAl(gfi.telefon, '', 40), adres: metinAl(gfi.adres, '', 200) };
+
+    const moduller = (Array.isArray(p && p.moduller) ? p.moduller : []).slice(0, 300).map((m) => modulNormallestir(m, A));
+    const idler = new Set();
+    for (const m of moduller) {
+      if (idler.has(m.id)) m.id = yeniId('m');
+      idler.add(m.id);
+    }
+    const y = (p && p.yerlesim) || {};
+    const t = (p && p.teklif) || {};
+    return {
+      ad: metinAl(p && p.ad, 'Yeni proje', 80),
+      ayarlar: A,
+      moduller,
+      yerlesim: {
+        tip: secenekAl(y.tip, ['duz', 'L'], 'duz'),
+        duvarA: sayiAl(y.duvarA, 3600, 0, 50000),
+        duvarB: sayiAl(y.duvarB, 2400, 0, 50000),
+      },
+      teklif: {
+        musteri: metinAl(t.musteri, '', 80),
+        telefon: metinAl(t.telefon, '', 40),
+        adres: metinAl(t.adres, '', 200),
+        teklifNo: metinAl(t.teklifNo, '', 40),
+        gecerlilikGun: Math.floor(sayiAl(t.gecerlilikGun, 15, 0, 365)),
+        teslimSuresi: metinAl(t.teslimSuresi, '', 60),
+        not: metinAl(t.not, '', 1000),
+      },
+    };
+  }
+
+  function yeniProje(ad) {
+    return projeyiNormallestir({ ad: ad || 'Yeni proje', moduller: [yeniModul('alt')] });
   }
 
   const malzemeBul = (ayar, id) => ayar.malzemeler.find((m) => m.id === id) || null;
@@ -270,11 +436,18 @@
         const m = M[kullanim];
         parcalar.push({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: bant || { u: 0, k: 0 }, damar: !!m.damar });
       },
-      hEkle(ad, adet, birim) {
+      /**
+       * kod: fiyat kataloğu anahtarı; fiyatMiktari: katalog birimindeki miktar
+       * (örn. askı borusu adetle sayılır ama metreyle fiyatlanır).
+       */
+      hEkle(kod, ad, adet, birim, fiyatMiktari) {
         if (!(adet > 0)) return;
+        const fm = fiyatMiktari == null ? adet : fiyatMiktari;
         const var_ = hirdavat.find((h) => h.ad === ad);
-        if (var_) var_.adet = r1(var_.adet + adet);
-        else hirdavat.push({ ad, adet: r1(adet), birim: birim || 'adet' });
+        if (var_) {
+          var_.adet = r1(var_.adet + adet);
+          var_.fiyatMiktari = r3(var_.fiyatMiktari + fm);
+        } else hirdavat.push({ kod, ad, adet: r1(adet), birim: birim || 'adet', fiyatMiktari: r3(fm) });
       },
     };
   }
@@ -285,33 +458,34 @@
     const nokta = birlesim * basina + (tekNoktali || 0);
     if (nokta <= 0) return;
     if (tur === 'konfirmat') {
-      T.hEkle('Konfirmat vida 7×50', nokta);
+      T.hEkle('konfirmat', 'Konfirmat vida 7×50', nokta);
     } else if (tur === 'kavela') {
-      T.hEkle('Kavela 8×35', nokta + birlesim);
-      T.hEkle('Ahşap tutkalı (birleşim)', birlesim + (tekNoktali ? 1 : 0), 'birleşim');
+      T.hEkle('kavela', 'Kavela 8×35', nokta + birlesim);
+      T.hEkle('tutkal', 'Ahşap tutkalı (birleşim)', birlesim + (tekNoktali ? 1 : 0), 'birleşim');
     } else {
-      T.hEkle('Minifix (gövde + pim)', nokta, 'takım');
-      T.hEkle('Kavela 8×35', nokta);
+      T.hEkle('minifix', 'Minifix (gövde + pim)', nokta, 'takım');
+      T.hEkle('kavela', 'Kavela 8×35', nokta);
     }
   }
 
   /** Ön yüz (kapak/çekmece önü) için kulp ve benzeri ekler. */
   function kulpEkle(T, kulpTur, adet, onGenisligi) {
-    if (kulpTur === 'gola') T.hEkle('Gola profil', (adet * onGenisligi) / 1000, 'm');
-    else if (kulpTur === 'basac') T.hEkle('Bas-aç mekanizması', adet);
-    else if (kulpTur === 'gomme') T.hEkle('Gömme kulp', adet);
-    else T.hEkle('Kulp', adet);
+    if (kulpTur === 'gola') T.hEkle('gola', 'Gola profil', (adet * onGenisligi) / 1000, 'm');
+    else if (kulpTur === 'basac') T.hEkle('basac', 'Bas-aç mekanizması', adet);
+    else if (kulpTur === 'gomme') T.hEkle('kulp_gomme', 'Gömme kulp', adet);
+    else T.hEkle('kulp', 'Kulp', adet);
   }
 
   function mentesheEkle(T, menteseTur, kapakTipi, adet, yarimBini) {
     const bini = kapakTipi === 'ic' ? 'gömme (iç bini)' : yarimBini ? 'yarım bini' : 'tam bini';
     const tur = menteseTur === 'basac' ? 'yaysız' : menteseTur === 'frenli' ? 'frenli' : 'standart';
-    T.hEkle(`Menteşe 35mm ${tur}, ${bini}`, adet);
+    const kod = menteseTur === 'basac' ? 'mentese_yaysiz' : menteseTur === 'frenli' ? 'mentese_frenli' : 'mentese_standart';
+    T.hEkle(kod, `Menteşe 35mm ${tur}, ${bini}`, adet);
   }
 
   function bazaEkle(T, baza, hb, W, Ds, t, ayakTur, ayakAdedi) {
     if (baza.tip === 'ayak') {
-      T.hEkle(`${HIRDAVAT_SECENEKLERI.ayak.secenekler[ayakTur].ad} (${hb} mm)`, ayakAdedi || (W > 1000 ? 6 : 4));
+      T.hEkle('ayak_' + ayakTur, `${HIRDAVAT_SECENEKLERI.ayak.secenekler[ayakTur].ad} (${hb} mm)`, ayakAdedi || (W > 1000 ? 6 : 4));
     } else if (baza.tip === 'panel') {
       const gc = say(baza.geriCekme, 0);
       // Baza çerçevesi: ön parça önden geri çekilir, yanlar gövdeyle aynı hizada.
@@ -353,6 +527,10 @@
     const iw = W - 2 * t; // iç genişlik
     const ic = modul.kapakTipi === 'ic';
 
+    if (!(t > 0) || !(tk > 0) || !(ta > 0) || !(tc > 0)) {
+      uyarilar.push('Malzeme kalınlığı geçersiz; malzeme ayarlarını kontrol edin.');
+      return { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
+    }
     if (W < 2 * t + 50 || Hc < 2 * t + 50 || D < 100) {
       uyarilar.push('Ölçüler çok küçük: genişlik, yükseklik ve derinlik kontrol edilmeli.');
       return { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
@@ -398,7 +576,7 @@
     } else if (modul.arkalik === 'cakma') {
       const p = say(A.arkalikCakmaPay, 2);
       ekle('Arkalık (çakma)', 'arkalik', Hc - 2 * p, W - 2 * p, 1);
-      hEkle('Arkalık vidası / zımba çivisi', Math.ceil((2 * (Hc + W)) / 150));
+      hEkle('arkalik_vida', 'Arkalık vidası / zımba çivisi', Math.ceil((2 * (Hc + W)) / 150));
     }
 
     bazaEkle(T, baza, hb, W, Ds, t, HS.ayak);
@@ -426,7 +604,7 @@
         }
         ekle('Kör köşe paneli', 'kapak', yUst - yAlt, kp, 1, { u: 2, k: 2 });
         ekle('Kör panel bağlantı çıtası', 'govde', Hc - 2 * t, 80, 1, { u: 0, k: 0 });
-        hEkle('Kör panel bağlantı köşebendi', 4);
+        hEkle('kor_kosebent', 'Kör panel bağlantı köşebendi', 4);
       }
     }
 
@@ -523,14 +701,14 @@
           if (raf > 0) {
             const yb = say(A.rafYanBosluk, 1);
             ekle(`Raf (satır ${satirNo})`, 'govde', secW - 2 * yb, icDerinlik - say(A.rafOnGeriCekme, 20), raf * bolum, { u: 1, k: 0 });
-            hEkle('Raf pimi', 4 * raf * bolum);
+            hEkle('raf_pimi', 'Raf pimi', 4 * raf * bolum);
             if (secW > 900) uyarilar.push(`Satır ${satirNo}: raf açıklığı ${r1(secW)} mm; ${t} mm rafta sehim olur, ara dikme ekleyin.`);
             for (let j = 1; j <= raf; j++) geo.raflar.push(icAlt + (j * icH) / (raf + 1));
           }
           if (s.aski) {
             geo.aski = true;
-            hEkle(`Askı borusu (${r1(secW - 2)} mm)`, bolum);
-            hEkle('Askı borusu flanşı', 2 * bolum);
+            hEkle('aski_borusu', `Askı borusu (${r1(secW - 2)} mm)`, bolum, 'adet', (bolum * (secW - 2)) / 1000);
+            hEkle('aski_flans', 'Askı borusu flanşı', 2 * bolum);
             if (icDerinlik < 500) uyarilar.push(`Satır ${satirNo}: askı için iç derinlik ${r1(icDerinlik)} mm; en az 500 mm önerilir.`);
             if (icH < 900) uyarilar.push(`Satır ${satirNo}: askı bölmesi yüksekliği ${r1(icH)} mm; kısa elbise için bile en az 900 mm önerilir.`);
           }
@@ -549,7 +727,7 @@
             const arkaH = kutuH >= 180 ? 167 : kutuH >= 110 ? 100 : 68;
             ekle(`Çekmece tabanı (satır ${satirNo})`, 'cekmece', L - ray.boyFark, secW - ray.tabanFark, bolum, { u: 0, k: 0 });
             ekle(`Çekmece arkalığı (satır ${satirNo})`, 'cekmece', secW - ray.arkaFark, arkaH, bolum, { u: 1, k: 0 });
-            hEkle(`Metal yanlı çekmece seti ${L} mm (arka yük. ${arkaH})`, bolum, 'takım');
+            hEkle('cekmece_metal', `Metal yanlı çekmece seti ${L} mm (arka yük. ${arkaH})`, bolum, 'takım');
             uyarilar.push(`Satır ${satirNo}: metal yanlı çekmece ölçüleri genel değerlerdir; kullandığınız markanın kataloğuyla kontrol edin.`);
             for (const b of bolumler) geo.cekmeceler.push({ x1: b.x1 + 5, x2: b.x2 - 5, y1: icAlt + 10, y2: icAlt + 10 + arkaH, L, kutuW: secW - 10, kutuH: arkaH });
           } else {
@@ -558,10 +736,10 @@
             ekle(`Çekmece yanı (satır ${satirNo})`, 'cekmece', kutuL, kutuH, 2 * bolum, { u: 1, k: 0 });
             ekle(`Çekmece ön/arka (satır ${satirNo})`, 'cekmece', kutuW - 2 * tc, kutuH, 2 * bolum, { u: 1, k: 0 });
             ekle(`Çekmece tabanı (satır ${satirNo})`, 'arkalik', kutuL, kutuW, bolum);
-            hEkle(`${ray.ad} ${L} mm`, bolum, 'takım');
+            hEkle('ray_' + HS.ray, `${ray.ad} ${L} mm`, bolum, 'takım');
             for (const b of bolumler) geo.cekmeceler.push({ x1: b.x1 + ray.yanBosluk, x2: b.x2 - ray.yanBosluk, y1: icAlt + 10, y2: icAlt + 10 + kutuH, L: kutuL, kutuW, kutuH });
           }
-          if (HS.kulp === 'basac' && L) hEkle('Ray için bas-aç adaptörü', bolum);
+          if (HS.kulp === 'basac' && L) hEkle('basac_ray', 'Ray için bas-aç adaptörü', bolum);
         }
         geoSatirlar.push(geo);
       }
@@ -584,7 +762,7 @@
       hirdavatSecimi: HS,
       geo: {
         W, H, D, Hc, hb, t, ta, Ds, icDerinlik, tk,
-        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: modul.ust, yapi: modul.yapi,
+        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: modul.ust, yapi: modul.yapi, db,
         baza: { tip: baza.tip, yukseklik: hb, geriCekme: say(baza.geriCekme, 0) },
         korPanel,
         satirlar: geoSatirlar,
@@ -618,6 +796,10 @@
     const Ds = D - ta; // arkalık arkaya çakılır
     const bos = { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
 
+    if (!(t > 0) || !(tk > 0) || !(ta > 0)) {
+      uyarilar.push('Malzeme kalınlığı geçersiz; malzeme ayarlarını kontrol edin.');
+      return bos;
+    }
     if (D < 200 || Hc < 2 * t + 100) {
       uyarilar.push('Ölçüler çok küçük: yükseklik ve derinlik kontrol edilmeli.');
       return bos;
@@ -641,10 +823,21 @@
     const p = say(A.arkalikCakmaPay, 2);
     ekle('Arkalık – A kolu (çakma)', 'arkalik', Hc - 2 * p, LA - p, 1);
     ekle('Arkalık – B kolu (çakma)', 'arkalik', Hc - 2 * p, LB - ta - p, 1);
-    hEkle('Arkalık vidası / zımba çivisi', Math.ceil((2 * (2 * Hc + LA + LB)) / 150));
+    hEkle('arkalik_vida', 'Arkalık vidası / zımba çivisi', Math.ceil((2 * (2 * Hc + LA + LB)) / 150));
 
-    bazaEkle(T, baza, hb, Math.max(LA, LB), Ds, t, HS.ayak, baza.tip === 'ayak' ? 6 : 0);
-    if (baza.tip === 'panel') uyarilar.push('L köşe dolapta baza çerçevesi iki kol için ayrı ayrı yapılmalı; listedeki baza parçaları yalnızca A kolu içindir.');
+    if (baza.tip === 'panel') {
+      // L baza çerçevesi: ön parçalar kapak düzleminden gc kadar geride, arka parçalar duvar dibinde.
+      const gc = say(baza.geriCekme, 0);
+      const on = D - gc; // ön çerçevenin köşeye uzaklığı
+      ekle('Baza önü – A kolu', 'govde', LA - on, hb, 1);
+      ekle('Baza önü – B kolu', 'govde', LB - on - t, hb, 1);
+      ekle('Baza arkası – A kolu', 'govde', LA, hb, 1);
+      ekle('Baza arkası – B kolu', 'govde', LB - t, hb, 1);
+      ekle('Baza yanı (kol ucu)', 'govde', on - 2 * t, hb, 2);
+      if (on - 2 * t < 100) uyarilar.push('Baza yanı çok kısa; baza geri çekme değerini kontrol edin.');
+    } else {
+      bazaEkle(T, baza, hb, Math.max(LA, LB), Ds, t, HS.ayak, 6);
+    }
 
     // Kapaklar
     const kapakH = Hc - 2 * db;
@@ -655,7 +848,7 @@
     ekle('Köşe kapağı – B kolu', 'kapak', kapakH, kapakB, 1, { u: 2, k: 2 });
     const mn = mentesheAdedi(kapakH);
     mentesheEkle(T, HS.mentese, 'tam', mn, false);
-    T.hEkle('Katlanır kapak bağlantı menteşesi (kapak-kapak)', mn);
+    T.hEkle('mentese_katlanir', 'Katlanır kapak bağlantı menteşesi (kapak-kapak)', mn);
     kulpEkle(T, HS.kulp, 1, kapakA);
     if (kapakA > 600 || kapakB > 600) uyarilar.push('Köşe kapaklarından biri 600 mm\'den geniş; katlanır kapak sarkabilir.');
 
@@ -667,8 +860,8 @@
     if (raf > 0) {
       ekle('Raf – A kolu', 'govde', LA - ta - t - yb, rafD, raf, { u: 1, k: 0 });
       ekle('Raf – B kolu', 'govde', LB - ta - t - yb - rafD, rafD, raf, { u: 1, k: 0 });
-      hEkle('Raf pimi', 6 * raf);
-      hEkle('Raf birleştirme bağlantısı', 2 * raf);
+      hEkle('raf_pimi', 'Raf pimi', 6 * raf);
+      hEkle('raf_baglanti', 'Raf birleştirme bağlantısı', 2 * raf);
       for (let j = 1; j <= raf; j++) raflar.push(t + (j * (Hc - 2 * t)) / (raf + 1));
     }
 
@@ -717,8 +910,23 @@
     const uyarilar = [];
     const doluluk = {};
     for (const sira of ['zemin', 'duvar']) {
-      const uygun = proje.moduller.filter((m) => sonuclar[m.id] && sonuclar[m.id].geo && (sira === 'zemin' ? montajOf(m) === 0 : montajOf(m) > 0));
+      const secilen = proje.moduller.filter((m) => sonuclar[m.id] && sonuclar[m.id].geo && (sira === 'zemin' ? montajOf(m) === 0 : montajOf(m) > 0));
+      // Adedi birden fazla olan modül duvarda o kadar yer kaplar: her kopya ayrı dizilir.
+      const kopyalar = new Map();
+      const uygun = [];
+      for (const m of secilen) {
+        const n = Math.max(1, Math.floor(say(m.adet, 1)));
+        if (m.tip === 'lkose') { uygun.push(m); continue; }
+        for (let k = 1; k <= n; k++) {
+          const kopya = n > 1 ? Object.assign(Object.create(m), { ad: `${m.ad} (${k}/${n})` }) : m;
+          kopyalar.set(kopya, m);
+          uygun.push(kopya);
+        }
+      }
+      const kaynak = (x) => kopyalar.get(x) || x;
       const koseler = uygun.filter((m) => m.tip === 'lkose');
+      if (L && koseler.some((m) => Math.floor(say(m.adet, 1)) > 1)) uyarilar.push('Yerleşim: L köşe dolabın adedi 1\'den fazla; köşeye yalnızca bir tanesi yerleşir.');
+      if (!L && koseler.length) uyarilar.push('Yerleşim: düz yerleşimde L köşe dolap var; köşe dolaplar için L yerleşimi seçin.');
       let kose = null;
       if (L && koseler.length) {
         kose = koseler[0];
@@ -729,12 +937,12 @@
       let x = 0;
       if (kose) {
         const g = sonuclar[kose.id].geo;
-        yerler.push({ modul: kose, duvar: 'kose', sira, bas: 0, W: g.W, W2: g.W2, D: g.D, montaj: montajOf(kose), geo: g });
+        yerler.push({ modul: kose, kaynak: kaynak(kose), duvar: 'kose', sira, bas: 0, W: g.W, W2: g.W2, D: g.D, montaj: montajOf(kose), geo: g });
         x = g.W;
       }
       for (const m of duvarA) {
         const g = sonuclar[m.id].geo;
-        yerler.push({ modul: m, duvar: 'A', sira, bas: x, W: g.W, D: g.D, montaj: montajOf(m), geo: g });
+        yerler.push({ modul: m, kaynak: kaynak(m), duvar: 'A', sira, bas: x, W: g.W, D: g.D, montaj: montajOf(m), geo: g });
         x += g.W;
       }
       const sonA = x;
@@ -746,7 +954,7 @@
       const baslangicB = y;
       for (const m of duvarB) {
         const g = sonuclar[m.id].geo;
-        yerler.push({ modul: m, duvar: 'B', sira, bas: y, W: g.W, D: g.D, montaj: montajOf(m), geo: g });
+        yerler.push({ modul: m, kaynak: kaynak(m), duvar: 'B', sira, bas: y, W: g.W, D: g.D, montaj: montajOf(m), geo: g });
         y += g.W;
       }
       doluluk[sira] = { A: sonA, B: duvarB.length || kose ? y : 0, koseBosluguB: !kose && duvarB.length && duvarA.length ? baslangicB : 0 };
@@ -764,6 +972,10 @@
     const tumParcalar = [];
     const hirdavatMap = new Map();
     const uyarilar = [];
+    for (const m of A.malzemeler) {
+      if (!(say(m.kalinlik, 0) > 0)) uyarilar.push(`Malzeme "${m.ad}": kalınlık geçersiz (${m.kalinlik}).`);
+      if (!(say(m.plakaUzun, 0) >= 100 && say(m.plakaKisa, 0) >= 100)) uyarilar.push(`Malzeme "${m.ad}": plaka ölçüsü geçersiz (${m.plakaUzun}×${m.plakaKisa}).`);
+    }
     const modulSonuclari = {};
 
     for (const m of proje.moduller) {
@@ -774,8 +986,10 @@
       for (const p of sonuc.parcalar) tumParcalar.push(Object.assign({}, p, { adet: p.adet * adet, modul: m.ad }));
       for (const h of sonuc.hirdavat) {
         const onceki = hirdavatMap.get(h.ad);
-        if (onceki) onceki.adet = r1(onceki.adet + h.adet * adet);
-        else hirdavatMap.set(h.ad, { ad: h.ad, adet: r1(h.adet * adet), birim: h.birim });
+        if (onceki) {
+          onceki.adet = r1(onceki.adet + h.adet * adet);
+          onceki.fiyatMiktari = r3(onceki.fiyatMiktari + h.fiyatMiktari * adet);
+        } else hirdavatMap.set(h.ad, { kod: h.kod, ad: h.ad, adet: r1(h.adet * adet), birim: h.birim, fiyatMiktari: r3(h.fiyatMiktari * adet) });
       }
     }
 
@@ -845,7 +1059,9 @@
     varsayilanAyarlar,
     yeniModul,
     yeniMalzeme,
-    projeyiGuncelle,
+    yeniProje,
+    projeyiNormallestir,
+    HIRDAVAT_KALEMLERI,
     malzemeBul,
     malzemeCoz,
     hirdavatCoz,

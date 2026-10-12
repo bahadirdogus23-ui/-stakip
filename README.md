@@ -22,8 +22,10 @@
 - **Plaka yerleşimi:** testere payı ve plaka kenar payı ile giyotin kesim planı, plaka sayısı ve doluluk oranı. Damar yönü işaretli malzemede parçalar döndürülmez.
 - **Hırdavat & özet:** menteşe (kapak yüksekliğine göre adet), kulp, ray, raf pimi, ayak, askı borusu, minifix; malzeme başına m² ve bant metrajı.
 - **Uyarılar:** sarkma riski olan geniş kapak, sehim yapacak uzun raf, yetersiz çekmece derinliği/yüksekliği, askı için yetersiz derinlik vb.
+- **Fiyat & maliyet:** plaka (kullanılan tam plaka ya da net alan + fire), m² işlem (lake boya vb.), kenar bandı, hırdavat (kalem kalem birim fiyat), ebatlama ve bant çekme hizmeti, atölye işçiliği, montaj, nakliye ve serbest ek kalemler (tezgah, cam…). Kâr oranı ve KDV ile satış fiyatı; modül başına maliyet ve satış fiyatı. Hazır gelen fiyatlar **örnektir**, kendi fiyatlarınızı girin.
+- **Fiyat teklifi PDF:** firma ve müşteri bilgisi, teklif no, geçerlilik tarihi, modül bazında satış fiyatları, KDV, genel toplam ve imza alanı (maliyet ayrıntısı içermez).
 - **PDF çıktı:** atölye için işaretleme kutulu kesim listesi, A4 3×7 (63,5×38,1 mm) parça etiketleri ve çizim + yerleşim + liste + hırdavat + plaka planlarını içeren tüm proje çıktısı. Tarayıcının yazdır penceresinde "PDF olarak kaydet" seçilir.
-- Proje tarayıcıda otomatik saklanır; JSON dosyasına kaydedilip tekrar açılabilir (eski sürüm dosyaları otomatik güncellenir).
+- Proje tarayıcıda otomatik saklanır; JSON dosyasına kaydedilip tekrar açılabilir. Açılan dosyadaki her alan doğrulanır, geçersiz değerler varsayılana döner.
 
 ## Ölçü kuralları
 
@@ -36,6 +38,7 @@
 ```
 js/hesap.js     ölçü hesap motoru (modül → parçalar, hırdavat, geometri)
 js/yerlesim.js  plaka yerleşimi (giyotin kesim)
+js/maliyet.js   fiyat, maliyet, kâr/KDV ve teklif satırları
 js/cizim.js     SVG teknik çizimler
 js/app.js       arayüz
 ```

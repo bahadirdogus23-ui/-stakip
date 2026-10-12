@@ -182,6 +182,35 @@ table.liste { width: 100%; border-collapse: collapse; font-size: 13px; }
 button:disabled { opacity: .4; cursor: not-allowed; }
 .yerlesim-form { max-width: 640px; margin-bottom: 6px; grid-template-columns: repeat(3, 1fr); }
 
+.cizim .tasma { fill: rgba(179, 38, 30, .10); stroke: #b3261e; stroke-width: 1; stroke-dasharray: 6 4; }
+.cizim .tasma-yazi { fill: #b3261e; text-anchor: middle; font-family: system-ui, sans-serif; font-weight: 600; }
+
+h4 { font-size: 12px; margin: 14px 0 6px; color: var(--metin); }
+h4 small { font-weight: normal; color: var(--soluk); }
+textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); border-radius: 5px; width: 100%; resize: vertical; }
+.maliyet-izgara { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+.maliyet-izgara > div { min-width: 0; }
+#fiyatForm .form-izgara { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.m-kartlar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
+.m-kart { border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.m-kart span { font-size: 11px; color: var(--soluk); text-transform: uppercase; letter-spacing: .03em; }
+.m-kart b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.m-kart small { color: var(--soluk); font-size: 11px; }
+.m-kart.vurgu { background: var(--vurgu-acik); border-color: var(--vurgu); }
+.m-kart.vurgu b { color: var(--vurgu); }
+.m-dagilim { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 6px; }
+.m-dagilim div { position: relative; font-size: 12px; padding-bottom: 6px; }
+.m-dagilim span { color: var(--soluk); display: block; }
+.m-dagilim b { font-variant-numeric: tabular-nums; }
+.m-dagilim i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--vurgu); border-radius: 2px; }
+.ek-satir { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; gap: 6px; margin-bottom: 6px; }
+.liste tr.soluk td { color: var(--soluk); }
+.liste tr.toplam td { font-weight: 700; border-top: 2px solid var(--metin); }
+.fiyat-tablo input[type="number"] { width: 84px; }
+.fiyat-tablo td:first-child { min-width: 120px; }
+.uyari-not { background: var(--uyari-zemin); border: 1px solid var(--uyari-cizgi); border-radius: 6px; padding: 6px 10px; color: var(--metin); }
+@media (max-width: 1700px) { .maliyet-izgara { grid-template-columns: 1fr; } .m-kartlar, .m-dagilim { grid-template-columns: repeat(2, 1fr); } }
+
 #yazdirAlan { display: none; }
 
 @media print {
@@ -227,4 +256,21 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   .e-olcu { font-size: 15pt; font-weight: 800; letter-spacing: -.01em; }
   .e-alt { display: flex; gap: 2mm; align-items: center; font-size: 6.5pt; color: #222; }
   .e-alt svg { color: #000; flex: none; }
+
+  /* Fiyat teklifi */
+  .teklif { font-size: 11.5px; }
+  .t-ust { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+  .t-ust h1 { font-size: 20px; margin: 0 0 4px; }
+  .t-ust p { margin: 0; }
+  .t-bilgi { text-align: right; }
+  #yazdirAlan .t-bilgi h2 { font-size: 16px; margin: 0 0 4px; letter-spacing: .05em; }
+  .t-musteri { display: flex; flex-direction: column; border: 1px solid #999; padding: 8px 10px; margin-bottom: 10px; max-width: 60%; }
+  .t-tablo { font-size: 11.5px; margin: 8px 0 12px; }
+  .t-tablo tfoot td { padding: 4px 5px; text-align: right; border: 0; }
+  .t-tablo tfoot td.sag { border-bottom: 1px solid #bbb; }
+  .t-tablo .t-genel td { font-size: 14px; font-weight: 800; border-top: 2px solid #000; }
+  .t-kosul p { margin: 4px 0; }
+  .t-not { white-space: pre-wrap; border-left: 3px solid #999; padding-left: 8px; }
+  .t-imza { display: flex; justify-content: space-between; margin-top: 30mm; }
+  .t-imza div { width: 45%; text-align: center; }
 }

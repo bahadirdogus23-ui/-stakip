@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const KAYIT_ANAHTARI = 'mobilya-olcu-proje-v1';
+  const KAYIT_ANAHTARI = 'mobilya-olcu-proje-v2';
   const RENKLER = ['#f6d7a7', '#c8e0f4', '#d4ecd0', '#f3c9d4', '#e3d4f2', '#fbe7a1', '#cfe9ec', '#f2d2bd', '#dfe4c3', '#e9d0e9'];
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,17 +15,18 @@
   let proje;
   let seciliId = null;
   let sonuc = null;
+  let plakaGruplari = [];
+  let maliyet = null;
+  const para = (x) => Number(x || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
 
-  function yeniProje() {
-    return Hesap.projeyiGuncelle({ ad: 'Yeni proje', ayarlar: Hesap.varsayilanAyarlar(), moduller: [Hesap.yeniModul('alt')] });
-  }
+  const yeniProje = () => Hesap.yeniProje();
 
   function yukle() {
     try {
       const v = localStorage.getItem(KAYIT_ANAHTARI);
       if (v) {
         const p = JSON.parse(v);
-        if (p && Array.isArray(p.moduller)) return Hesap.projeyiGuncelle(p);
+        if (p && Array.isArray(p.moduller)) return Hesap.projeyiNormallestir(p);
       }
     } catch (e) { /* bozuk kayıt: yeni proje */ }
     return yeniProje();
@@ -48,9 +49,9 @@
         : `G${m.genislik} × Y${m.yukseklik} × D${m.derinlik}`;
       const duvar = L ? (m.tip === 'lkose' ? ' · köşe' : ` · ${m.duvar} duvarı`) : '';
       return `
-      <li class="${m.id === seciliId ? 'secili' : ''}" data-id="${m.id}">
+      <li class="${m.id === seciliId ? 'secili' : ''}" data-id="${esc(m.id)}">
         <span class="m-ad">${esc(m.ad)}</span>
-        <span class="m-olcu">${olcu}${m.adet > 1 ? ` · ${m.adet} ad.` : ''}${duvar}</span>
+        <span class="m-olcu">${esc(olcu)}${m.adet > 1 ? ` · ${esc(m.adet)} ad.` : ''}${duvar}</span>
         <span class="m-arac">
           <button data-islem="yukari" title="Yukarı taşı">↑</button>
           <button data-islem="kopya" title="Çoğalt">⧉</button>
@@ -302,7 +303,7 @@
   }
 
   function plakaHtml() {
-    const y = Yerlesim.projeYerlesimi(sonuc.kesimListesi, proje.ayarlar);
+    const y = plakaGruplari;
     if (!y.length) return '<p class="bos">Parça yok.</p>';
     let html = `<p class="not">Giyotin kesim planı · testere payı ${proje.ayarlar.testereKalinligi} mm · plaka kenar payı ${proje.ayarlar.plakaKenarPayi} mm. Damarlı malzemede parçalar döndürülmez.</p>`;
     for (const g of y) {
@@ -372,7 +373,7 @@
       <div class="tablo-kap">
       <table class="liste ayar-tablo">
         <thead><tr><th>Malzeme adı</th><th>Tür</th><th>Kalınlık</th><th>Plaka uzun</th><th>Plaka kısa</th><th title="0 = bantsız (örn. boyalı lake kenar)">Bant</th><th>Damar</th><th></th></tr></thead>
-        <tbody>${A.malzemeler.map((m) => `<tr data-malz="${m.id}">
+        <tbody>${A.malzemeler.map((m) => `<tr data-malz="${esc(m.id)}">
             <td><input data-alan="ad" value="${esc(m.ad)}"></td>
             <td>${secim('tur', m.tur || 'Diğer', Hesap.MALZEME_TURLERI.map((t) => [t, t]))}</td>
             <td><input data-alan="kalinlik" type="number" step="0.5" min="1" value="${m.kalinlik}"></td>
@@ -424,6 +425,172 @@
     ayarFormCiz();
   });
 
+  // ---------------- Fiyat & maliyet ----------------
+  const FIYAT_ALANLARI = [
+    ['ebatlamaPlaka', 'Ebatlama (TL/plaka)'],
+    ['bantCekmeM', 'Bant çekme (TL/m)'],
+    ['atolyeIscilikModul', 'Atölye işçiliği (TL/modül)'],
+    ['montajModul', 'Montaj (TL/modül)'],
+    ['nakliye', 'Nakliye (TL/proje)'],
+    ['bantFire', 'Bant firesi (%)'],
+    ['alanFire', 'Alan firesi (%)'],
+    ['karOrani', 'Kâr oranı (%)'],
+    ['kdvOrani', 'KDV (%)'],
+  ];
+
+  function fiyatFormCiz() {
+    const A = proje.ayarlar;
+    const F = A.fiyat;
+    const kullanilan = new Set(sonuc.hirdavat.map((h) => h.kod));
+    const kodlar = Object.keys(Hesap.HIRDAVAT_KALEMLERI).sort((a, b) => (kullanilan.has(b) ? 1 : 0) - (kullanilan.has(a) ? 1 : 0));
+    $('#fiyatForm').innerHTML = `
+      <div class="form-izgara">
+        <label>Plaka maliyeti${secim('plakaHesabi', F.plakaHesabi, [['tam', 'Kullanılan tam plaka'], ['alan', 'Net alan + fire']], 'data-fiyat')}</label>
+        ${FIYAT_ALANLARI.map(([k, t]) => `<label>${t}<input data-fiyat="${k}" type="number" min="0" step="any" value="${esc(F[k])}"></label>`).join('')}
+      </div>
+      <h4>Plaka malzemeleri</h4>
+      <div class="tablo-kap"><table class="liste ayar-tablo fiyat-tablo">
+        <thead><tr><th>Malzeme</th><th>Plaka (TL)</th><th title="Metre başı kenar bandı">Bant (TL/m)</th><th title="Boya, lake vb. m² başı işlem">İşlem (TL/m²)</th></tr></thead>
+        <tbody>${A.malzemeler.map((m) => `<tr data-malz="${esc(m.id)}"><td>${esc(m.ad)}</td>
+          <td><input data-alan="plakaFiyati" type="number" min="0" step="any" value="${esc(m.plakaFiyati)}"></td>
+          <td><input data-alan="bantFiyati" type="number" min="0" step="any" value="${esc(m.bantFiyati)}" ${m.bant > 0 ? '' : 'disabled title="Bantsız malzeme"'}></td>
+          <td><input data-alan="islemFiyatiM2" type="number" min="0" step="any" value="${esc(m.islemFiyatiM2)}"></td></tr>`).join('')}</tbody>
+      </table></div>
+      <h4>Hırdavat birim fiyatları</h4>
+      <div class="tablo-kap"><table class="liste ayar-tablo fiyat-tablo">
+        <thead><tr><th>Kalem</th><th>Birim</th><th>Fiyat (TL)</th></tr></thead>
+        <tbody>${kodlar.map((k) => {
+          const h = Hesap.HIRDAVAT_KALEMLERI[k];
+          return `<tr class="${kullanilan.has(k) ? '' : 'soluk'}"><td>${esc(h.ad)}${kullanilan.has(k) ? '' : ' <span class="kucuk">(projede yok)</span>'}</td><td>${esc(h.birim)}</td>
+            <td><input data-hfiyat="${esc(k)}" type="number" min="0" step="any" value="${esc(Maliyet.hirdavatFiyati(A, k))}"></td></tr>`;
+        }).join('')}</tbody>
+      </table></div>
+      <h4>Ek kalemler <small>(tezgah, cam, LED, aksesuar…)</small></h4>
+      <div id="ekKalemler">${F.ekKalemler.map((e, i) => `<div class="ek-satir" data-ek="${i}"><input data-ekalan="ad" value="${esc(e.ad)}" aria-label="Kalem adı"><input data-ekalan="tutar" type="number" min="0" step="any" value="${esc(e.tutar)}" aria-label="Tutar"><button data-islem="ekSil" class="ikincil kucuk-buton" title="Sil">✕</button></div>`).join('')}</div>
+      <button data-islem="ekEkle" class="ikincil">+ Ek kalem</button>
+      <p class="not">Ek kalem tutarı maliyet olarak girilir; teklife kâr oranı eklenerek yansır.</p>`;
+  }
+
+  $('#fiyatForm').addEventListener('change', (e) => {
+    const el = e.target;
+    const A = proje.ayarlar;
+    const sayiDeger = () => Math.max(0, Number(el.value) || 0);
+    const tr = el.closest('tr[data-malz]');
+    const ek = el.closest('[data-ek]');
+    if (tr) A.malzemeler.find((m) => m.id === tr.dataset.malz)[el.dataset.alan] = sayiDeger();
+    else if (el.dataset.hfiyat) A.fiyat.hirdavat[el.dataset.hfiyat] = sayiDeger();
+    else if (ek) A.fiyat.ekKalemler[Number(ek.dataset.ek)][el.dataset.ekalan] = el.dataset.ekalan === 'tutar' ? sayiDeger() : el.value;
+    else if (el.dataset.alan === 'plakaHesabi') A.fiyat.plakaHesabi = el.value;
+    else if (el.dataset.fiyat) A.fiyat[el.dataset.fiyat] = sayiDeger();
+    else return;
+    tumunuCiz(false);
+  });
+  $('#fiyatForm').addEventListener('click', (e) => {
+    const F = proje.ayarlar.fiyat;
+    const islem = e.target.dataset.islem;
+    if (islem === 'ekEkle') F.ekKalemler.push({ ad: 'Tezgah', tutar: 0 });
+    else if (islem === 'ekSil') F.ekKalemler.splice(Number(e.target.closest('[data-ek]').dataset.ek), 1);
+    else return;
+    tumunuCiz(false);
+    fiyatFormCiz();
+  });
+
+  function teklifFormCiz() {
+    const T = proje.teklif;
+    const Fi = proje.ayarlar.firma;
+    $('#teklifForm').innerHTML = `
+      <label>Müşteri<input data-teklif="musteri" value="${esc(T.musteri)}"></label>
+      <label>Müşteri telefonu<input data-teklif="telefon" value="${esc(T.telefon)}"></label>
+      <label>Teklif no<input data-teklif="teklifNo" value="${esc(T.teklifNo)}"></label>
+      <label>Geçerlilik (gün)<input data-teklif="gecerlilikGun" type="number" min="0" value="${esc(T.gecerlilikGun)}"></label>
+      <label>Teslim süresi<input data-teklif="teslimSuresi" placeholder="örn. 30 iş günü" value="${esc(T.teslimSuresi)}"></label>
+      <label class="genis">Müşteri adresi<input data-teklif="adres" value="${esc(T.adres)}"></label>
+      <label class="genis">Teklif notu<textarea data-teklif="not" rows="2" placeholder="Ödeme koşulları, dahil olmayanlar vb.">${esc(T.not)}</textarea></label>
+      <label>Firma adı<input data-firma="ad" value="${esc(Fi.ad)}"></label>
+      <label>Firma telefonu<input data-firma="telefon" value="${esc(Fi.telefon)}"></label>
+      <label class="genis">Firma adresi<input data-firma="adres" value="${esc(Fi.adres)}"></label>`;
+  }
+  $('#teklifForm').addEventListener('change', (e) => {
+    const el = e.target;
+    if (el.dataset.teklif) proje.teklif[el.dataset.teklif] = el.type === 'number' ? Math.max(0, Math.floor(Number(el.value) || 0)) : el.value;
+    else if (el.dataset.firma) proje.ayarlar.firma[el.dataset.firma] = el.value;
+    else return;
+    kaydet();
+  });
+
+  function maliyetCiz() {
+    const r = maliyet;
+    const kart = (baslik, deger, alt, vurgu) => `<div class="m-kart${vurgu ? ' vurgu' : ''}"><span>${baslik}</span><b>${para(deger)}</b>${alt ? `<small>${alt}</small>` : ''}</div>`;
+    $('#maliyetOzet').innerHTML = `
+      ${r.eksikFiyat.length ? `<p class="hata">Fiyatı girilmemiş kalemler: ${esc(r.eksikFiyat.join(', '))}</p>` : ''}
+      <div class="m-kartlar">
+        ${kart('Toplam maliyet', r.maliyet, `${r.modulAdedi} modül`)}
+        ${kart('Kâr', r.kar, `%${sayiYaz(r.karOrani)}`)}
+        ${kart('Satış (KDV hariç)', r.satisKdvHaric)}
+        ${kart('KDV', r.kdv, `%${sayiYaz(r.kdvOrani)}`)}
+        ${kart('Genel toplam', r.genelToplam, 'KDV dahil', true)}
+      </div>
+      <div class="m-dagilim">${[['Plaka & bant', r.ara.malzeme], ['Hırdavat', r.ara.hirdavat], ['Ebatlama & bant çekme', r.ara.hizmet], ['İşçilik', r.ara.iscilik], ['Nakliye & ek', r.ara.diger]]
+        .map(([t, v]) => `<div><span>${t}</span><b>${para(v)}</b><i style="width:${r.maliyet > 0 ? (100 * v) / r.maliyet : 0}%"></i></div>`).join('')}</div>`;
+
+    $('#modulMaliyetTablo').innerHTML = r.modulMaliyetleri.length ? `<table class="liste"><thead><tr><th>Modül</th><th>Adet</th><th>Malzeme</th><th>Hırdavat</th><th>İşçilik</th><th>Birim maliyet</th><th>Birim satış</th><th>Toplam satış</th></tr></thead><tbody>
+      ${r.modulMaliyetleri.map((x, i) => `<tr><td>${esc(x.ad)}</td><td class="sag">${x.adet}</td><td class="sag">${para(x.malzeme)}</td><td class="sag">${para(x.hirdavat)}</td><td class="sag">${para(x.iscilik)}</td><td class="sag">${para(x.birim)}</td><td class="sag">${para(r.teklifSatirlari[i].birimFiyat)}</td><td class="sag kalin">${para(r.teklifSatirlari[i].tutar)}</td></tr>`).join('')}
+      </tbody></table>` : '<p class="bos">Modül yok.</p>';
+
+    const K = r.kalemler;
+    let h = '<table class="liste"><thead><tr><th>Kalem</th><th>Miktar</th><th>Birim fiyat</th><th>Tutar</th></tr></thead><tbody>';
+    const grup = (t, top) => `<tr class="grup"><td colspan="3">${t}</td><td class="sag">${para(top)}</td></tr>`;
+    h += grup('Plaka malzeme, işlem ve bant', r.ara.malzeme);
+    for (const m of K.malzeme) {
+      h += `<tr><td>${esc(m.ad)} – plaka</td><td class="sag">${sayiYaz(m.plaka, 2)} plaka</td><td class="sag">${para(m.plakaFiyati)}</td><td class="sag">${para(m.plakaTutar)}</td></tr>`;
+      if (m.islemTutar > 0) h += `<tr><td>${esc(m.ad)} – işlem</td><td class="sag">${sayiYaz(m.alanM2, 2)} m²</td><td class="sag">${para(m.islemFiyatiM2)}</td><td class="sag">${para(m.islemTutar)}</td></tr>`;
+      if (m.bantM > 0) h += `<tr><td>${esc(m.ad)} – kenar bandı</td><td class="sag">${sayiYaz(m.bantM, 1)} m</td><td class="sag">${para(m.bantFiyati)}</td><td class="sag">${para(m.bantTutar)}</td></tr>`;
+    }
+    h += grup('Hırdavat', r.ara.hirdavat);
+    for (const x of K.hirdavat) h += `<tr><td>${esc(x.ad)}</td><td class="sag">${sayiYaz(x.fiyatMiktari, 2)} ${esc(x.fiyatBirimi)}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`;
+    h += grup('Ebatlama ve bant çekme', r.ara.hizmet);
+    for (const x of K.hizmet) h += `<tr><td>${esc(x.ad)}</td><td class="sag">${sayiYaz(x.miktar, 1)} ${x.birim}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`;
+    h += grup('İşçilik', r.ara.iscilik);
+    for (const x of K.iscilik) h += `<tr><td>${esc(x.ad)}</td><td class="sag">${x.miktar} ${x.birim}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`;
+    if (K.diger.length) {
+      h += grup('Nakliye ve ek kalemler', r.ara.diger);
+      for (const x of K.diger) h += `<tr><td>${esc(x.ad)}</td><td></td><td></td><td class="sag">${para(x.tutar)}</td></tr>`;
+    }
+    h += `<tr class="toplam"><td colspan="3">Toplam maliyet</td><td class="sag">${para(r.maliyet)}</td></tr></tbody></table>`;
+    $('#maliyetKalemleri').innerHTML = h;
+  }
+
+  function teklifYazdirHtml() {
+    const r = maliyet;
+    const T = proje.teklif;
+    const Fi = proje.ayarlar.firma;
+    const tarih = new Date();
+    const gecerli = new Date(tarih.getTime() + T.gecerlilikGun * 86400000);
+    const gun = (d) => d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+    return `<section class="y-sayfa teklif">
+      <header class="t-ust">
+        <div><h1>${esc(Fi.ad || 'Fiyat Teklifi')}</h1>${Fi.telefon ? `<p>${esc(Fi.telefon)}</p>` : ''}${Fi.adres ? `<p>${esc(Fi.adres)}</p>` : ''}</div>
+        <div class="t-bilgi"><h2>FİYAT TEKLİFİ</h2>
+          ${T.teklifNo ? `<p>No: <b>${esc(T.teklifNo)}</b></p>` : ''}<p>Tarih: ${gun(tarih)}</p>${T.gecerlilikGun ? `<p>Geçerlilik: ${gun(gecerli)}</p>` : ''}</div>
+      </header>
+      <div class="t-musteri"><span>Sayın</span><b>${esc(T.musteri || '—')}</b>${T.telefon ? `<span>${esc(T.telefon)}</span>` : ''}${T.adres ? `<span>${esc(T.adres)}</span>` : ''}</div>
+      <p>Proje: <b>${esc(proje.ad || '')}</b></p>
+      <table class="liste t-tablo"><thead><tr><th>#</th><th>Ürün</th><th>Ölçü (G×Y×D mm)</th><th>Adet</th><th>Birim fiyat</th><th>Tutar</th></tr></thead><tbody>
+        ${r.teklifSatirlari.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.ad)}</td><td>${esc(x.aciklama)}</td><td class="sag">${x.adet}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`).join('')}
+      </tbody><tfoot>
+        <tr><td colspan="5">Ara toplam (KDV hariç)</td><td class="sag">${para(r.satisKdvHaric)}</td></tr>
+        <tr><td colspan="5">KDV %${sayiYaz(r.kdvOrani)}</td><td class="sag">${para(r.kdv)}</td></tr>
+        <tr class="t-genel"><td colspan="5">GENEL TOPLAM</td><td class="sag">${para(r.genelToplam)}</td></tr>
+      </tfoot></table>
+      <div class="t-kosul">
+        <p><b>Malzeme:</b> ${esc([...new Set(proje.moduller.flatMap((m) => Hesap.KULLANIMLAR.map((k) => Hesap.malzemeCoz(m, proje.ayarlar)[k].ad)))].join(', '))}</p>
+        ${T.teslimSuresi ? `<p><b>Teslim süresi:</b> ${esc(T.teslimSuresi)}</p>` : ''}
+        ${T.not ? `<p class="t-not">${esc(T.not)}</p>` : ''}
+      </div>
+      <div class="t-imza"><div>Teklifi veren<br><br>…………………………</div><div>Onaylayan (müşteri)<br><br>…………………………</div></div>
+    </section>`;
+  }
+
   // ---------------- Sekmeler ----------------
   let aktifSekme = 'cizim';
   document.querySelector('.sekmeler').addEventListener('click', (e) => {
@@ -434,6 +601,7 @@
     document.querySelectorAll('.sekme').forEach((x) => x.classList.toggle('aktif', x.id === 'sekme-' + aktifSekme));
     if (aktifSekme === 'plaka') plakaCiz();
     if (aktifSekme === 'yerlesim') yerlesimCiz();
+    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); maliyetCiz(); }
   });
 
   // ---------------- Yazdırma (PDF) ----------------
@@ -445,7 +613,7 @@
 
   function plakaSayilari() {
     const s = {};
-    for (const g of Yerlesim.projeYerlesimi(sonuc.kesimListesi, proje.ayarlar)) s[g.malzemeId] = g.plakalar.length;
+    for (const g of plakaGruplari) s[g.malzemeId] = g.plakalar.length;
     return s;
   }
 
@@ -490,6 +658,8 @@
     html += `<section class="y-sayfa">${baslikHtml('Yerleşim')}<h2>Kuşbakışı plan</h2>${Cizim.planCizimi(yer)}<h2>A duvarı</h2>${Cizim.duvarGorunus(yer, 'A')}${yer.tip === 'L' ? `<h2>B duvarı</h2>${Cizim.duvarGorunus(yer, 'B')}` : ''}</section>`;
     html += kesimYazdirHtml();
     html += `<section class="y-sayfa">${baslikHtml('Hırdavat listesi')}${hirdavatHtml()}</section>`;
+    maliyetCiz();
+    html += `<section class="y-sayfa">${baslikHtml('Maliyet (iç kullanım)')}${$('#maliyetOzet').innerHTML}<h2>Modül başına</h2>${$('#modulMaliyetTablo').innerHTML}<h2>Kalemler</h2>${$('#maliyetKalemleri').innerHTML}</section>`;
     html += `<section class="y-sayfa">${baslikHtml('Plaka kesim planları')}${plakaHtml()}</section>`;
     return html;
   }
@@ -497,15 +667,18 @@
   function yazdir(tur) {
     const alan = $('#yazdirAlan');
     alan.className = 'yazdir-' + tur;
-    alan.innerHTML = tur === 'etiket' ? etiketYazdirHtml() : tur === 'kesim' ? kesimYazdirHtml() : tumYazdirHtml();
+    const icerik = { etiket: etiketYazdirHtml, kesim: kesimYazdirHtml, teklif: teklifYazdirHtml, tumu: tumYazdirHtml }[tur];
+    alan.innerHTML = icerik();
     const eskiBaslik = document.title;
-    document.title = `${proje.ad || 'Proje'} - ${tur === 'etiket' ? 'Parça etiketleri' : tur === 'kesim' ? 'Kesim listesi' : 'Proje'}`;
+    const adlar = { etiket: 'Parça etiketleri', kesim: 'Kesim listesi', teklif: 'Fiyat teklifi', tumu: 'Proje' };
+    document.title = `${proje.ad || 'Proje'} - ${adlar[tur]}`;
     window.print();
     document.title = eskiBaslik;
   }
   $('#btnYazdirKesim').addEventListener('click', () => yazdir('kesim'));
   $('#btnYazdirEtiket').addEventListener('click', () => yazdir('etiket'));
   $('#btnYazdirTumu').addEventListener('click', () => yazdir('tumu'));
+  $('#btnYazdirTeklif').addEventListener('click', () => yazdir('teklif'));
   window.addEventListener('afterprint', () => { $('#yazdirAlan').innerHTML = ''; });
 
   // ---------------- Dışa aktarma ----------------
@@ -526,7 +699,13 @@
       const m = malzeme(p.malzeme);
       satirlar.push([p.no, m.ad, sayi(m.kalinlik), p.ad, p.adet, sayi(p.boy), sayi(p.en), sayi(p.kesimBoy), sayi(p.kesimEn), p.bant.u, p.bant.k, p.damar ? 'Var' : 'Yok', p.moduller.join(', ')]);
     }
-    const csv = satirlar.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    // Excel'in hücreyi formül olarak çalıştırmaması için = + - @ ile başlayan metinler etkisizleştirilir.
+    const hucre = (c) => {
+      let x = String(c);
+      if (typeof c === 'string' && /^[=+\-@\t\r]/.test(x)) x = "'" + x;
+      return `"${x.replace(/"/g, '""')}"`;
+    };
+    const csv = satirlar.map((r) => r.map(hucre).join(';')).join('\r\n');
     indir(`${dosyaAdi()} - kesim listesi.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
   });
 
@@ -539,11 +718,12 @@
     try {
       const p = JSON.parse(await dosya.text());
       if (!p || !Array.isArray(p.moduller)) throw new Error('biçim');
-      proje = Hesap.projeyiGuncelle(p);
+      proje = Hesap.projeyiNormallestir(p);
       seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
       $('#projeAd').value = proje.ad || '';
       tumunuCiz(true);
       ayarFormCiz();
+      if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); }
     } catch (err) {
       alert('Dosya okunamadı: geçerli bir proje dosyası değil.');
     }
@@ -556,6 +736,7 @@
     $('#projeAd').value = proje.ad;
     tumunuCiz(true);
     ayarFormCiz();
+    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); }
   });
 
   $('#projeAd').addEventListener('input', (e) => { proje.ad = e.target.value; kaydet(); });
@@ -563,6 +744,10 @@
   // ---------------- Ana döngü ----------------
   function tumunuCiz(formDa) {
     sonuc = Hesap.projeHesapla(proje);
+    plakaGruplari = Yerlesim.projeYerlesimi(sonuc.kesimListesi, proje.ayarlar);
+    const ps = {};
+    for (const g of plakaGruplari) ps[g.malzemeId] = g.plakalar.length;
+    maliyet = Maliyet.maliyetHesapla(proje, sonuc, ps);
     modulListesiCiz();
     if (formDa) modulFormCiz();
     uyarilariCiz();
@@ -571,6 +756,7 @@
     hirdavatCiz();
     if (aktifSekme === 'plaka') plakaCiz();
     if (aktifSekme === 'yerlesim') yerlesimCiz();
+    if (aktifSekme === 'maliyet') maliyetCiz();
     kaydet();
   }
 

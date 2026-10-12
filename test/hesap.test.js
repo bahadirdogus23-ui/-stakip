@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Hesap = require('../js/hesap.js');
 const Yerlesim = require('../js/yerlesim.js');
+const Maliyet = require('../js/maliyet.js');
 
 const ayar = Hesap.varsayilanAyarlar();
 const bul = (sonuc, ad) => sonuc.parcalar.find((p) => p.ad.startsWith(ad));
@@ -126,7 +127,7 @@ test('yerleşim: damarlı parça döndürülmez, büyük parça sığmayan olara
   assert.equal(y2.plakalar[0].yerlesen[0].dondu, true);
 });
 
-const proje = (moduller, ek) => Hesap.projeyiGuncelle(Object.assign({ ad: 'T', ayarlar: Hesap.varsayilanAyarlar(), moduller }, ek || {}));
+const proje = (moduller, ek) => Object.assign({ ad: 'T', ayarlar: Hesap.varsayilanAyarlar(), moduller, yerlesim: { tip: 'duz', duvarA: 0, duvarB: 0 } }, ek || {});
 
 test('L köşe dolap: tablalar, kapaklar ve arkalıklar', () => {
   const m = Hesap.yeniModul('lkose'); // A 900, B 900, Y 870, D 560, ayak 100, çakma arkalık 8
@@ -185,24 +186,6 @@ test('modüle özel malzeme seçimi', () => {
   assert.equal(bul(s, 'Yan').damar, true);
 });
 
-test('eski sürüm proje dosyası güncellenir', () => {
-  const eski = {
-    ad: 'Eski', moduller: [{ id: 'x', ad: 'Üst', genislik: 600, yukseklik: 720, derinlik: 320, yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam', baza: { tip: 'yok', yukseklik: 0, geriCekme: 0 }, satirlar: [{ tip: 'kapak', yukseklik: null, adet: 2, raf: 1, dikme: 0, aski: false }], adet: 1 }],
-    ayarlar: { malzemeler: {
-      govde: { ad: 'Sunta X 18', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false },
-      kapak: { ad: 'MDF Y 18', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 1, damar: false },
-      arkalik: { ad: 'HDF 8', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false },
-      cekmece: { ad: 'Sunta X 18', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false },
-    } },
-  };
-  const p = Hesap.projeyiGuncelle(eski);
-  assert.ok(Array.isArray(p.ayarlar.malzemeler));
-  assert.equal(p.ayarlar.kullanim.govde, p.ayarlar.kullanim.cekmece);
-  const s = Hesap.projeHesapla(p);
-  assert.equal(s.kesimListesi.find((x) => x.ad === 'Yan').malzeme, p.ayarlar.kullanim.govde);
-  assert.equal(p.yerlesim.tip, 'duz');
-});
-
 test('L mutfak yerleşimi: köşe dolap köşeye, diğerleri duvarlara dizilir', () => {
   const kose = Hesap.yeniModul('lkose');
   const a1 = Hesap.yeniModul('alt');
@@ -229,4 +212,133 @@ test('L yerleşimde köşe dolabı yoksa B duvarı köşe boşluğuyla başlar',
   const s = Hesap.projeHesapla(p);
   assert.equal(s.yerlesim.yerler.find((y) => y.modul === b1).bas, 560);
   assert.ok(s.uyarilar.some((u) => u.includes('köşe boşluğu')));
+});
+
+// ---------- Hata analizi regresyon testleri ----------
+
+test('hata: yerleşim modül adedini hesaba katar ve taşmayı bildirir', () => {
+  const a = Hesap.yeniModul('alt');
+  a.adet = 3;
+  const s = Hesap.projeHesapla(proje([a], { yerlesim: { tip: 'duz', duvarA: 1000, duvarB: 0 } }));
+  assert.equal(s.yerlesim.doluluk.zemin.A, 1800);
+  assert.equal(s.yerlesim.yerler.length, 3);
+  assert.deepEqual(s.yerlesim.yerler.map((y) => y.modul.ad), ['Alt Dolap (1/3)', 'Alt Dolap (2/3)', 'Alt Dolap (3/3)']);
+  assert.ok(s.uyarilar.some((u) => u.includes('A duvarını 800')));
+});
+
+test('hata: L köşe dolapta baza çerçevesi iki kol için çıkar', () => {
+  const l = Hesap.yeniModul('lkose');
+  l.genislik = 1200;
+  l.baza = { tip: 'panel', yukseklik: 80, geriCekme: 40 };
+  const s = Hesap.modulHesapla(l, ayar);
+  const ad = (x) => s.parcalar.find((p) => p.ad === x);
+  assert.equal(ad('Baza önü – A kolu').boy, 1200 - 520);
+  assert.equal(ad('Baza önü – B kolu').boy, 900 - 520 - 18);
+  assert.equal(ad('Baza arkası – A kolu').boy, 1200);
+  assert.equal(ad('Baza yanı (kol ucu)').adet, 2);
+});
+
+test('hata: geçersiz malzeme kalınlığı ve plaka ölçüsü uyarı verir', () => {
+  const A0 = Hesap.varsayilanAyarlar();
+  A0.malzemeler[0].kalinlik = 0;
+  A0.malzemeler[0].plakaUzun = 0;
+  const s = Hesap.projeHesapla(proje([Hesap.yeniModul('ust')], { ayarlar: A0 }));
+  assert.ok(s.uyarilar.some((u) => u.includes('kalınlık geçersiz')));
+  assert.ok(s.uyarilar.some((u) => u.includes('plaka ölçüsü geçersiz')));
+  assert.equal(s.kesimListesi.length, 0);
+});
+
+test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
+  const p = Hesap.projeyiNormallestir({
+    ad: 'X',
+    ayarlar: { malzemeler: [{ id: 'a" onclick="x', ad: '<b>', kalinlik: '18<script>' }], kdvOrani: 'abc' },
+    moduller: [{
+      id: 'x" onmouseover="y', ad: '<img src=x>', genislik: '<img src=x onerror=alert(1)>', yukseklik: '720',
+      arkalik: 'kotu', baza: { tip: 'roket' }, satirlar: [{ tip: 'kpk', adet: 'iki', yukseklik: -5 }], malzeme: { kapak: 'olmayan' },
+    }],
+    yerlesim: { tip: 'Z', duvarA: '3000' },
+  });
+  const m = p.moduller[0];
+  assert.match(m.id, /^[A-Za-z0-9_-]+$/);
+  assert.match(p.ayarlar.malzemeler[0].id, /^[A-Za-z0-9_-]+$/);
+  assert.equal(m.genislik, 600);       // sayı olmayan değer varsayılana döner
+  assert.equal(m.yukseklik, 720);      // sayı metni sayıya çevrilir
+  assert.equal(p.ayarlar.malzemeler[0].kalinlik, 18);
+  assert.equal(m.arkalik, 'kanal');
+  assert.equal(m.baza.tip, 'yok');
+  assert.deepEqual(m.satirlar[0], { tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false });
+  assert.deepEqual(m.malzeme, {});
+  assert.equal(p.yerlesim.tip, 'duz');
+  assert.equal(p.yerlesim.duvarA, 3000);
+  assert.equal(p.ayarlar.fiyat.kdvOrani, 20);
+  assert.equal(typeof m.ad, 'string'); // metin alanları arayüzde kaçışlanır
+});
+
+test('hata: aynı kimlikli modüller ayrıştırılır', () => {
+  const p = Hesap.projeyiNormallestir({ moduller: [{ id: 'a' }, { id: 'a' }] });
+  assert.notEqual(p.moduller[0].id, p.moduller[1].id);
+});
+
+// ---------- Fiyat ve maliyet ----------
+
+const maliyetKur = (p) => {
+  const s = Hesap.projeHesapla(p);
+  const ps = {};
+  for (const g of Yerlesim.projeYerlesimi(s.kesimListesi, p.ayarlar)) ps[g.malzemeId] = g.plakalar.length;
+  return { s, ps, r: Maliyet.maliyetHesapla(p, s, ps) };
+};
+
+test('maliyet: toplamlar tutarlı, modül dağılımı maliyete eşit', () => {
+  const u = Hesap.yeniModul('ust'); u.adet = 2;
+  const p = Hesap.projeyiNormallestir(proje([Hesap.yeniModul('alt'), u, Hesap.yeniModul('gardirop')]));
+  p.ayarlar.fiyat.ekKalemler = [{ ad: 'Tezgah', tutar: 5000 }];
+  const { r } = maliyetKur(p);
+  const ara = r.ara.malzeme + r.ara.hirdavat + r.ara.hizmet + r.ara.iscilik + r.ara.diger;
+  assert.ok(Math.abs(ara - r.maliyet) < 0.01);
+  assert.ok(Math.abs(r.dagitimFarki) < 0.05, `dağıtım farkı ${r.dagitimFarki}`);
+  const satirToplam = r.teklifSatirlari.reduce((a, x) => a + x.tutar, 0);
+  assert.ok(Math.abs(satirToplam - r.satisKdvHaric) < 0.01);
+  assert.ok(Math.abs(r.satisKdvHaric - r.maliyet * 1.3) < 0.1);
+  assert.ok(Math.abs(r.kdv - r.satisKdvHaric * 0.2) < 0.01);
+  assert.ok(Math.abs(r.genelToplam - (r.satisKdvHaric + r.kdv)) < 0.01);
+  assert.equal(r.modulAdedi, 4);
+  assert.equal(r.kalemler.iscilik[0].tutar, 4 * 1500);
+  assert.ok(r.teklifSatirlari.some((x) => x.ad === 'Tezgah' && x.tutar === 6500));
+});
+
+test('maliyet: plaka tam sayı veya alan + fire ile hesaplanır', () => {
+  const p = Hesap.projeyiNormallestir(proje([Hesap.yeniModul('ust')]));
+  const { ps, r } = maliyetKur(p);
+  const govde = r.kalemler.malzeme.find((m) => m.malzemeId === 'sl18');
+  assert.equal(govde.plaka, ps.sl18);
+  assert.equal(govde.plakaTutar, ps.sl18 * 2200);
+  p.ayarlar.fiyat.plakaHesabi = 'alan';
+  const r2 = maliyetKur(p).r;
+  const g2 = r2.kalemler.malzeme.find((m) => m.malzemeId === 'sl18');
+  assert.ok(Math.abs(g2.plaka - (g2.alanM2 * 1.15) / 5.88) < 0.01);
+  // Ebatlama alan modunda da gerçek plaka sayısıyla
+  assert.equal(r2.kalemler.hizmet.find((h) => h.malzemeId === 'sl18' && h.tur === 'ebatlama').miktar, ps.sl18);
+});
+
+test('maliyet: hırdavat fiyatı kullanıcı fiyatıyla değişir, askı borusu metreyle', () => {
+  const p = Hesap.projeyiNormallestir(proje([Hesap.yeniModul('gardirop')]));
+  p.ayarlar.fiyat.hirdavat.mentese_frenli = 100;
+  const { r } = maliyetKur(p);
+  const m = r.kalemler.hirdavat.find((h) => h.kod === 'mentese_frenli');
+  assert.equal(m.tutar, m.adet * 100);
+  const aski = r.kalemler.hirdavat.find((h) => h.kod === 'aski_borusu');
+  assert.equal(aski.fiyatMiktari, 0.962);
+  assert.equal(aski.tutar, 153.92);
+});
+
+test('maliyet: eksik fiyat bildirilir, lake malzemede m² işlem fiyatı eklenir', () => {
+  const k = Hesap.yeniModul('ust');
+  k.malzeme = { kapak: 'lake18' };
+  const p = Hesap.projeyiNormallestir(proje([k]));
+  p.ayarlar.fiyat.hirdavat.raf_pimi = 0;
+  const { r } = maliyetKur(p);
+  assert.ok(r.eksikFiyat.some((x) => x.startsWith('Raf pimi')));
+  const lake = r.kalemler.malzeme.find((m) => m.malzemeId === 'lake18');
+  assert.ok(lake.islemTutar > 0);
+  assert.equal(lake.bantTutar, 0);
 });

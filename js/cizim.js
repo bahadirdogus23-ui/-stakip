@@ -78,7 +78,7 @@
     });
 
     // Ön yüzler
-    if (!ic && geo.korPanel) s += rect(geo.korPanel.x1, yb + 1.5, geo.korPanel.x2, yb + Hc - 1.5, 'kor-panel');
+    if (!ic && geo.korPanel) s += rect(geo.korPanel.x1, yb + geo.db, geo.korPanel.x2, yb + Hc - geo.db, 'kor-panel');
     if (!ic) {
       geo.satirlar.forEach((sat) => {
         if (sat.tip === 'acik') return;
@@ -298,7 +298,8 @@
     }
     // Montaj yükseklikleri
     const montajlar = [...new Set(ogeler.filter((y) => y.montaj > 0).map((y) => y.montaj))].sort((a, b) => a - b);
-    montajlar.forEach((m, i) => { s += olcuDikey(0, m, -fs * (2 + 2 * i), fs * 0.8); });
+    const solKenar = Math.min(0, ...ogeler.map(konum));
+    montajlar.forEach((m, i) => { s += olcuDikey(0, m, solKenar - fs * (2 + 2 * i), fs * 0.8); });
     // Duvar uzunluğu ve kalan boşluk (zemin sırası)
     s += olcuYatay(0, duvarL, -fs * 6.5, fs, `${duvar} duvarı ${f(duvarL)}`);
     const dz = yer.doluluk.zemin;
@@ -308,9 +309,14 @@
       const a2 = duvar === 'B' ? duvarL - zDolu : duvarL;
       s += olcuYatay(a1, a2, -fs * 4.2, fs * 0.85, `boş ${f(a2 - a1)}`);
     }
+    // Duvarı taşan modüller (B duvarında sola, A duvarında sağa taşar) görünür kalsın
+    const xMin = Math.min(0, ...ogeler.map(konum));
+    const xMax = Math.max(L, ...ogeler.map((y) => konum(y) + genislik(y)));
+    if (xMin < 0) s += `<rect class="tasma" x="${f(xMin)}" y="${f(-Hmax - fs * 2)}" width="${f(-xMin)}" height="${f(Hmax + fs * 2)}"/>` + yazi(xMin / 2, Hmax + fs * 2.6, 'duvar dışı', fs * 0.8, 'tasma-yazi');
+    if (xMax > duvarL) s += `<rect class="tasma" x="${f(duvarL)}" y="${f(-Hmax - fs * 2)}" width="${f(xMax - duvarL)}" height="${f(Hmax + fs * 2)}"/>` + yazi((duvarL + xMax) / 2, Hmax + fs * 2.6, 'duvar dışı', fs * 0.8, 'tasma-yazi');
     const pay = fs * (4 + 2 * montajlar.length);
-    s += cizgi(-pay, 0, L + pay, 0, 'zemin');
-    const vb = `${f(-pay)} ${f(-Hmax - fs * 6)} ${f(L + 2 * pay)} ${f(Hmax + fs * 14)}`;
+    s += cizgi(xMin - pay, 0, xMax + pay, 0, 'zemin');
+    const vb = `${f(xMin - pay)} ${f(-Hmax - fs * 6)} ${f(xMax - xMin + 2 * pay)} ${f(Hmax + fs * 14)}`;
     return `<svg class="cizim" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
