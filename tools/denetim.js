@@ -12,6 +12,7 @@ const C = require('../js/cizim.js');
 const D = require('../js/delik.js');
 const K = require('../js/montaj.js');
 const U = require('../js/uc.js');
+const UK = require('./uc-kontrol.js');
 
 let tohum = 12345;
 const rnd = () => ((tohum = (tohum * 1103515245 + 12345) % 2147483648) / 2147483648);
@@ -32,7 +33,23 @@ function ihlal(kural, modul, detay) {
 
 function rastgeleModul() {
   const m = H.yeniModul(sec(Object.keys(H.PRESETLER)));
-  if (m.tip === 'panel' || m.tip === 'lkose') return m;
+  if (m.tip === 'lkose') {
+    m.derinlik = ara(300, 650);
+    m.genislik = ara(m.derinlik + 300, 1500);
+    m.genislik2 = ara(m.derinlik + 300, 1500);
+    m.yukseklik = ara(500, 2400);
+    m.raf = ara(0, 3);
+    m.baza = sec([{ tip: 'yok', yukseklik: 0, geriCekme: 0 }, { tip: 'ayak', yukseklik: 100, geriCekme: 50 }, { tip: 'panel', yukseklik: ara(60, 150), geriCekme: ara(0, 60) }]);
+    return m;
+  }
+  if (m.tip === 'panel') {
+    m.boy = ara(100, 2600);
+    m.en = ara(50, 1200);
+    m.sekil = sec(['dikdortgen', 'dikdortgen', 'egimli', 'radyus', 'pah', 'oval', 'daire', 'yarim_daire', 'kemer']);
+    m.sekilParam = ara(0, 600);
+    m.koseSayisi = ara(0, 4);
+    return m;
+  }
   m.genislik = ara(300, 2600);
   m.yukseklik = ara(400, 2600);
   m.derinlik = ara(250, 700);
@@ -108,6 +125,13 @@ function denetle(m, A) {
     if (g) {
       const svg = U.ciz(U.modulParcalari(g, { kapaksiz: rnd() < 0.5 }), { yaw: ara(-180, 180), pitch: ara(-10, 80) }, {});
       if (/NaN|undefined/.test(svg)) ihlal('3B çizimde NaN/undefined', m, '');
+      // 3B parçalar birbirine girmemeli (uyarısız dolapta)
+      if (!s.uyarilar.length) {
+        for (const kapaksiz of [false, true]) {
+          const c = UK.modulCakismalari(g, { kapaksiz })[0];
+          if (c) ihlal('3B parçalar iç içe', m, `${c.a.tur} ∩ ${c.b.tur} %${Math.round(c.oran * 100)}`);
+        }
+      }
     }
   } catch (e) { ihlal('Atölye/3B istisnası', m, e.stack.split('\n').slice(0, 2).join(' ')); }
   if (!g || g.panel || g.lkose) return;
@@ -217,6 +241,10 @@ for (let i = 0; i < 200; i++) {
     if (s.saha.uyarilar.some((u) => /NaN|undefined/.test(u))) ihlal('Saha uyarısında NaN', {}, '');
     if (!s.montajHirdavat.every((h) => Number.isFinite(h.adet))) ihlal('Montaj hırdavatı NaN', {}, '');
     U.ciz(U.projeParcalari(s.yerlesim, {}), { yaw: -35, pitch: 22 }, {});
+    if (!s.uyarilar.some((u) => /Yerleşim/.test(u))) {
+      const c = UK.projeCakismalari(s.yerlesim, { kapaksiz: true })[0];
+      if (c) ihlal('Yerleşimde modüller iç içe', { moduller: p.moduller.map((x) => x.ad) }, `${c.a.modul} ∩ ${c.b.modul}`);
+    }
     const r = M.maliyetHesapla(p, s, ps);
     if (Math.abs(r.dagitimFarki) > 0.05 * Math.max(1, s.kesimListesi.length)) ihlal('Maliyet modüllere tam dağıtılmıyor', { moduller: p.moduller.map((m) => m.ad) }, `fark ${r.dagitimFarki}`);
     if (!Number.isFinite(r.genelToplam)) ihlal('Maliyet NaN', {}, '');

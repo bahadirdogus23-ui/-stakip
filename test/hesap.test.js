@@ -233,7 +233,7 @@ test('hata: L köşe dolapta baza çerçevesi iki kol için çıkar', () => {
   const s = Hesap.modulHesapla(l, ayar);
   const ad = (x) => s.parcalar.find((p) => p.ad === x);
   assert.equal(ad('Baza önü – A kolu').boy, 1200 - 520);
-  assert.equal(ad('Baza önü – B kolu').boy, 900 - 520 - 18);
+  assert.equal(ad('Baza önü – B kolu').boy, 900 - 520 + 18); // köşedeki ve kol ucundaki t×t boşluğu kapatır
   assert.equal(ad('Baza arkası – A kolu').boy, 1200);
   assert.equal(ad('Baza yanı (kol ucu)').adet, 2);
 });
@@ -930,4 +930,105 @@ test('eğimli gövde delik planı: tüm uçlar bağlanır, yamuk parçalar kontu
     assert.ok(d.parcalar.find((p) => p.ad === 'Arkalık (çakma) – yamuk').kontur);
     assert.ok(d.parcalar.some((p) => /eğimli/.test(p.ad) && p.kontur));
   }
+});
+
+// ---- Hata analizi turu: motor, yerleşim ve 3B regresyonları ----
+const UK = require('../tools/uc-kontrol.js');
+
+test('hırdavat seçiminde "constructor" gibi miras adlar varsayılana döner', () => {
+  const p = Hesap.projeyiNormallestir({ ayarlar: { hirdavat: { ray: 'constructor', ayak: 'toString' } }, moduller: [Hesap.yeniModul('alt')] });
+  assert.equal(p.ayarlar.hirdavat.ray, Hesap.varsayilanAyarlar().hirdavat.ray);
+  const r = Hesap.projeHesapla(p);
+  assert.ok(!r.hirdavat.some((h) => /undefined/.test(h.ad)));
+  assert.ok(!r.uyarilar.some((u) => /NaN/.test(u)));
+});
+
+test('şekilli kenar ücreti: eğimli kenar faturalanır, pah iki kez sayılmaz', () => {
+  const tabla = (sekil, param, kose) => {
+    const m = Object.assign(Hesap.yeniModul('tabla'), { boy: 1000, en: 600, sekil, sekilParam: param, koseSayisi: kose || 0 });
+    const p = Hesap.yeniProje();
+    p.moduller = [m];
+    return Hesap.projeHesapla(Hesap.projeyiNormallestir(p)).kesimListesi.reduce((a, x) => a + (x.sekil ? x.sekil.cnc * x.adet : 0), 0) / 1000;
+  };
+  assert.ok(Math.abs(tabla('egimli', 300) - Math.hypot(600, 700) / 1000) < 0.01);
+  assert.ok(Math.abs(tabla('pah', 50, 4) - (4 * 50 * Math.SQRT2) / 1000) < 0.01);
+});
+
+test('eğimli kapak menteşe adedi her kapağın menteşe kenarına göre', () => {
+  const m = Hesap.projeyiNormallestir({ moduller: [{ tip: 'normal', genislik: 1000, yukseklik: 1000, sagYukseklik: 2200, derinlik: 400, egimli: true, sutunlar: [{ satirlar: [{ tip: 'kapak', adet: 2 }] }] }] }).moduller[0];
+  const s = Hesap.modulHesapla(m, ayar);
+  const mentese = s.hirdavat.filter((h) => h.kod.startsWith('mentese_')).reduce((a, h) => a + h.adet, 0);
+  const notlar = s.parcalar.filter((p) => /^Kapak .*eğimli/.test(p.ad)).map((p) => (p.not.match(/üstten ([\d,\/ ]+) mm/) || [, ''])[1].split('/').length);
+  assert.equal(mentese, notlar.reduce((a, b) => a + b, 0));
+});
+
+test('baza çekmecesi: panel bazada yan yerine taşıyıcı, ayaklı bazada yalnız arka ayaklar', () => {
+  const panel = Object.assign(Hesap.yeniModul('alt_baza'), { baza: { tip: 'panel', yukseklik: 120, geriCekme: 40 } });
+  const sp = Hesap.modulHesapla(panel, ayar);
+  assert.ok(!sp.parcalar.some((p) => p.ad === 'Baza yanı'));
+  assert.ok(sp.parcalar.some((p) => p.ad === 'Baza çekmecesi taşıyıcı'));
+  const sa = Hesap.modulHesapla(Hesap.yeniModul('alt_baza'), ayar);
+  assert.equal(sa.hirdavat.find((h) => h.kod.startsWith('ayak_')).adet, 2);
+  for (const s of [sp, sa]) for (const k of [false, true]) assert.deepEqual(UK.modulCakismalari(s.geo, { kapaksiz: k }).map((c) => `${c.a.tur}/${c.b.tur}`), []);
+});
+
+test('L köşe: baza önü B kolu köşeyi kapatır; düz yerleşimde adet kadar dizilir', () => {
+  const lk = Object.assign(Hesap.yeniModul('lkose'), { baza: { tip: 'panel', yukseklik: 100, geriCekme: 40 } });
+  const s = Hesap.modulHesapla(lk, ayar);
+  const on = 560 - 40;
+  assert.equal(s.parcalar.find((p) => p.ad === 'Baza önü – B kolu').boy, 900 - on + 18);
+  assert.deepEqual(UK.modulCakismalari(s.geo, {}), []);
+  const p = Hesap.yeniProje();
+  p.moduller = [Object.assign(Hesap.yeniModul('lkoseust'), { adet: 2 })];
+  const r = Hesap.projeHesapla(Hesap.projeyiNormallestir(p));
+  assert.equal(r.yerlesim.yerler.length, 2);
+  assert.equal(r.montajHirdavat.find((h) => h.kod === 'aski_aparati').adet, 8);
+});
+
+test('kulp "el hizası" montaj yüksekliğini hesaba katar', () => {
+  const kulpY = (montaj) => {
+    const m = Object.assign(Hesap.yeniModul('banyo_boy'), { montajYuksekligi: montaj });
+    const s = Hesap.modulHesapla(m, ayar);
+    const o = s.geo.satirlar.flatMap((x) => x.onler).find((x) => x.kulp && !x.kulp.yatay);
+    return o.kulp.delikler[0].y;
+  };
+  assert.notEqual(kulpY(0), kulpY(400));
+});
+
+test('sığ dolapta kuşak yerine tam üst tabla; şekilli panelin yerleşim ölçüsü gerçek ölçü', () => {
+  const m = Object.assign(Hesap.yeniModul('aynali'), { ust: 'kusak' });
+  const s = Hesap.modulHesapla(m, ayar);
+  assert.equal(s.geo.ust, 'tam');
+  assert.ok(s.uyarilar.some((u) => /kuşak/.test(u)));
+  const d = Hesap.modulHesapla(Object.assign(Hesap.yeniModul('tabla'), { boy: 1200, en: 600, sekil: 'daire' }), ayar);
+  assert.equal(d.geo.W, 600);
+});
+
+test('3B: katalogda ve çeşitlemelerinde parçalar iç içe geçmez', () => {
+  const cesit = [null, (m) => { m.egimli = true; m.sagYukseklik = Math.max(600, m.yukseklik - 500); }, (m) => { m.yapi = 'tabla_boydan'; }, (m) => { m.kapakTipi = 'ic'; }, (m) => { m.arkalik = 'cakma'; }, (m) => { m.baza = { tip: 'panel', yukseklik: 100, geriCekme: 50 }; }];
+  for (const id of Object.keys(Hesap.PRESETLER)) {
+    for (const f of cesit) {
+      const m = Hesap.yeniModul(id);
+      if (f && m.tip === 'panel') continue;
+      if (f) f(m);
+      const s = Hesap.modulHesapla(m, ayar);
+      if (!s.geo) continue;
+      for (const kapaksiz of [false, true]) {
+        const c = UK.modulCakismalari(s.geo, { kapaksiz });
+        assert.equal(c.length, 0, `${id}: ${c.map((x) => `${x.a.tur}∩${x.b.tur}`).join(', ')}`);
+      }
+    }
+  }
+});
+
+test('yerleşim: asma dolap boy dolabın üstüne, boy dolap köşe üst dolabının altına gelmez', () => {
+  const p = Hesap.yeniProje();
+  p.yerlesim.tip = 'L';
+  p.moduller = [Hesap.yeniModul('lkoseust'), Hesap.yeniModul('boy_firin'), Hesap.yeniModul('ust'), Hesap.yeniModul('alt'), Object.assign(Hesap.yeniModul('boy_kiler'), { duvar: 'B' }), Object.assign(Hesap.yeniModul('ust'), { duvar: 'B' }), Object.assign(Hesap.yeniModul('tabla'), { duvar: 'B', montajYuksekligi: 730 })];
+  const r = Hesap.projeHesapla(Hesap.projeyiNormallestir(p));
+  assert.deepEqual(UK.projeCakismalari(r.yerlesim, { kapaksiz: true }).map((c) => `${c.a.modul}∩${c.b.modul}`), []);
+  const boy = r.yerlesim.yerler.find((y) => y.modul.ad.startsWith('Boy Dolap'));
+  assert.ok(boy.bas >= 600, 'boy dolap köşe üst dolabından sonra başlar');
+  // Boy dolap ile yanındaki asma dolap birleştirilir
+  assert.ok(r.birlesimSayisi >= 1);
 });

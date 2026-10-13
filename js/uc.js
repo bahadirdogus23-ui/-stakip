@@ -2,7 +2,10 @@
  * 3D görünüm: dışa bağımlılık olmadan, SVG çokgenleriyle çizilen döndürülebilir model.
  * Her parça 8 köşeli bir altı yüzlüdür (dikdörtgen kutu ya da eğimli/yamuk parça).
  * Dünya koordinatı: X sağa (A duvarı boyunca), Y yukarı, Z odaya doğru (duvar Z=0).
- * Çizim: döndürme (yaw, pitch) + dik izdüşüm, uzaktan yakına sıralama (ressam algoritması).
+ * Ölçüler hesap motorunun geometrisinden (geo) alınır; kesim listesiyle aynı yapı kuralları
+ * (yanlar/tablalar boydan, kuşak, kanal/çakma arkalık, gömme kapak, sürgü, eğim) uygulanır.
+ * Çizim: döndürme (yaw, pitch) + dik izdüşüm. Sıralama: eksenlere paralel parçalar için
+ * ayırma ekseni testine dayalı ressam sıralaması (topolojik), gerekirse ağırlık merkezi derinliği.
  */
 (function (root, factory) {
   const api = factory();
@@ -25,16 +28,36 @@
   }
   /** Üst yüzü eğimli kutu: sol (x1) üst yüksekliği ySol, sağ (x2) üst yüksekliği ySag. */
   function egimliKutu(x1, x2, y1, ySol, ySag, z1, z2, tur, ek) {
-    return Object.assign({ k: [[x1, y1, z1], [x2, y1, z1], [x2, ySag, z1], [x1, ySol, z1], [x1, y1, z2], [x2, y1, z2], [x2, ySag, z2], [x1, ySol, z2]], tur }, ek || {});
+    return Object.assign({ k: [[x1, y1, z1], [x2, y1, z1], [x2, ySag, z1], [x1, ySol, z1], [x1, y1, z2], [x2, y1, z2], [x2, ySag, z2], [x1, ySol, z2]], tur, egik: true }, ek || {});
   }
-  /** Eğik plaka (eğimli üst tabla): alt ve üst yüzleri eğik. */
+  /** Eğik plaka (eğimli üst tabla): alt yüz yAltSol..yAltSag, düşey kalınlık kal. */
   function egikPlaka(x1, x2, yAltSol, yAltSag, kal, z1, z2, tur) {
-    return { k: [[x1, yAltSol, z1], [x2, yAltSag, z1], [x2, yAltSag + kal, z1], [x1, yAltSol + kal, z1], [x1, yAltSol, z2], [x2, yAltSag, z2], [x2, yAltSag + kal, z2], [x1, yAltSol + kal, z2]], tur };
+    return { k: [[x1, yAltSol, z1], [x2, yAltSag, z1], [x2, yAltSag + kal, z1], [x1, yAltSol + kal, z1], [x1, yAltSol, z2], [x2, yAltSag, z2], [x2, yAltSag + kal, z2], [x1, yAltSol + kal, z2]], tur, egik: true };
+  }
+
+  /** Ön yüz: kapak türüne göre düz, camlı çerçeveli ya da profilli. */
+  function onYuz(P, x1, x2, y1, y2Sol, y2Sag, z1, z2, kapakTuru, cerceve, tur, profil) {
+    const egik = Math.abs(y2Sol - y2Sag) > 0.5;
+    const tek = (a, b, c, dSol, dSag, t2) => P.push(egik || dSol !== dSag ? egimliKutu(a, b, c, dSol, dSag, z1, z2, t2.tur, t2.ek) : kutu(a, b, c, dSol, z1, z2, t2.tur, t2.ek));
+    if (tur === 'cekmece' || egik || !(kapakTuru === 'cam_cerceve' || kapakTuru === 'cam_profil')) {
+      const t2 = kapakTuru === 'ayna' ? { tur: 'ayna' } : kapakTuru === 'cam' ? { tur: 'cam', ek: { saydam: 0.45 } } : { tur };
+      tek(x1, x2, y1, y2Sol, y2Sag, t2);
+      return;
+    }
+    // Çerçeve + cam: dört çıta ve ortada cam
+    const e = Math.min(kapakTuru === 'cam_profil' ? profil : cerceve, (x2 - x1) / 3, (y2Sol - y1) / 3);
+    const ct = kapakTuru === 'cam_profil' ? 'ayak' : 'kapak';
+    P.push(kutu(x1, x1 + e, y1, y2Sol, z1, z2, ct));
+    P.push(kutu(x2 - e, x2, y1, y2Sol, z1, z2, ct));
+    P.push(kutu(x1 + e, x2 - e, y1, y1 + e, z1, z2, ct));
+    P.push(kutu(x1 + e, x2 - e, y2Sol - e, y2Sol, z1, z2, ct));
+    const zc = (z1 + z2) / 2;
+    P.push(kutu(x1 + e, x2 - e, y1 + e, y2Sol - e, zc - 2, zc + 2, 'cam', { saydam: 0.4 }));
   }
 
   /**
    * Bir modülün yerel parçaları. Yerel: x 0..W (önden bakınca soldan sağa), y zeminden,
-   * z 0 = arka (duvar), z = D gövde ön yüzü; kapaklar z > D.
+   * z 0 = arka (duvar), z = D gövde ön yüzü; tam bini kapaklar z > D.
    */
   function modulParcalari(geo, secenek) {
     const kapaksiz = !!(secenek && secenek.kapaksiz);
@@ -44,89 +67,171 @@
     if (geo.lkose) return lKoseParcalari(geo, kapaksiz);
     const { W, D, Ds, t, hb, tk } = geo;
     const Hc = geo.Hc;
-    const HcL = geo.egim ? geo.egim.HcL : Hc;
-    const HcR = geo.egim ? geo.egim.HcR : Hc;
+    const egim = geo.egim;
+    const HcL = egim ? egim.HcL : Hc;
+    const HcR = egim ? egim.HcR : Hc;
     const HX = (x) => HcL + ((HcR - HcL) * x) / W;
+    const cos = egim ? Math.cos(Math.atan(Math.abs(HcR - HcL) / W)) : 1;
+    const tc = t / cos; // eğik tablanın düşey kalınlığı
     const zArka = D - Ds;
-    const icOn = geo.kapakTipi === 'ic' || geo.surgu ? tk : 0;
+    const icOn = geo.kapakTipi === 'ic' ? tk : 0; // gömme kapakta iç parçalar kapak kalınlığı kadar geride
     const zIcOn = D - icOn;
     const zIcArka = zIcOn - geo.icDerinlik;
     const tabla = geo.yapi === 'tabla_boydan';
-    // Baza
+    const kusak = geo.ust === 'kusak' && !egim;
+    const kusakEn = geo.kusakEn || 100;
+    const gc = (geo.baza && geo.baza.geriCekme) || 0;
+
+    // ---------- Baza ----------
     if (geo.baza.tip === 'ayak' || geo.baza.tip === 'tekerlek') {
-      for (const x of [50, W - 50]) for (const z of [zArka + 50, D - 50]) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
+      const xs = W > 1000 ? [50, W / 2, W - 50] : [50, W - 50];
+      // Baza çekmecesinde önde taşıyıcılar var; ayaklar yalnız arkada (kutunun arkasında)
+      const zs = geo.bazaCekmece ? [zArka + 20] : [zArka + 50, D - gc - 30];
+      for (const x of xs) for (const z of zs) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
     } else if (geo.baza.tip === 'panel') {
-      P.push(kutu(0, W, 0, hb, zArka, D - geo.baza.geriCekme, 'baza'));
+      const zOn = D - gc;
+      P.push(kutu(0, W, 0, hb, zArka, zArka + t, 'baza'));
+      // Baza çekmecesinde ön parça ve yanlar yoktur; yerlerini taşıyıcılar alır
+      if (!geo.bazaCekmece) {
+        P.push(kutu(0, W, 0, hb, zOn - t, zOn, 'baza'));
+        P.push(kutu(0, t, 0, hb, zArka + t, zOn - t, 'baza'));
+        P.push(kutu(W - t, W, 0, hb, zArka + t, zOn - t, 'baza'));
+      }
     }
-    if (geo.bazaCekmece && !kapaksiz) P.push(kutu(geo.bazaCekmece.x1, geo.bazaCekmece.x2, geo.bazaCekmece.y1, geo.bazaCekmece.y2, D - geo.baza.geriCekme - tk, D - geo.baza.geriCekme, 'kapak'));
-    // Gövde
+    if (geo.bazaCekmece) {
+      const bc = geo.bazaCekmece;
+      const zOn2 = D - gc;
+      const zOn1 = zOn2 - tk;
+      const tasL = Ds - gc - tk - 2 - (geo.baza.tip === 'panel' ? t : 0);
+      for (const [a, b] of [[0, t], [W - t, W]]) P.push(kutu(a, b, 5, hb, zOn1 - 2 - tasL, zOn1 - 2, 'govde'));
+      if (!kapaksiz) P.push(kutu(bc.x1, bc.x2, bc.y1, bc.y2, zOn1, zOn2, 'kapak'));
+      const k = (geo.kutular || []).find((x) => x.etiket === 'baza çekmecesi');
+      if (kapaksiz && k && !k.metal) P.push(kutu(W / 2 - k.kutuW / 2, W / 2 + k.kutuW / 2, 10, 10 + k.kutuH, zOn1 - k.L, zOn1, 'ic'));
+    }
+
+    // ---------- Gövde ----------
     const yanAlt = hb + (tabla ? t : 0);
-    P.push(kutu(0, t, yanAlt, hb + HcL - (tabla ? t : 0), zArka, D, 'govde'));
-    P.push(kutu(W - t, W, yanAlt, hb + HcR - (tabla ? t : 0), zArka, D, 'govde'));
-    P.push(kutu(tabla ? 0 : t, tabla ? W : W - t, hb, hb + t, zArka, D, 'govde'));
-    if (geo.egim) P.push(egikPlaka(tabla ? 0 : t, tabla ? W : W - t, hb + HX(tabla ? 0 : t) - t, hb + HX(tabla ? W : W - t) - t, t, zArka, D, 'govde'));
-    else if (geo.ust === 'kusak') {
-      P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, D - 100, D, 'govde'));
-      P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, zArka, zArka + 100, 'govde'));
-    } else P.push(kutu(tabla ? 0 : t, tabla ? W : W - t, hb + Hc - t, hb + Hc, zArka, D, 'govde'));
-    // Arkalık
-    if (geo.arkalik === 'kanal') {
-      const z = zArka + 10;
-      P.push(geo.egim ? egimliKutu(t, W - t, hb + t, hb + HcL - t, hb + HcR - t, z, z + geo.ta, 'arkalik') : kutu(t, W - t, hb + t, hb + Hc - t, z, z + geo.ta, 'arkalik'));
-    } else if (geo.arkalik === 'cakma') {
-      P.push(geo.egim ? egimliKutu(0, W, hb, hb + HcL, hb + HcR, zArka - geo.ta, zArka, 'arkalik') : kutu(0, W, hb, hb + Hc, zArka - geo.ta, zArka, 'arkalik'));
+    const yanUstY = tabla ? (kusak ? Hc : Hc - t) : Hc;
+    for (const [x1, x2] of [[0, t], [W - t, W]]) {
+      if (egim) {
+        // Yanın üst kenarı eğime uyar (kalınlık boyunca açılı)
+        const d = tabla ? tc : 0;
+        P.push(egimliKutu(x1, x2, yanAlt, hb + HX(x1) - d, hb + HX(x2) - d, zArka, D, 'govde'));
+      } else P.push(kutu(x1, x2, yanAlt, hb + yanUstY, zArka, D, 'govde'));
     }
-    // Kapaklar kapalıyken yalnızca açık, niş ya da camlı satırların içi görünür
-    const acikSatir = (s) => kapaksiz || (!geo.surgu && (s.tip === 'acik' || s.tip === 'nis' || (s.tip === 'kapak' && ['cam', 'cam_profil', 'cam_cerceve'].includes(s.kapakTuru))));
-    const herhangiAcik = kapaksiz || geo.satirlar.some(acikSatir);
-    // Bölme dikmeleri, ara tablalar
-    if (herhangiAcik) for (const dx of geo.dikmeX) P.push(kutu(dx, dx + t, hb + t, hb + HX(dx + t / 2) - t, zIcArka, zIcOn, 'panel'));
+    const tx1 = tabla ? 0 : t;
+    const tx2 = tabla ? W : W - t;
+    P.push(kutu(tx1, tx2, hb, hb + t, zArka, D, 'govde'));
+    if (egim) P.push(egikPlaka(tx1, tx2, hb + HX(tx1) - tc, hb + HX(tx2) - tc, tc, zArka, D, 'govde'));
+    else if (kusak) {
+      P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, D - kusakEn, D, 'govde'));
+      P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, zArka, zArka + kusakEn, 'govde'));
+    } else P.push(kutu(tx1, tx2, hb + Hc - t, hb + Hc, zArka, D, 'govde'));
+
+    // ---------- Arkalık ----------
+    if (geo.arkalik === 'kanal') {
+      const z = zArka + (geo.kanalGeri != null ? geo.kanalGeri : 10);
+      P.push(egim
+        ? egimliKutu(t, W - t, hb + t, hb + HX(t) - tc, hb + HX(W - t) - tc, z, z + geo.ta, 'arkalik')
+        : kutu(t, W - t, hb + t, hb + Hc - t, z, z + geo.ta, 'arkalik'));
+    } else if (geo.arkalik === 'cakma') {
+      P.push(egim ? egimliKutu(0, W, hb, hb + HcL, hb + HcR, zArka - geo.ta, zArka, 'arkalik') : kutu(0, W, hb, hb + Hc, zArka - geo.ta, zArka, 'arkalik'));
+    }
+
+    // ---------- İç parçalar ----------
+    // Kapaklar kapalıyken yalnızca açık, niş ya da camlı satırların içi çizilir (ön yüzlerin arkasında kalır)
+    const camli = (s) => s.tip === 'kapak' && ['cam', 'cam_profil', 'cam_cerceve'].includes(s.kapakTuru);
+    const surguSaydam = geo.surgu && geo.surgu.tur !== 'panel' && geo.surgu.tur !== 'ayna';
+    const acikSatir = (s) => kapaksiz || surguSaydam || (!geo.surgu && (s.tip === 'acik' || s.tip === 'nis' || camli(s)));
+    const herhangiAcik = geo.satirlar.some(acikSatir);
+    const ustSatir = (s) => geo.sutunlar[s.sutun].satirlar.indexOf(s) === 0;
+    if (herhangiAcik) {
+      for (const dx of geo.dikmeX) {
+        if (egim) P.push(egimliKutu(dx, dx + t, hb + t, hb + HX(dx) - tc, hb + HX(dx + t) - tc, zIcArka, zIcOn, 'panel'));
+        else P.push(kutu(dx, dx + t, hb + t, hb + Hc - t, zIcArka, zIcOn, 'panel'));
+      }
+    }
     for (const c of geo.sutunlar) {
       c.sinirlar.forEach((b, i) => {
         if (!b.panel) return;
-        if (!kapaksiz && !acikSatir(c.satirlar[i]) && !acikSatir(c.satirlar[i + 1])) return;
+        if (!acikSatir(c.satirlar[i]) && !acikSatir(c.satirlar[i + 1])) return;
         P.push(kutu(b.x1, b.x2, hb + b.y - t / 2, hb + b.y + t / 2, zIcArka, zIcOn, 'panel'));
       });
     }
-    // Satır içleri
     for (const s of geo.satirlar) {
       if (!acikSatir(s)) continue;
-      for (const dx of s.dikmeX) P.push(kutu(dx, dx + t, hb + s.icAlt, hb + s.icUst, zIcArka, zIcOn, 'panel'));
+      const egikSatir = egim && ustSatir(s);
+      for (const dx of s.dikmeX) {
+        if (egikSatir) P.push(egimliKutu(dx, dx + t, hb + s.icAlt, hb + HX(dx) - tc, hb + HX(dx + t) - tc, zIcArka, zIcOn, 'panel'));
+        else P.push(kutu(dx, dx + t, hb + s.icAlt, hb + s.icUst, zIcArka, zIcOn, 'panel'));
+      }
+      const dolguH = s.icDolguH || 0;
       for (const b of s.bolumler) {
         for (const ry of s.raflar) {
-          const cam = s.rafTipi === 'cam';
-          P.push(kutu(b.x1 + 1, b.x2 - 1, hb + ry - (cam ? 4 : t / 2), hb + ry + (cam ? 4 : t / 2), zIcArka, zIcOn - 20, cam ? 'cam' : 'panel', cam ? { saydam: 0.45 } : null));
+          if (s.rafSabit) P.push(kutu(b.x1, b.x2, hb + ry - t / 2, hb + ry + t / 2, zIcArka, zIcOn, 'panel'));
+          else {
+            const cam = s.rafTipi === 'cam';
+            const yb = geo.rafYan != null ? geo.rafYan : 1;
+            const rg = geo.rafGeri != null ? geo.rafGeri : 20;
+            P.push(kutu(b.x1 + yb, b.x2 - yb, hb + ry - (cam ? 3 : t / 2), hb + ry + (cam ? 3 : t / 2), zIcArka, zIcOn - rg, cam ? 'cam' : 'panel', cam ? { saydam: 0.45 } : null));
+          }
         }
         if (s.aski) P.push(kutu(b.x1, b.x2, hb + s.icUst - 70, hb + s.icUst - 55, (zIcArka + zIcOn) / 2 - 8, (zIcArka + zIcOn) / 2 + 8, 'kulp'));
         if (s.led) P.push(kutu(b.x1 + 10, b.x2 - 10, hb + s.icUst - 6, hb + s.icUst - 1, zIcOn - 40, zIcOn - 20, 'led'));
+        if (dolguH && (s.icCekmeceler || []).some((c) => c.x1 >= b.x1 - 1 && c.x2 <= b.x2 + 1)) {
+          P.push(kutu(b.x1, b.x1 + t, hb + s.icAlt, hb + s.icAlt + dolguH, zIcArka, zIcOn, 'panel'));
+          P.push(kutu(b.x2 - t, b.x2, hb + s.icAlt, hb + s.icAlt + dolguH, zIcArka, zIcOn, 'panel'));
+        }
+      }
+      // Gizli çekmeceler: ön (gövde içinde) ve kutu
+      for (const c of s.icCekmeceler || []) {
+        const zf2 = zIcOn - 5;
+        const zf1 = zf2 - t;
+        P.push(kutu(c.x1, c.x2, hb + c.y1, hb + c.y2, zf1, zf2, 'cekmece'));
+        if (kapaksiz && c.kutuW) {
+          const mx = (c.x1 + c.x2) / 2;
+          P.push(kutu(mx - c.kutuW / 2, mx + c.kutuW / 2, hb + c.kutuY1, hb + c.kutuY1 + c.kutuH, zf1 - c.L, zf1, 'ic'));
+        }
       }
       if (kapaksiz) {
-        for (const c of s.cekmeceler) P.push(kutu(c.x1, c.x2, hb + c.y1, hb + c.y2, zIcOn - c.L, zIcOn, 'ic'));
-        for (const c of s.icCekmeceler || []) P.push(kutu(c.x1, c.x2, hb + c.y1, hb + c.y2, zIcOn - (c.L || 300), zIcOn - 25, 'cekmece'));
+        const zKutu = geo.surgu || geo.kapakTipi === 'ic' ? D - tk : D;
+        for (const c of s.cekmeceler) P.push(kutu(c.x1, c.x2, hb + c.y1, hb + c.y2, zKutu - c.L, zKutu, 'ic'));
       }
     }
     if (kapaksiz) return P;
-    // Ön yüzler
+
+    // ---------- Ön yüzler ----------
     const zOn1 = geo.kapakTipi === 'ic' ? D - tk : D;
     const zOn2 = zOn1 + tk;
     if (geo.korPanel) P.push(kutu(geo.korPanel.x1, geo.korPanel.x2, hb + geo.db, hb + Hc - geo.db, zOn1, zOn2, 'kapak'));
     if (geo.surgu) {
       const s = geo.surgu;
-      const tur = s.tur === 'ayna' ? 'ayna' : s.tur === 'cam_profil' ? 'cam' : 'kapak';
+      const tur = s.tur === 'ayna' ? 'ayna' : s.tur === 'cam_profil' || s.tur === 'cam' ? 'cam' : 'kapak';
       for (const k of s.kapaklar) {
         const z = D + (k.arka ? 5 : 12 + tk);
-        P.push(kutu(k.x1, k.x2, hb + s.y1, hb + s.y2, z, z + tk, tur, tur === 'cam' ? { saydam: 0.5 } : null));
+        if (tur === 'kapak') P.push(kutu(k.x1, k.x2, hb + s.y1, hb + s.y2, z, z + tk, 'kapak'));
+        else {
+          // Cam/ayna sürgü: alüminyum profil çerçeve + dolgu (kesim listesindeki cam ölçüsüyle)
+          const e = geo.profilPay || 18;
+          const y1 = hb + s.y1;
+          const y2 = hb + s.y2;
+          P.push(kutu(k.x1, k.x1 + e, y1, y2, z, z + tk, 'ayak'));
+          P.push(kutu(k.x2 - e, k.x2, y1, y2, z, z + tk, 'ayak'));
+          P.push(kutu(k.x1 + e, k.x2 - e, y1, y1 + e, z, z + tk, 'ayak'));
+          P.push(kutu(k.x1 + e, k.x2 - e, y2 - e, y2, z, z + tk, 'ayak'));
+          P.push(kutu(k.x1 + e, k.x2 - e, y1 + e, y2 - e, z + tk / 2 - 2, z + tk / 2 + 2, tur, tur === 'cam' ? { saydam: 0.5 } : null));
+        }
       }
-      return P;
     }
     for (const s of geo.satirlar) {
-      if (!s.onler.length) continue;
+      // Sürgü kapaklı dolapta çekmece önleri gövde içinde gömme
+      const z1 = geo.surgu ? D - tk : zOn1;
       for (const o of s.onler) {
-        const tur = s.tip === 'kapak' ? (s.kapakTuru === 'ayna' ? 'ayna' : s.kapakTuru === 'cam' || s.kapakTuru === 'cam_profil' ? 'cam' : 'kapak') : 'cekmece';
-        const ek = tur === 'cam' ? { saydam: 0.45 } : null;
-        if (o.y2sol != null) P.push(egimliKutu(o.x1, o.x2, hb + s.on.y1, hb + o.y2sol, hb + o.y2sag, zOn1, zOn2, tur, ek));
-        else P.push(kutu(o.x1, o.x2, hb + s.on.y1, hb + s.on.y2, zOn1, zOn2, tur, ek));
-        if (o.kulp && o.kulp.delikler.length) {
+        const tur = s.tip === 'kapak' ? 'kapak' : 'cekmece';
+        const y2Sol = hb + (o.y2sol != null ? o.y2sol : s.on.y2);
+        const y2Sag = hb + (o.y2sag != null ? o.y2sag : s.on.y2);
+        onYuz(P, o.x1, o.x2, hb + s.on.y1, y2Sol, y2Sag, z1, z1 + tk, s.tip === 'kapak' ? s.kapakTuru : 'panel', geo.cerceveEni || 70, tur, geo.profilPay || 18);
+        if (o.kulp && o.kulp.delikler.length && !(s.tip === 'cekmece' && !s.cekmeceler.length)) {
           const d = o.kulp.delikler;
           const xs = d.map((p) => o.x1 + p.x);
           const ys = d.map((p) => hb + s.on.y1 + p.y);
@@ -135,40 +240,67 @@
           const x2 = Math.max(...xs) + (yatay ? 10 : 6);
           const y1 = Math.min(...ys) - (yatay ? 6 : 10);
           const y2 = Math.max(...ys) + (yatay ? 6 : 10);
-          P.push(kutu(x1, x2, y1, y2, zOn2 + 18, zOn2 + 28, 'kulp'));
+          P.push(kutu(x1, x2, y1, y2, z1 + tk + 18, z1 + tk + 28, 'kulp'));
         }
       }
     }
     return P;
   }
 
+  /** L köşe dolap: A kolu X boyunca (duvar Z=0), B kolu Z boyunca (duvar X=0). */
   function lKoseParcalari(g, kapaksiz) {
-    const { W, W2, D, t, hb, tk, db } = g;
+    const { W, W2, D, t, hb, tk, db, ta } = g;
     const Hc = g.Hc;
     const P = [];
-    if (g.baza.tip === 'ayak') for (const [x, z] of [[50, 50], [W - 50, 50], [W - 50, D - 50], [50, W2 - 50], [D - 50, W2 - 50], [D - 50, D - 50]]) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
-    for (const y of [hb, hb + Hc - t]) {
-      P.push(kutu(0, W, y, y + t, 0, D, 'govde'));
-      P.push(kutu(0, D, y, y + t, D, W2, 'govde'));
+    const gc = (g.baza && g.baza.geriCekme) || 0;
+    if (g.baza.tip === 'ayak' || g.baza.tip === 'tekerlek') {
+      for (const [x, z] of [[ta + 50, ta + 50], [W - 50, ta + 50], [W - 50, D - gc - 30], [ta + 50, W2 - 50], [D - gc - 30, W2 - 50], [D - gc - 30, D - gc - 30]]) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
+    } else if (g.baza.tip === 'panel') {
+      const on = D - gc;
+      P.push(kutu(on, W, 0, hb, on - t, on, 'baza'));
+      P.push(kutu(on - t, on, 0, hb, on - t, W2, 'baza'));
+      P.push(kutu(0, W, 0, hb, 0, t, 'baza'));
+      P.push(kutu(0, t, 0, hb, t, W2, 'baza'));
+      P.push(kutu(W - t, W, 0, hb, t, on - t, 'baza'));
+      P.push(kutu(t, on - t, 0, hb, W2 - t, W2, 'baza'));
     }
-    P.push(kutu(W - t, W, hb, hb + Hc, 0, D, 'govde'));
-    P.push(kutu(0, D, hb, hb + Hc, W2 - t, W2, 'govde'));
-    P.push(kutu(0, W, hb, hb + Hc, 0, g.ta, 'arkalik'));
-    P.push(kutu(0, g.ta, hb, hb + Hc, g.ta, W2, 'arkalik'));
-    if (!kapaksiz) {
-      P.push(kutu(D + tk + 3, W - db, hb + db, hb + Hc - db, D, D + tk, 'kapak'));
-      P.push(kutu(D, D + tk, hb + db, hb + Hc - db, D, W2 - db, 'kapak'));
+    // Arkalıklar (duvar dibinde), tablalar ve kol uçlarındaki yanlar
+    P.push(kutu(0, W, hb, hb + Hc, 0, ta, 'arkalik'));
+    P.push(kutu(0, ta, hb, hb + Hc, ta, W2, 'arkalik'));
+    for (const y of [hb, hb + Hc - t]) {
+      P.push(kutu(ta, W - t, y, y + t, ta, D, 'govde'));
+      P.push(kutu(ta, D, y, y + t, D, W2 - t, 'govde'));
+    }
+    P.push(kutu(W - t, W, hb, hb + Hc, ta, D, 'govde'));
+    P.push(kutu(ta, D, hb, hb + Hc, W2 - t, W2, 'govde'));
+    // Raflar (kapaklar kapalıyken görünmez)
+    if (kapaksiz) {
+      const rafD = D - ta - (g.rafGeri != null ? g.rafGeri : 20);
+      const yb = g.rafYan != null ? g.rafYan : 1;
+      for (const ry of g.raflar || []) {
+        P.push(kutu(ta, W - t - yb, hb + ry - t / 2, hb + ry + t / 2, ta, ta + rafD, 'panel'));
+        P.push(kutu(ta, ta + rafD, hb + ry - t / 2, hb + ry + t / 2, ta + rafD, W2 - t - yb, 'panel'));
+      }
+      return P;
+    }
+    // Katlanır kapaklar: B kapağı x = D düzleminde, A kapağı onun kalınlığı + boşluk kadar sonra
+    P.push(kutu(W - db - g.kapakA, W - db, hb + db, hb + Hc - db, D, D + tk, 'kapak'));
+    P.push(kutu(D, D + tk, hb + db, hb + Hc - db, W2 - db - g.kapakB, W2 - db, 'kapak'));
+    if (g.kulpTur === 'kulp') {
+      const x = W - db - 40;
+      const yOrta = hb + Hc - 120;
+      P.push(kutu(x - 6, x + 6, yOrta - 90, yOrta + 90, D + tk + 18, D + tk + 28, 'kulp'));
     }
     return P;
   }
 
-  function panelParcalari(g) {
+  function panelParcalari(g, onZ) {
     const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
     if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
     if (g.tur === 'raf' || g.tur === 'tabla') return [kutu(0, g.boy, 0, g.t, 0, g.en, tur)];
     if (g.tur === 'baza') return [kutu(0, g.boy, 0, g.en, 0, g.t, tur)];
-    // Dolgu, bulaşık kapağı, serbest: ön düzlemde dik panel (komşu dolapların önüne hizalı)
-    const z = 560;
+    // Dolgu, bulaşık kapağı, serbest: komşu dolapların ön düzleminde dik panel
+    const z = onZ != null ? onZ : 560;
     return [kutu(0, g.W, 0, g.H, z, z + g.t, tur)];
   }
 
@@ -176,7 +308,13 @@
   function projeParcalari(yer, secenek) {
     const P = [];
     for (const y of yer.yerler) {
-      const yerel = modulParcalari(y.geo, secenek);
+      let yerel;
+      if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza'].includes(y.geo.tur)) {
+        // Ön panel: aynı duvar ve sıradaki en yakın gövdenin ön yüzüne hizalanır
+        const komsu = yer.yerler.filter((x) => x !== y && x.geo && !x.geo.panel && x.sira === y.sira && (x.duvar === y.duvar || x.duvar === 'kose'))
+          .sort((a, b) => Math.abs(a.bas - y.bas) - Math.abs(b.bas - y.bas))[0];
+        yerel = panelParcalari(y.geo, komsu ? komsu.geo.D : null);
+      } else yerel = modulParcalari(y.geo, secenek);
       const donustur = (p) => {
         if (y.duvar === 'kose' || y.duvar === 'A' || yer.tip !== 'L') return [y.duvar === 'kose' ? p[0] : y.bas + p[0], y.montaj + p[1], p[2]];
         // B duvarı: modül +X yönüne bakar; yerel sol (x=0) köşeden uzakta
@@ -187,12 +325,66 @@
     return P;
   }
 
-  // Altı yüzün köşe indisleri (dış normal yönünde saat yönünün tersi)
+  // Altı yüzün köşe indisleri
   const YUZLER = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]];
   const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 
   /**
-   * Parçaları SVG'ye çizer. gorus: { yaw, pitch } (derece), yakin: yakınlaştırma (1 = sığdır).
+   * Çizim sırası (uzaktan yakına). İki parçanın ekran kutuları örtüşüyorsa ve dünya
+   * eksenlerinden birinde ayrıklarsa, bakış yönüne göre arkadaki önce çizilir. Ayrılamayan
+   * çiftlerde (eğik parçalar) ağırlık merkezi derinliği kullanılır. Döngü kalırsa en uzaktaki seçilir.
+   */
+  function siraBul(ogeler, bakis) {
+    const n = ogeler.length;
+    const once = Array.from({ length: n }, () => []); // i → i'den sonra çizilmesi gerekenler
+    const gelen = new Array(n).fill(0);
+    const E = 0.5;
+    for (let i = 0; i < n; i++) {
+      const a = ogeler[i];
+      for (let j = i + 1; j < n; j++) {
+        const b = ogeler[j];
+        if (a.ex2 <= b.ex1 || b.ex2 <= a.ex1 || a.ey2 <= b.ey1 || b.ey2 <= a.ey1) continue; // ekranda örtüşmez
+        let karar = 0; // -1: a önce, 1: b önce
+        let enIyi = 0;
+        for (let k = 0; k < 3; k++) {
+          const v = bakis[k];
+          if (Math.abs(v) < 1e-6) continue;
+          let yon = 0;
+          if (a.b[k][1] <= b.b[k][0] + E) yon = v > 0 ? -1 : 1; // a eksi tarafta
+          else if (b.b[k][1] <= a.b[k][0] + E) yon = v > 0 ? 1 : -1;
+          if (yon && Math.abs(v) > enIyi) { enIyi = Math.abs(v); karar = yon; }
+        }
+        if (!karar) karar = a.derinlik <= b.derinlik ? -1 : 1;
+        if (karar < 0) { once[i].push(j); gelen[j]++; } else { once[j].push(i); gelen[i]++; }
+      }
+    }
+    // Kahn: hazır olanlardan en uzaktakini (en küçük derinlik) seç
+    const sira = [];
+    const hazir = [];
+    const kullanildi = new Array(n).fill(false);
+    for (let i = 0; i < n; i++) if (!gelen[i]) hazir.push(i);
+    while (sira.length < n) {
+      let sec = -1;
+      if (hazir.length) {
+        let ei = 0;
+        for (let h = 1; h < hazir.length; h++) if (ogeler[hazir[h]].derinlik < ogeler[hazir[ei]].derinlik) ei = h;
+        sec = hazir.splice(ei, 1)[0];
+      } else {
+        // Döngü: kalanlardan en uzaktaki
+        for (let i = 0; i < n; i++) if (!kullanildi[i] && (sec < 0 || ogeler[i].derinlik < ogeler[sec].derinlik)) sec = i;
+      }
+      kullanildi[sec] = true;
+      sira.push(sec);
+      for (const j of once[sec]) {
+        gelen[j]--;
+        if (gelen[j] === 0 && !kullanildi[j]) hazir.push(j);
+      }
+    }
+    return sira;
+  }
+
+  /**
+   * Parçaları SVG'ye çizer. gorus: { yaw, pitch } (derece), secenek.yakin: yakınlaştırma (1 = sığdır).
    * Dönüş: SVG metni.
    */
   function ciz(parcalar, gorus, secenek) {
@@ -206,35 +398,43 @@
       const z2 = sp * y + cp * z1;
       return [x1, y2, z2];
     };
+    // Bakana doğru dünya yönü (kamera z ekseninin dünya bileşenleri)
+    const bakis = [don([1, 0, 0])[2], don([0, 1, 0])[2], don([0, 0, 1])[2]];
     const isik = (() => { const v = [0.35, 0.75, 0.55]; const n = Math.hypot(...v); return v.map((a) => a / n); })();
-    // Ressam algoritması parça bazında: her parçanın ağırlık merkezi derinliğine göre uzaktan yakına.
-    // Dışbükey bir parçanın kendi görünen yüzleri birbirini örtmez.
-    const cizilecek = [];
+    const ogeler = [];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const p of parcalar) {
       const v = p.k.map(don);
-      for (const q of v) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); minY = Math.min(minY, -q[1]); maxY = Math.max(maxY, -q[1]); }
+      let ex1 = Infinity, ex2 = -Infinity, ey1 = Infinity, ey2 = -Infinity;
+      for (const q of v) { ex1 = Math.min(ex1, q[0]); ex2 = Math.max(ex2, q[0]); ey1 = Math.min(ey1, -q[1]); ey2 = Math.max(ey2, -q[1]); }
+      minX = Math.min(minX, ex1); maxX = Math.max(maxX, ex2); minY = Math.min(minY, ey1); maxY = Math.max(maxY, ey2);
+      const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
       const derinlik = v.reduce((a, q) => a + q[2], 0) / 8;
       const [r, g, bb] = hexRgb(RENK[p.tur] || RENK.govde);
       const yuzler = [];
+      const merkez = v.reduce((a, q) => a.map((c, k) => c + q[k] / 8), [0, 0, 0]);
       for (const idx of YUZLER) {
         const pts = idx.map((i2) => v[i2]);
-        const a = pts[1].map((c, k) => c - pts[0][k]);
-        const b = pts[3].map((c, k) => c - pts[0][k]);
-        let n = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-        const nl = Math.hypot(...n) || 1;
-        n = n.map((c) => c / nl);
+        // Normal: köşegenlerin çapraz çarpımı (eğik parçalarda da kararlı), dışa doğru yönlendirilir
+        const a = pts[2].map((c, k) => c - pts[0][k]);
+        const c2 = pts[3].map((c, k) => c - pts[1][k]);
+        let n = [a[1] * c2[2] - a[2] * c2[1], a[2] * c2[0] - a[0] * c2[2], a[0] * c2[1] - a[1] * c2[0]];
+        const nl = Math.hypot(...n);
+        if (nl < 1e-9) continue;
+        n = n.map((x) => x / nl);
+        const yuzMerkez = pts.reduce((s2, q) => s2.map((x, k) => x + q[k] / 4), [0, 0, 0]);
+        if (n[0] * (yuzMerkez[0] - merkez[0]) + n[1] * (yuzMerkez[1] - merkez[1]) + n[2] * (yuzMerkez[2] - merkez[2]) < 0) n = n.map((x) => -x);
         if (n[2] <= 0.0001) continue; // arka yüz
         const parlak = 0.62 + 0.38 * Math.max(0, n[0] * isik[0] + n[1] * isik[1] + n[2] * isik[2]);
         yuzler.push({ pts, renk: `rgb(${Math.round(r * parlak)},${Math.round(g * parlak)},${Math.round(bb * parlak)})` });
       }
-      cizilecek.push({ derinlik, yuzler, saydam: p.saydam });
+      ogeler.push({ derinlik, yuzler, saydam: p.saydam, b, ex1, ex2, ey1, ey2 });
     }
-    if (!cizilecek.length) return '<p class="bos">Gösterilecek parça yok.</p>';
-    cizilecek.sort((a, b) => a.derinlik - b.derinlik);
+    if (!ogeler.length) return '<p class="bos">Gösterilecek parça yok.</p>';
     const f = (x) => Math.round(x * 10) / 10;
     let s = '';
-    for (const p of cizilecek) {
+    for (const i of siraBul(ogeler, bakis)) {
+      const p = ogeler[i];
       for (const y of p.yuzler) {
         s += `<polygon points="${y.pts.map((q) => `${f(q[0])},${f(-q[1])}`).join(' ')}" fill="${y.renk}"${p.saydam ? ` fill-opacity="${p.saydam}"` : ''} stroke="rgba(40,32,22,.45)" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
       }
@@ -250,5 +450,5 @@
     return `<svg class="uc-svg" viewBox="${f(cx - vw / 2)} ${f(cyy - vh / 2)} ${f(vw)} ${f(vh)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { modulParcalari, projeParcalari, ciz, kutu, RENK };
+  return { modulParcalari, projeParcalari, ciz, kutu, siraBul, RENK };
 });

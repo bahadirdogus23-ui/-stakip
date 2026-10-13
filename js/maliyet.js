@@ -130,7 +130,7 @@
         if (!b) continue;
         malz += Hesap.parcaAlanM2(p) * p.adet * b.m2 + Hesap.parcaBantM(p) * p.adet * b.bantM;
         // CNC/şablon kesim ücreti yalnızca şekilli parçaya
-        if (p.sekil) malz += (((p.sekil.egri || 0) + (p.sekil.tur === 'egimli' || p.sekil.tur === 'pah' ? p.sekil.cevre - p.sekil.duz : 0)) / 1000) * p.adet * sayi(F.sekilliKesimM);
+        if (p.sekil) malz += ((p.sekil.cnc != null ? p.sekil.cnc : p.sekil.egri || 0) / 1000) * p.adet * sayi(F.sekilliKesimM);
       }
       let hird = 0;
       for (const h of s.hirdavat) hird += h.fiyatMiktari * hirdavatFiyati(A, h.kod);
@@ -192,8 +192,8 @@
   /** Bir seçeneğin uygulandığı proje kopyası (modüle özel seçimler korunur). */
   function secenekProjesi(proje, sec) {
     const p = JSON.parse(JSON.stringify(proje));
-    for (const [k, v] of Object.entries(sec.kullanim || {})) if (v && p.ayarlar.malzemeler.some((m) => m.id === v)) p.ayarlar.kullanim[k] = v;
-    for (const [k, v] of Object.entries(sec.hirdavat || {})) if (v && Hesap.HIRDAVAT_SECENEKLERI[k] && Hesap.HIRDAVAT_SECENEKLERI[k].secenekler[v]) p.ayarlar.hirdavat[k] = v;
+    for (const [k, v] of Object.entries(sec.kullanim || {})) if (v && Hesap.KULLANIMLAR.includes(k) && p.ayarlar.malzemeler.some((m) => m.id === v)) p.ayarlar.kullanim[k] = v;
+    for (const [k, v] of Object.entries(sec.hirdavat || {})) if (Hesap.hirdavatGecerli(k, v)) p.ayarlar.hirdavat[k] = v;
     if (sec.karOrani != null && Number.isFinite(Number(sec.karOrani))) p.ayarlar.fiyat.karOrani = Number(sec.karOrani);
     return p;
   }

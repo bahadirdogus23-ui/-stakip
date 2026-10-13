@@ -502,6 +502,18 @@
   }
 
   /** Kuşbakışı yerleşim planı. Köşe sol üstte; A duvarı sağa, B duvarı aşağı. */
+  /** Kutuya sığan yazı: önce küçültülür, yine sığmazsa '…' ile kısaltılır (tam ad title'da). */
+  function siganYazi(metin, x, y, genislik, fs, aci) {
+    const kar = 0.56; // ortalama karakter genişliği / yazı boyu
+    let boy = fs;
+    let yazi = String(metin);
+    if (yazi.length * kar * boy > genislik) boy = Math.max(fs * 0.6, genislik / (yazi.length * kar));
+    const sigar = Math.max(3, Math.floor(genislik / (kar * boy)));
+    if (yazi.length > sigar) yazi = yazi.slice(0, sigar - 1) + '…';
+    const don = aci ? ` transform="rotate(${aci} ${f(x)} ${f(y)})"` : '';
+    return `<text class="plan-yazi" x="${f(x)}" y="${f(y)}" font-size="${f(boy)}"${don}><title>${esc(metin)}</title>${esc(yazi)}</text>`;
+  }
+
   function planCizimi(yer) {
     if (!yer.yerler.length) return '<p class="bos">Henüz modül yok.</p>';
     const L = yer.tip === 'L';
@@ -517,13 +529,13 @@
       const D = y.geo.D;
       if (y.duvar === 'kose') {
         s += `<polygon class="${cls}" points="0,0 ${f(y.W)},0 ${f(y.W)},${f(D)} ${f(D)},${f(D)} ${f(D)},${f(y.W2)} 0,${f(y.W2)}"/>`;
-        if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(D / 2)}" y="${f(D / 2)}" font-size="${f(fs * 0.8)}">${esc(y.modul.ad)}</text>`;
+        if (y.sira === 'zemin') s += siganYazi(y.modul.ad, D / 2, D / 2, D * 0.9, fs * 0.8);
       } else if (y.duvar === 'B') {
         s += `<rect class="${cls}" x="0" y="${f(y.bas)}" width="${f(D)}" height="${f(y.W)}"/>`;
-        if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(D / 2)}" y="${f(y.bas + y.W / 2)}" font-size="${f(fs * 0.8)}" transform="rotate(-90 ${f(D / 2)} ${f(y.bas + y.W / 2)})">${esc(y.modul.ad)}</text>`;
+        if (y.sira === 'zemin') s += siganYazi(y.modul.ad, D / 2, y.bas + y.W / 2, y.W * 0.9, fs * 0.8, -90);
       } else {
         s += `<rect class="${cls}" x="${f(y.bas)}" y="0" width="${f(y.W)}" height="${f(D)}"/>`;
-        if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(y.bas + y.W / 2)}" y="${f(D / 2)}" font-size="${f(fs * 0.8)}">${esc(y.modul.ad)}</text>`;
+        if (y.sira === 'zemin') s += siganYazi(y.modul.ad, y.bas + y.W / 2, D / 2, y.W * 0.9, fs * 0.8);
       }
     }
     // Kolon ve kirişler (derinliği olan engeller)

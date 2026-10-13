@@ -151,7 +151,10 @@
     const araTur = HS.araBaglanti === 'ayni' ? (HS.baglanti === 'seffaf_kose' ? 'seffaf_t' : HS.baglanti) : HS.araBaglanti;
     const { t, Ds, W } = g;
     const tablaBoydan = g.yapi === 'tabla_boydan';
-    const icOn = g.kapakTipi === 'ic' || g.surgu ? g.tk : 0;
+    // Gömme kapakta iç parçalar kapak kalınlığı kadar geride başlar; sürgüde raflar tam derin,
+    // yalnız çekmeceler (gömme önleriyle) kapak kalınlığı kadar geride
+    const icOn = g.kapakTipi === 'ic' ? g.tk : 0;
+    const cekOn = g.kapakTipi === 'ic' || g.surgu ? g.tk : 0;
     const icSon = icOn + g.icDerinlik;
     const egim = g.egim;
     const HcL = egim ? egim.HcL : g.Hc;
@@ -323,8 +326,8 @@
           const yan = !kutu || !kutu.metal && kutu.ray !== 'gizli';
           const y = yan ? c.y1 + 22 : c.y1 - 7;
           const L = c.L || 400;
-          const zs = [icOn + ICERI, icOn + Math.max(ICERI + 64, L - 32)];
-          if (L >= 450) zs.splice(1, 0, icOn + ICERI + 32 * Math.round((L - 69) / 64));
+          const zs = [cekOn + ICERI, cekOn + Math.max(ICERI + 64, L - 32)];
+          if (L >= 450) zs.splice(1, 0, cekOn + ICERI + 32 * Math.round((L - 69) / 64));
           for (const f of yuzler) for (const z of zs) yuzDelik(f, 'ray', y, z, 4, 10, yan ? 'Ray vidası Ø4 (ray ekseni kutu tabanı +22)' : 'Gizli/metal ray vidası Ø4');
           if (!yan) for (const f of yuzler) not(f.v.p, 'Gizli/metal ray delik yüksekliği ve konumları ray şablonuna göre kontrol edilmeli.');
         }
@@ -544,11 +547,12 @@
       const yanL = Ds - gc - 2 * t;
       const ys = hb < 100 ? [hb / 2] : [hb / 2 - 20, hb / 2 + 20];
       const onArka = P.yeni(onYok ? 'Baza arkası' : 'Baza ön/arka', onYok ? 'Baza arkası' : 'Baza ön/arka', W, hb, 'x: soldan · y: alttan (iç yüz)', { adet: onYok ? 1 : 2 });
-      const yanP = P.yeni('Baza yanı', 'Baza yanı', yanL, hb, 'x: ön uçtan · y: alttan', { adet: 2 });
+      const yanP = onYok ? null : P.yeni('Baza yanı', 'Baza yanı', yanL, hb, 'x: ön uçtan · y: alttan', { adet: 2 });
       // Ön/arka parçası iki ucunda yanlara bağlanır; bir yanın iki ucu (ön ve arka) çizilir.
       // Baza çekmecesinde ön parça yoktur: yanların yalnızca arka ucu bağlanır.
-      const uclar = onYok ? [yanL, null] : [0, yanL];
-      [t / 2, W - t / 2].forEach((X, i) => {
+      const uclar = [0, yanL];
+      if (onYok) not(onArka, 'Baza çekmecesi var: baza yanları yerine çekmece taşıyıcıları kullanılır; arka parça taşıyıcılara köşebentle bağlanır.');
+      else [t / 2, W - t / 2].forEach((X, i) => {
         const u = uclar[i];
         yuzUcBagla(govdeTur, ys, hb,
           (y) => ({ p: onArka, x: X, y, yuz: 'iç yüz' }),
@@ -560,12 +564,13 @@
     } else if (baza.tip === 'ayak') {
       const n = W > 1000 ? 6 : 4;
       const xs = n === 4 ? [50, W - 50] : [50, W / 2, W - 50];
-      for (const X of xs) for (const z of [gc + 50, Ds - 50]) delik(alt.p, 'vida', alt.yerel(X), z - alt.z0, 3, 0, 'Ayak bağlantı yeri (ayak tabanı şablonu, 4 vida)', 'alt yüz');
+      for (const X of xs) for (const z of (g.bazaCekmece ? [Ds - 20] : [gc + 50, Ds - 50])) delik(alt.p, 'vida', alt.yerel(X), z - alt.z0, 3, 0, 'Ayak bağlantı yeri (ayak tabanı şablonu, 4 vida)', 'alt yüz');
     } else if (baza.tip === 'tekerlek') {
       for (const X of [60, W - 60]) for (const z of [60, Ds - 60]) delik(alt.p, 'vida', alt.yerel(X), z - alt.z0, 3, 0, 'Tekerlek plakası yeri (4 vida Ø3)', 'alt yüz');
     }
     if (g.bazaCekmece) {
-      const tasL = Ds - gc - 20;
+      const tasP = sonuc.parcalar.find((x) => x.ad === 'Baza çekmecesi taşıyıcı');
+      const tasL = tasP ? tasP.boy : Ds - gc - 20;
       const tas = P.yeni('Baza çekmecesi taşıyıcı', 'Baza çekmecesi taşıyıcı', tasL, hb - 5, 'x: ön uçtan · y: alttan', { adet: 2 });
       const k = kutuBul('baza çekmecesi');
       const L = k ? k.L : tasL - 40;
@@ -784,14 +789,16 @@
     if (tur === 'serbest') return;
     const p = P.yeni(adBas, adBas, w, h, yatayPanel ? 'x: sol uçtan · y: ön kenardan / alttan' : 'x: ön kenardan · y: alttan (iç yüz)');
     const kosebent = (x, y, yuz) => { for (const d of [-12, 12]) delik(p, 'vida', x, y + d, 3, 12, 'Köşebent vidası Ø3 (12 mm, boydan delmeyin)', yuz); };
+    // Kenardan pay kadar içeride iki nokta; parça kısaysa ortada tek nokta
+    const ikiUc = (L, pay) => (L > 2 * pay + 40 ? [pay, L - pay] : [L / 2]);
     if (tur === 'yan_kapama') {
-      for (const y of [120, h - 120]) for (const x of [60, w - 60]) kosebent(x, y, 'iç yüz');
+      for (const y of ikiUc(h, 120)) for (const x of ikiUc(w, 60)) kosebent(x, y, 'iç yüz');
       not(p, 'Dolabın yanına 4 köşebentle bağlanır; dolap içinden ayrıca 4×30 vidayla sabitlenebilir.');
     } else if (tur === 'dolgu') {
-      for (const y of [120, h - 120]) kosebent(w / 2, y, 'iç yüz');
+      for (const y of ikiUc(h, 120)) kosebent(w / 2, y, 'iç yüz');
       not(p, 'Komşu dolaba ve duvar tarafına çıtayla; köşebent vidaları panel kalınlığını geçmemeli.');
     } else if (tur === 'tabla') {
-      for (const x of [100, w - 100]) for (const y of [60, h - 60]) kosebent(x, y, 'alt yüz');
+      for (const x of ikiUc(w, 100)) for (const y of ikiUc(h, 60)) kosebent(x, y, 'alt yüz');
       not(p, 'Dolaplara alttan 4 köşebentle bağlanır.');
     } else if (tur === 'raf') {
       const n = Math.max(2, Math.ceil(w / 400));
