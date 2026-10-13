@@ -9,6 +9,9 @@ const H = require('../js/hesap.js');
 const Y = require('../js/yerlesim.js');
 const M = require('../js/maliyet.js');
 const C = require('../js/cizim.js');
+const D = require('../js/delik.js');
+const K = require('../js/montaj.js');
+const U = require('../js/uc.js');
 
 let tohum = 12345;
 const rnd = () => ((tohum = (tohum * 1103515245 + 12345) % 2147483648) / 2147483648);
@@ -57,8 +60,13 @@ function rastgeleModul() {
   m.korPanel = rnd() < 0.1 ? ara(300, 600) : 0;
   m.bazaCekmece = rnd() < 0.3;
   if (rnd() < 0.3) m.baza = { tip: sec(['ayak', 'panel']), yukseklik: ara(60, 160), geriCekme: ara(0, 60) };
+  if (rnd() < 0.2) { m.egimli = true; m.sagYukseklik = ara(300, 2700); }
+  m.kulpYon = sec(['proje', 'dikey', 'yatay']);
+  m.kulpKonum = sec(['proje', 'oto', 'ust', 'orta', 'alt']);
   return m;
 }
+
+const W0 = (g) => g.W;
 
 function denetle(m, A) {
   let s;
@@ -74,7 +82,32 @@ function denetle(m, A) {
     if (/NaN|undefined/.test(svg)) ihlal('Çizimde NaN/undefined', m, '');
   } catch (e) { ihlal('Çizim istisnası', m, e.message); }
   const g = s.geo;
+  // Delik planı, montaj kılavuzu ve 3B görünüm üretilebilmeli
+  try {
+    const d = D.delikPlani(m, s, A);
+    for (const p of d.parcalar || []) for (const h of p.delikler) {
+      if (!(h.x >= -E && h.x <= p.w + E && h.y >= -E && h.y <= p.h + E)) { ihlal('Delik parça dışında', m, `${p.ad} ${h.ad} ${h.x},${h.y} / ${p.w}×${p.h}`); break; }
+    }
+    const proje = H.projeyiNormallestir({ moduller: [m] });
+    const k = JSON.stringify(K.kilavuz(m, s, proje, H.projeHesapla(proje)));
+    if (/NaN|undefined/.test(k)) ihlal('Montaj kılavuzunda NaN/undefined', m, '');
+    if (g) {
+      const svg = U.ciz(U.modulParcalari(g, { kapaksiz: rnd() < 0.5 }), { yaw: ara(-180, 180), pitch: ara(-10, 80) }, {});
+      if (/NaN|undefined/.test(svg)) ihlal('3B çizimde NaN/undefined', m, '');
+    }
+  } catch (e) { ihlal('Atölye/3B istisnası', m, e.stack.split('\n').slice(0, 2).join(' ')); }
   if (!g || g.panel || g.lkose) return;
+  // Kulp delikleri ön yüzün içinde
+  for (const sat of g.satirlar) for (const o of sat.onler) for (const h of (o.kulp && o.kulp.delikler) || []) {
+    if (h.x < -E || h.x > o.x2 - o.x1 + E || h.y < -E || h.y > sat.on.h + E + (o.y2sol ? Math.max(o.y2sol, o.y2sag) - sat.on.y2 : 0)) ihlal('Kulp deliği ön yüz dışında', m, `${h.x},${h.y} / ${o.x2 - o.x1}×${sat.on.h}`);
+  }
+  // Eğimli üst satırın ön yüzleri eğimin altında kalmalı
+  if (g.egim) {
+    const HcX = (x) => g.egim.HcL + ((g.egim.HcR - g.egim.HcL) * x) / W0(g);
+    for (const sat of g.satirlar) for (const o of sat.onler) {
+      if (o.y2sol != null && (o.y2sol > HcX(o.x1) + E || o.y2sag > HcX(o.x2) + E)) ihlal('Eğimli ön yüz gövdeyi aşıyor', m, `${o.y2sol}/${o.y2sag}`);
+    }
+  }
   const { W, Hc, t, db } = g;
   const icDuzen = g.kapakTipi === 'ic' || !!g.surgu;
   // Ön yüzler gövdenin içinde/üstünde ve birbirleriyle çakışmamalı
@@ -147,11 +180,22 @@ for (let i = 0; i < N; i++) denetle(rastgeleModul(), A);
 for (let i = 0; i < 200; i++) {
   const moduller = [];
   for (let j = 0, n = ara(1, 6); j < n; j++) { const m = rastgeleModul(); m.adet = ara(1, 3); m.duvar = sec(['A', 'B']); moduller.push(m); }
-  const p = H.projeyiNormallestir({ moduller, yerlesim: { tip: sec(['duz', 'L']), duvarA: ara(1000, 5000), duvarB: ara(1000, 4000) } });
+  const engeller = [];
+  for (let j = 0, n = ara(0, 4); j < n; j++) engeller.push({ tur: sec(Object.keys(H.ENGEL_TURLERI)), duvar: sec(['A', 'B']), x: ara(0, 4000), genislik: ara(50, 1500), y: ara(0, 2000), yukseklik: ara(50, 1500), derinlik: ara(0, 300) });
+  const p = H.projeyiNormallestir({ moduller, yerlesim: { tip: sec(['duz', 'L']), duvarA: ara(1000, 5000), duvarB: ara(1000, 4000), tavan: sec([0, ara(2000, 2900)]), engeller } });
+  const artiklar = [];
+  for (let j = 0, n = ara(0, 3); j < n; j++) { const mz = sec(p.ayarlar.malzemeler); artiklar.push({ id: 'a' + j, malzemeAd: mz.ad, kalinlik: mz.kalinlik, boy: ara(250, 2800), en: ara(250, 2000), adet: ara(1, 3) }); }
   try {
     const s = H.projeHesapla(p);
     const ps = {};
-    for (const g of Y.projeYerlesimi(s.kesimListesi, p.ayarlar)) ps[g.malzemeId] = g.plakalar.length;
+    for (const g of Y.projeYerlesimi(s.kesimListesi, p.ayarlar, artiklar)) {
+      ps[g.malzemeId] = g.tamPlaka;
+      if (g.sigmayan.length === 0 && g.plakalar.reduce((a, pl) => a + pl.yerlesen.length, 0) !== s.kesimListesi.filter((x) => x.malzeme === g.malzemeId).reduce((a, x) => a + x.adet, 0)) ihlal('Yerleşimde parça kayboldu', {}, g.malzemeAd);
+      for (const pl of g.plakalar) for (const y of pl.yerlesen) if (y.x + y.w > pl.uzun - 2 * pl.kenar + E || y.y + y.h > pl.kisa - 2 * pl.kenar + E) ihlal('Parça plakadan taşıyor', {}, `${pl.uzun}×${pl.kisa}`);
+    }
+    if (s.saha.uyarilar.some((u) => /NaN|undefined/.test(u))) ihlal('Saha uyarısında NaN', {}, '');
+    if (!s.montajHirdavat.every((h) => Number.isFinite(h.adet))) ihlal('Montaj hırdavatı NaN', {}, '');
+    U.ciz(U.projeParcalari(s.yerlesim, {}), { yaw: -35, pitch: 22 }, {});
     const r = M.maliyetHesapla(p, s, ps);
     if (Math.abs(r.dagitimFarki) > 0.05 * Math.max(1, s.kesimListesi.length)) ihlal('Maliyet modüllere tam dağıtılmıyor', { moduller: p.moduller.map((m) => m.ad) }, `fark ${r.dagitimFarki}`);
     if (!Number.isFinite(r.genelToplam)) ihlal('Maliyet NaN', {}, '');

@@ -284,6 +284,83 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 .cizim .basac-isaret { fill: none; stroke: #6f6658; stroke-width: 1; }
 .form-izgara label.onay { flex-direction: row; align-items: center; gap: 6px; color: var(--metin); }
 
+.cizim .engel { fill: rgba(179, 38, 30, .10); stroke: #b3261e; stroke-width: 1; stroke-dasharray: 5 3; }
+.cizim .engel-pencere { fill: rgba(80, 150, 210, .18); stroke: #3d7cb3; }
+.cizim .engel-kapi { fill: rgba(120, 100, 80, .12); stroke: #7a6650; }
+.cizim .engel-kolon { fill: rgba(120, 120, 120, .35); stroke: #555; }
+.cizim .engel-nokta { stroke: #fff; stroke-width: 1; }
+.cizim .engel-nokta.engel-priz { fill: #d9822b; }
+.cizim .engel-nokta.engel-su { fill: #2d7fc1; }
+.cizim .engel-nokta.engel-gaz { fill: #c62828; }
+.cizim .engel-yazi { fill: #6b2b26; text-anchor: middle; font-family: system-ui, sans-serif; }
+.cizim .tavan { stroke: #6b2b26; stroke-width: 1.2; stroke-dasharray: 10 5; }
+.cizim .kulp.gomme { fill: #8a8070; }
+.plaka-svg .cikan-artik { fill: rgba(60, 150, 80, .15); stroke: #3c9650; stroke-width: 2; stroke-dasharray: 12 6; }
+.cizim .delik-parca { fill: #f3ead9; stroke: #3c3428; stroke-width: 1.2; }
+.cizim .delik-kanal { fill: rgba(60, 60, 60, .25); stroke: #555; stroke-width: .8; stroke-dasharray: 4 3; }
+.cizim .delik { stroke: #222; stroke-width: .8; fill: #fff; }
+.cizim .delik.arka { stroke-dasharray: 3 2; }
+.cizim .d-baglanti { fill: #b3261e; }
+.cizim .d-pim { fill: #3d7cb3; }
+.cizim .d-mentese { fill: #fff; stroke: #9a5b22; stroke-width: 1.4; }
+.cizim .d-plaka { fill: #9a5b22; }
+.cizim .d-ray { fill: #2e7d32; }
+.cizim .d-kulp { fill: #222; }
+.cizim .delik.uc { fill: #fff; stroke: #b3261e; stroke-width: 1.4; }
+
+/* 3D */
+.uc-arac { gap: 6px; }
+.uc-arac select { width: auto; }
+.uc-arac .onay { display: flex; align-items: center; gap: 4px; }
+.uc-alan { border: 1px solid var(--cizgi); border-radius: 8px; background: linear-gradient(#fbfaf7, #efebe3); height: min(72vh, 760px); cursor: grab; touch-action: none; user-select: none; display: flex; }
+.uc-alan:active { cursor: grabbing; }
+.uc-alan:focus { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+.uc-svg { width: 100%; height: 100%; }
+/* Atölye */
+.atolye { align-items: start; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
+.kucuk-tablo td:not(:first-child), .kucuk-tablo th { white-space: nowrap; }
+.kucuk-tablo td:first-child { min-width: 90px; }
+.delik-tablo-kap { overflow-x: auto; }
+.montaj-adim { padding-left: 22px; line-height: 1.5; }
+.montaj-adim li { margin-bottom: 5px; }
+.delik-kart { border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; break-inside: avoid; }
+.delik-kart h4 { margin: 0 0 6px; }
+.delik-kart h4 small { font-weight: normal; color: var(--soluk); }
+.delik-icerik { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); gap: 10px; align-items: start; }
+.delik-resim .cizim { max-height: 340px; }
+.kucuk-tablo { font-size: 11.5px; }
+.kucuk-tablo td, .kucuk-tablo th { padding: 2px 5px; }
+/* Seçenekli teklif */
+.secenek-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.secenek-kart { border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 5px; background: #fcfbf8; }
+.secenek-kart label { display: flex; flex-direction: column; font-size: 11px; color: var(--soluk); }
+.sk-baslik { display: flex; gap: 6px; }
+.sk-baslik input { font-weight: 700; }
+.sk-toplam { margin-top: 4px; border-top: 1px solid var(--cizgi); padding-top: 6px; display: flex; flex-direction: column; }
+.sk-toplam span { font-size: 11px; color: var(--soluk); }
+.sk-toplam b { font-size: 17px; }
+.sk-toplam small { color: var(--soluk); font-size: 11px; }
+.sk-toplam.ucuz b { color: #2e7d32; }
+/* Yerinde ölçü ve artık */
+.saha, .artik-kutu { border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; background: #fcfbf8; }
+.saha summary, .artik-kutu summary { cursor: pointer; font-weight: 600; }
+.engel-tablo input, .engel-tablo select { padding: 3px 5px; min-width: 64px; }
+.saha-uyari { color: var(--hata); }
+.artik-ekle { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); align-items: end; margin-top: 8px; }
+.artik-ozet { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #e8f3ea; border: 1px solid #b9dcc0; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
+.plaka-kart.artik { border-color: #3c9650; }
+@media (max-width: 760px) {
+  .delik-icerik { grid-template-columns: 1fr; }
+  .atolye { grid-template-columns: 1fr; }
+  .duzen { padding: 8px; gap: 10px; }
+  .kutu, .sag { padding: 10px; }
+  .ust-bar { padding: 8px; }
+  .ust-butonlar button, .ust-butonlar .buton-label { padding: 6px 8px; font-size: 13px; }
+  .proje-ad { width: 150px; }
+  .sekmeler button { padding: 6px 8px; }
+  input, select, button { min-height: 34px; }
+}
+
 #yazdirAlan { display: none; }
 
 @media print {
@@ -348,6 +425,12 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   .t-not { white-space: pre-wrap; border-left: 3px solid #999; padding-left: 8px; }
   .t-imza { display: flex; justify-content: space-between; margin-top: 30mm; }
   .t-imza div { width: 45%; text-align: center; }
+
+  .y-uc .uc-svg { width: 100%; height: auto; max-height: 230mm; }
+  .secenek-tablo th small { font-weight: normal; }
+  .secenek-tablo td.secim-kutu { text-align: center; font-size: 16px; }
+  .delik-resim .cizim { max-height: 90mm; }
+  .montaj-adim { font-size: 11px; }
 }
 
 </style>
@@ -386,10 +469,12 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       <section class="sag">
         <nav class="sekmeler" role="tablist">
           <button data-sekme="cizim" class="aktif">Çizim</button>
+          <button data-sekme="uc">3D</button>
           <button data-sekme="yerlesim">Mutfak / yerleşim</button>
           <button data-sekme="kesim">Kesim listesi</button>
           <button data-sekme="plaka">Plaka yerleşimi</button>
           <button data-sekme="hirdavat">Hırdavat & özet</button>
+          <button data-sekme="atolye">Atölye</button>
           <button data-sekme="maliyet">Fiyat & maliyet</button>
           <button data-sekme="ayarlar">Malzeme & ayarlar</button>
         </nav>
@@ -406,9 +491,50 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
           </div>
         </div>
 
+        <div class="sekme" id="sekme-uc">
+          <div class="arac-satir uc-arac">
+            <select id="ucKapsam" aria-label="Kapsam"><option value="modul">Seçili modül</option><option value="proje">Tüm proje (yerleşim)</option></select>
+            <label class="onay"><input type="checkbox" id="ucKapaksiz"> Kapakları gizle</label>
+            <button data-uc="on" class="ikincil">Önden</button>
+            <button data-uc="izo" class="ikincil">Köşeden</button>
+            <button data-uc="ust" class="ikincil">Üstten</button>
+            <button data-uc="yak" class="ikincil" title="Yakınlaştır">＋</button>
+            <button data-uc="uzak" class="ikincil" title="Uzaklaştır">－</button>
+            <span class="not">Döndürmek için sürükleyin; fare tekerleği yakınlaştırır.</span>
+          </div>
+          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"></div>
+        </div>
+
+        <div class="sekme" id="sekme-atolye">
+          <div class="arac-satir">
+            <label>Modül <select id="atolyeModul"></select></label>
+            <button id="btnYazdirDelik">Delik planı PDF</button>
+            <button id="btnYazdirMontaj" class="ikincil">Montaj kılavuzu PDF</button>
+            <span class="not">PDF'ler tüm modülleri içerir.</span>
+          </div>
+          <div class="iki-kolon atolye">
+            <div>
+              <h3>Montaj kılavuzu</h3>
+              <div id="montajAlan"></div>
+            </div>
+            <div>
+              <h3>Delik planı</h3>
+              <div id="delikAlan"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="sekme" id="sekme-yerlesim">
           <div id="yerlesimForm" class="form-izgara yerlesim-form"></div>
           <p class="not">L yerleşimde köşe sol üsttedir: <b>A duvarı</b> köşeden sağa, <b>B duvarı</b> köşeden aşağı uzanır. Modüller listedeki sırayla köşeden başlayarak dizilir; her modülün duvarı modül formundan seçilir. L köşe dolap otomatik olarak köşeye yerleşir.</p>
+          <details class="saha" id="sahaKutu">
+            <summary>Yerinde ölçü (tavan, köşe, engeller)</summary>
+            <div id="sahaForm" class="form-izgara"></div>
+            <h4>Engeller <small>(konum köşeden — düz yerleşimde duvarın solundan — ve zeminden, mm)</small></h4>
+            <div id="engelTablo" class="tablo-kap"></div>
+            <button data-islem="engelEkle" class="ikincil" id="btnEngelEkle">+ Engel ekle</button>
+            <div id="sahaNotlari"></div>
+          </details>
           <h3>Kuşbakışı plan</h3>
           <div id="cizimPlan" class="cizim-kutu"></div>
           <h3>A duvarı görünüşü</h3>
@@ -430,6 +556,20 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         </div>
 
         <div class="sekme" id="sekme-plaka">
+          <details class="artik-kutu" id="artikKutu">
+            <summary>Artık stoku <span id="artikOzet" class="kucuk"></span></summary>
+            <p class="not">Önceki işlerden kalan parçalar. "Artıkları kullan" açıkken aynı ad ve kalınlıktaki malzemede, plaka açmadan önce bunlar kullanılır. Stok bu bilgisayardaki tarayıcıda tutulur; projeler arasında ortaktır.</p>
+            <label class="onay"><input type="checkbox" id="artikKullan"> Bu işte artıkları kullan</label>
+            <div id="artikTablo" class="tablo-kap"></div>
+            <div class="form-izgara artik-ekle">
+              <label>Malzeme<select id="artikMalz"></select></label>
+              <label>Boy (mm)<input id="artikBoy" type="number" min="50"></label>
+              <label>En (mm)<input id="artikEn" type="number" min="50"></label>
+              <label>Adet<input id="artikAdet" type="number" min="1" value="1"></label>
+              <label>Not<input id="artikNot"></label>
+              <button id="btnArtikEkle" class="ikincil">+ Stoka ekle</button>
+            </div>
+          </details>
           <div id="plakaAlan"></div>
         </div>
 
@@ -440,6 +580,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
               <div id="hirdavatTablo" class="tablo-kap"></div>
             </div>
             <div>
+              <h3>Yerinde montaj hırdavatı</h3>
+              <div id="montajHirdavatTablo" class="tablo-kap"></div>
               <h3>Malzeme özeti</h3>
               <div id="ozetTablo" class="tablo-kap"></div>
             </div>
@@ -453,6 +595,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
               <h3>Teklif</h3>
               <div id="teklifForm" class="form-izgara"></div>
               <div class="arac-satir"><button id="btnYazdirTeklif">Fiyat teklifi PDF</button><span class="not">Müşteriye gidecek teklif: modül bazında satış fiyatları, KDV ve genel toplam. Maliyet ayrıntısı içermez.</span></div>
+              <h3>Seçenekli teklif <small>(ekonomik / standart / lüks — düzenlenebilir)</small></h3>
+              <div id="secenekAlan"></div>
               <h3>Modül başına maliyet ve satış</h3>
               <div id="modulMaliyetTablo" class="tablo-kap"></div>
               <h3>Maliyet kalemleri</h3>
@@ -525,6 +669,18 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
   const SATIR_TIPLERI = { kapak: 'Kapak', cekmece: 'Çekmece', acik: 'Açık raf', nis: 'Cihaz nişi' };
   const KAPAK_TURLERI = { panel: 'Düz panel', cam: 'Cam (çerçevesiz)', cam_profil: 'Alüminyum profil + cam', cam_cerceve: 'MDF çerçeve + cam', ayna: 'Ayna' };
+  const KULP_KONUMLARI = { oto: 'Otomatik (alt dolap üstte, üst dolap altta, boy dolap el hizasında)', ust: 'Üstte', orta: 'Ortada', alt: 'Altta' };
+  const KULP_YONLERI = { dikey: 'Dikey', yatay: 'Yatay' };
+  const ENGEL_TURLERI = {
+    pencere: { ad: 'Pencere', alan: true },
+    kapi: { ad: 'Kapı', alan: true },
+    kolon: { ad: 'Kolon / kiriş', alan: true, derin: true },
+    kalorifer: { ad: 'Kalorifer / petek', alan: true },
+    priz: { ad: 'Priz / elektrik' },
+    su: { ad: 'Su tesisatı' },
+    gaz: { ad: 'Gaz vanası' },
+    diger: { ad: 'Diğer', alan: true },
+  };
   const CEKMECE_ICLERI = { yok: 'Boş', catal: 'Çatal-kaşıklık', bolucu: 'Bölücü seti' };
   const MENTESE_YONLERI = { oto: 'Otomatik', sol: 'Solda', sag: 'Sağda' };
   const ACILIMLAR = { yana: 'Yana açılır', yukari: 'Yukarı kalkar', asagi: 'Aşağı devrilir (klapa)' };
@@ -724,6 +880,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     arkalik_vida: { ad: 'Arkalık vidası / zımba çivisi', birim: 'adet', fiyat: 0.4 },
     kosebent: { ad: 'Bağlantı köşebendi', birim: 'adet', fiyat: 5 },
     catal_kasiklik: { ad: 'Çatal-kaşıklık', birim: 'adet', fiyat: 350 },
+    dolap_birlestirme: { ad: 'Dolap birleştirme vidası (somunlu)', birim: 'adet', fiyat: 4 },
+    aski_aparati: { ad: 'Asma dolap askı aparatı', birim: 'adet', fiyat: 45 },
+    aski_rayi: { ad: 'Asma dolap askı rayı', birim: 'm', fiyat: 120 },
+    devrilme: { ad: 'Devrilme önleyici duvar bağlantısı', birim: 'adet', fiyat: 25 },
     cekmece_bolucu: { ad: 'Çekmece bölücü seti', birim: 'takım', fiyat: 150 },
   };
 
@@ -767,12 +927,20 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     firma: { ad: '', telefon: '', adres: '' },
     testereKalinligi: 4,      // kesim bıçağı payı
     plakaKenarPayi: 10,       // plaka kenarından kırpılan pay
+    artikMin: 250,            // stoka alınacak artığın en küçük kenarı (mm)
     bantDus: true,            // bant kalınlığını kesim ölçüsünden düş
     kapakBoslugu: 3,          // kapaklar arası boşluk
     disBosluk: 1.5,           // tam bini kapakta dış kenar boşluğu
     cekmeceUstBosluk: 40,     // çekmece önü yüksekliği ile kutu yüksekliği farkı
     cekmeceTabani: 'cakma',   // 'cakma': alttan çakma, 'kanal': kanala geçme
     icCekmeceYukseklik: 140,  // iç (gizli) çekmece önü varsayılan yüksekliği
+    kulpYon: 'dikey',         // kapak kulpu yönü
+    kulpKonum: 'oto',         // kapakta kulp konumu
+    kulpCekmece: 'ust',       // çekmecede kulp: üstte / ortada
+    kulpAralik: 160,          // kulp vida (delik) aralığı; 0 = tek vidalı düğme kulp
+    kulpKenar: 40,            // kulp eksenine açılan kenardan mesafe
+    kulpUcMesafe: 60,         // üst/alt konumda kulp ucunun kapak kenarına mesafesi
+    duvarAski: 'aparat',      // asma dolap: 'aparat' (gizli askı aparatı) | 'ray' (askı rayı + aparat)
     arkalikKanalDerinligi: 8, // arkalık kanal derinliği
     arkalikGeriPay: 10,       // kanalın arka kenara uzaklığı
     arkalikCakmaPay: 2,       // çakma arkalıkta her kenardan içeri pay
@@ -991,6 +1159,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       korPanel: sayiAl(x.korPanel, 0, 0, 2000),
       korTaraf: secenekAl(x.korTaraf, ['sol', 'sag'], 'sol'),
       bazaCekmece: !!x.bazaCekmece,
+      egimli: !!x.egimli,
+      sagYukseklik: sayiAl(x.sagYukseklik, sayiAl(x.yukseklik, 720, 0, 5000), 0, 5000),
+      kulpYon: secenekAl(x.kulpYon, ['proje', ...Object.keys(KULP_YONLERI)], 'proje'),
+      kulpKonum: secenekAl(x.kulpKonum, ['proje', ...Object.keys(KULP_KONUMLARI)], 'proje'),
       onTipi: secenekAl(x.onTipi, ['normal', 'surgu'], 'normal'),
       surguAdet: Math.floor(sayiAl(x.surguAdet, 2, 2, 4)),
       surguTuru: secenekAl(x.surguTuru, Object.keys(SURGU_TURLERI), 'panel'),
@@ -1022,6 +1194,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       else if (typeof v[k] === 'boolean') A[k] = g[k] == null ? v[k] : !!g[k];
     }
     A.cekmeceTabani = secenekAl(g.cekmeceTabani, ['cakma', 'kanal'], 'cakma');
+    A.kulpYon = secenekAl(g.kulpYon, Object.keys(KULP_YONLERI), 'dikey');
+    A.kulpKonum = secenekAl(g.kulpKonum, Object.keys(KULP_KONUMLARI), 'oto');
+    A.kulpCekmece = secenekAl(g.kulpCekmece, ['ust', 'orta'], 'ust');
+    A.duvarAski = secenekAl(g.duvarAski, ['aparat', 'ray'], 'aparat');
     A.malzemeler = (Array.isArray(g.malzemeler) && g.malzemeler.length ? g.malzemeler : v.malzemeler).slice(0, 100).map(malzemeNormallestir);
     const gorulen = new Set();
     for (const m of A.malzemeler) {
@@ -1068,12 +1244,27 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const t = (p && p.teklif) || {};
     return {
       ad: metinAl(p && p.ad, 'Yeni proje', 80),
+      artikKullan: !!(p && p.artikKullan),
       ayarlar: A,
       moduller,
       yerlesim: {
         tip: secenekAl(y.tip, ['duz', 'L'], 'duz'),
         duvarA: sayiAl(y.duvarA, 3600, 0, 50000),
         duvarB: sayiAl(y.duvarB, 2400, 0, 50000),
+        birlestir: y.birlestir === undefined ? true : !!y.birlestir,
+        tavan: sayiAl(y.tavan, 0, 0, 10000),
+        koseAcisi: sayiAl(y.koseAcisi, 90, 45, 135),
+        duvarSapma: sayiAl(y.duvarSapma, 0, 0, 200),
+        engeller: (Array.isArray(y.engeller) ? y.engeller : []).slice(0, 60).map((e) => ({
+          tur: secenekAl(e && e.tur, Object.keys(ENGEL_TURLERI), 'diger'),
+          duvar: secenekAl(e && e.duvar, ['A', 'B'], 'A'),
+          x: sayiAl(e && e.x, 0, 0, 50000),
+          y: sayiAl(e && e.y, 0, 0, 10000),
+          genislik: sayiAl(e && e.genislik, 0, 0, 50000),
+          yukseklik: sayiAl(e && e.yukseklik, 0, 0, 10000),
+          derinlik: sayiAl(e && e.derinlik, 0, 0, 3000),
+          not: metinAl(e && e.not, '', 80),
+        })),
       },
       teklif: {
         musteri: metinAl(t.musteri, '', 80),
@@ -1083,6 +1274,14 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         gecerlilikGun: Math.floor(sayiAl(t.gecerlilikGun, 15, 0, 365)),
         teslimSuresi: metinAl(t.teslimSuresi, '', 60),
         not: metinAl(t.not, '', 1000),
+        secenekler: (Array.isArray(t.secenekler) ? t.secenekler : []).slice(0, 4).map((sc) => {
+          const kul = {};
+          const hrd = {};
+          for (const k of KULLANIMLAR) if (sc && sc.kullanim && A.malzemeler.some((m) => m.id === sc.kullanim[k])) kul[k] = sc.kullanim[k];
+          for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) if (sc && sc.hirdavat && HIRDAVAT_SECENEKLERI[k].secenekler[sc.hirdavat[k]]) hrd[k] = sc.hirdavat[k];
+          const kar = sayiAl(sc && sc.karOrani, null, 0, 1000);
+          return { id: kimlikAl(sc && sc.id, 'sc'), ad: metinAl(sc && sc.ad, 'Seçenek', 40), aciklama: metinAl(sc && sc.aciklama, '', 120), kullanim: kul, hirdavat: hrd, karOrani: kar };
+        }),
       },
     };
   }
@@ -1118,6 +1317,79 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       sonuc[k] = gecerli(secim) ? secim : gecerli(ayar.hirdavat && ayar.hirdavat[k]) ? ayar.hirdavat[k] : VARSAYILAN_AYARLAR.hirdavat[k];
     }
     return sonuc;
+  }
+
+  /** Modülün kulp ayarları (modül seçimi > proje). sinif: alt | ust | boy (otomatik konum için). */
+  function kulpBaglami(modul, A, H) {
+    const montaj = Math.max(0, say(modul.montajYuksekligi, 0));
+    return {
+      yon: modul.kulpYon && modul.kulpYon !== 'proje' ? modul.kulpYon : A.kulpYon || 'dikey',
+      konum: modul.kulpKonum && modul.kulpKonum !== 'proje' ? modul.kulpKonum : A.kulpKonum || 'oto',
+      cekmeceKonum: A.kulpCekmece || 'ust',
+      aralik: Math.max(0, say(A.kulpAralik, 160)),
+      kenar: Math.max(10, say(A.kulpKenar, 40)),
+      ucMesafe: Math.max(10, say(A.kulpUcMesafe, 60)),
+      sinif: montaj > ASILI_SINIR ? 'ust' : H >= 1500 ? 'boy' : 'alt',
+      montaj,
+    };
+  }
+
+  /**
+   * Kulp delik merkezleri (ön yüzün sol-alt köşesine göre, mm) ve atölye notu.
+   * tip: kapak | cekmece; menteseSol: menteşe sol kenarda mı (kulp açılan kenara konur);
+   * altYerden: ön yüz alt kenarının zeminden yüksekliği (boy dolapta el hizası için).
+   */
+  function kulpDelikleri(c, tip, acilim, w, h, menteseSol, altYerden) {
+    const a = c.aralik;
+    const yari = a / 2;
+    let cx;
+    let cy;
+    let yatay;
+    if (tip === 'cekmece' || acilim === 'yukari' || acilim === 'asagi') {
+      yatay = true;
+      cx = w / 2;
+      if (tip === 'cekmece') cy = c.cekmeceKonum === 'ust' ? h - Math.min(c.ucMesafe, h / 2) : h / 2;
+      else cy = acilim === 'yukari' ? Math.min(c.ucMesafe, h / 2) : h - Math.min(c.ucMesafe, h / 2);
+    } else {
+      yatay = c.yon === 'yatay';
+      const uzun = yatay ? 0 : yari;
+      const kenardan = c.kenar + (yatay ? yari : 0);
+      cx = menteseSol ? w - kenardan : kenardan;
+      let konum = c.konum;
+      if (konum === 'oto') konum = c.sinif === 'ust' ? 'alt' : c.sinif === 'boy' ? 'el' : 'ust';
+      const enAz = c.ucMesafe + uzun;
+      if (konum === 'ust') cy = h - enAz;
+      else if (konum === 'alt') cy = enAz;
+      else if (konum === 'el') cy = Math.min(h - enAz, Math.max(enAz, 1050 - altYerden));
+      else cy = h / 2;
+      cy = Math.min(Math.max(cy, Math.min(enAz, h / 2)), Math.max(h - enAz, h / 2));
+    }
+    const delikler = a <= 0 ? [{ x: cx, y: cy }]
+      : yatay ? [{ x: cx - yari, y: cy }, { x: cx + yari, y: cy }] : [{ x: cx, y: cy - yari }, { x: cx, y: cy + yari }];
+    const yuv = (L) => L.map((x) => r1(x)).join(' / ');
+    let not;
+    if (tip === 'kapak' && acilim === 'yana') {
+      const kenarMes = r1(menteseSol ? w - delikler[0].x : delikler[0].x);
+      not = yatay
+        ? `Kulp Ø5${a ? ` (aralık ${a})` : ''}: açılan kenardan ${yuv(delikler.map((d) => (menteseSol ? w - d.x : d.x)))}, alttan ${r1(cy)} mm`
+        : `Kulp Ø5${a ? ` (aralık ${a})` : ''}: açılan kenardan ${kenarMes}, alttan ${yuv(delikler.map((d) => d.y))} mm`;
+    } else {
+      not = `Kulp Ø5${a ? ` (aralık ${a})` : ''}: soldan ${yuv(delikler.map((d) => d.x))}, alttan ${r1(cy)} mm`;
+    }
+    // Delikler ön yüzün içinde (kenardan en az 15 mm) kalmalı. Kalmıyorsa yana açılan kapakta
+    // diğer yön denenir; o da olmazsa tek delikli düğme kulba düşülür.
+    const pay = 15;
+    const icinde = delikler.every((d) => d.x >= pay - 1e-6 && d.x <= w - pay + 1e-6 && d.y >= pay - 1e-6 && d.y <= h - pay + 1e-6);
+    if (!icinde && a > 0) {
+      if (tip === 'kapak' && acilim === 'yana' && !c.denendi) {
+        const alt = kulpDelikleri(Object.assign({}, c, { yon: yatay ? 'dikey' : 'yatay', denendi: true }), tip, acilim, w, h, menteseSol, altYerden);
+        if (!alt.dugme) return alt;
+      }
+      const x = Math.min(Math.max(cx, Math.min(pay, w / 2)), Math.max(w - pay, w / 2));
+      const y = Math.min(Math.max(cy, Math.min(pay, h / 2)), Math.max(h - pay, h / 2));
+      return { delikler: [{ x, y }], yatay, dugme: true, not: `Kulp sığmıyor (aralık ${a}): tek delikli düğme kulp Ø5, soldan ${r1(x)}, alttan ${r1(y)} mm` };
+    }
+    return { delikler, yatay, not };
   }
 
   /** Menteşe çanak (Ø35) delik merkezleri: kapak üst kenarından mm. Uçlar 100 mm, aralar eşit. */
@@ -1190,6 +1462,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         const m = M[kullanim];
         const cam = camMi(m);
         const p = Object.assign({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: cam ? { u: 0, k: 0 } : bant || { u: 0, k: 0 }, damar: !cam && !!m.damar, cam }, ek || {});
+        // Atölye notlarında Türkçe ondalık virgül
+        if (p.not) p.not = p.not.replace(/(\d)\.(\d)/g, '$1,$2');
         parcalar.push(p);
         return p;
       },
@@ -1335,7 +1609,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const D = say(modul.derinlik, 0);
     const baza = modul.baza || { tip: 'yok', yukseklik: 0, geriCekme: 0 };
     const hb = baza.tip === 'yok' ? 0 : say(baza.yukseklik, 0);
-    const Hc = H - hb; // gövde (baza hariç) yüksekliği
+    let Hc = H - hb; // gövde (baza hariç) yüksekliği; eğimli dolapta alçak taraf
     const iw = W - 2 * t; // iç genişlik
     const surgu = modul.onTipi === 'surgu';
     const ic = modul.kapakTipi === 'ic';
@@ -1351,6 +1625,30 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       return bos();
     }
 
+    // ---------- Eğimli üst (çatı altı / merdiven altı) ----------
+    // Sol yükseklik = modül yüksekliği, sağ yükseklik = sagYukseklik. Satırlar alçak tarafa göre
+    // yerleşir; en üst satırın ön yüzleri ve üst tabla eğime göre kesilir.
+    let egim = null;
+    if (modul.egimli) {
+      const H2 = say(modul.sagYukseklik, H);
+      const HcR = H2 - hb;
+      if (surgu) uyarilar.push('Eğimli dolapta sürgü kapak desteklenmez; eğim uygulanmadı.');
+      else if (ic) uyarilar.push('Eğimli dolapta gömme kapak desteklenmez; eğim uygulanmadı.');
+      else if (HcR < 2 * t + 150) uyarilar.push(`Sağ yükseklik (${H2} mm) çok küçük; eğim uygulanmadı.`);
+      else if (Math.abs(HcR - Hc) >= 1) {
+        const alfa = Math.atan2(Math.abs(HcR - Hc), W);
+        if (alfa > Math.PI / 3) uyarilar.push(`Eğim ${r1((alfa * 180) / Math.PI)}°; 60°'den dik eğim desteklenmez, eğim uygulanmadı.`);
+        else {
+          egim = { HcL: Hc, HcR, dH: HcR - Hc, alfa, aciDer: r1((alfa * 180) / Math.PI), min: Math.min(Hc, HcR), max: Math.max(Hc, HcR) };
+          Hc = egim.min;
+        }
+      }
+    }
+    // x konumundaki gövde dış yüksekliği (eğim yoksa sabit)
+    const HcX = (x) => (egim ? egim.HcL + (egim.dH * x) / W : Hc);
+    const kulpC = kulpBaglami(modul, A, H);
+    const kulpVar = HS.kulp === 'kulp';
+
     // Yan derinliği: çakma arkalık gövdenin arkasına çakıldığı için yanlardan düşülür.
     const Ds = modul.arkalik === 'cakma' ? D - ta : D;
     // Ara tabla, dikme ve raflar için kullanılabilir derinlik
@@ -1361,7 +1659,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const cekmeceDerinlik = surgu && !ic ? icDerinlik - tk : icDerinlik;
 
     // ---------- Gövde ----------
-    const usttam = modul.ust !== 'kusak';
+    if (egim && modul.ust === 'kusak') uyarilar.push('Eğimli dolapta kuşak yerine tam üst tabla kullanıldı.');
+    const usttam = modul.ust !== 'kusak' || !!egim;
     const kusakEn = say(A.kusakGenisligi, 100);
     if (modul.yapi === 'tabla_boydan') {
       ekle('Alt tabla', 'govde', W, Ds, 1, { u: 1, k: 2 });
@@ -1524,7 +1823,14 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
     // ---------- Dikey bölmeler (sütunlar) ----------
     if (ns > 1) {
-      ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
+      if (egim) {
+        let x = t;
+        for (let k = 0; k < ns - 1; k++) {
+          x += genislikler[k];
+          ekle(`Bölme dikmesi (boydan) ${k + 1}`, 'govde', HcX(x + t / 2) - t - t / Math.cos(egim.alfa), icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir` });
+          x += t;
+        }
+      } else ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
       araBirlesim += 2 * (ns - 1);
     }
 
@@ -1601,10 +1907,13 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
           const geo = {
             tip: s.tip, sutun: si, on, icUst, icAlt, icH, bolumler, dikmeX: satirDikmeX, onler: [], raflar: [], cekmeceler: [],
             aski: false, kapakTuru, acilim, rafTipi: s.rafTipi || 'ahsap', led: !!s.led, menteseYonu: s.menteseYonu || 'oto',
+            rafSabit: !!s.rafSabit && s.rafTipi !== 'cam',
           };
 
           if (dikme > 0) {
-            ekle(`Ara dikme (${ek(i + 1)})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
+            if (egim && i === 0) {
+              satirDikmeX.forEach((dx, k) => ekle(`Ara dikme (${ek(i + 1)}) ${k + 1}`, 'govde', icH + HcX(dx + t / 2) - Hc, icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir` }));
+            } else ekle(`Ara dikme (${ek(i + 1)})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
             araBirlesim += 2 * dikme;
           }
           if (secW > 0 && secW < 100) uyarilar.push(`${ek(i + 1)}: bölme iç genişliği ${r1(secW)} mm, çok dar.`);
@@ -1614,14 +1923,39 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
           if (onVar) {
             const ayr = icDuzen && n > 1 && dikme >= n - 1 ? t + 2 * g : g;
             const fw = (fx1 - fx0 - (n - 1) * ayr) / n;
+            // Eğimli dolabın en üst satırı: ön yüz üst kenarı eğime uyar
+            const egimliSatir = !!egim && i === 0;
+            const ekstra = (x) => (egimliSatir ? HcX(x) - Hc : 0);
             for (let k = 0; k < n; k++) {
               const fx = fx0 + k * (fw + ayr);
-              geo.onler.push({ x1: fx, x2: fx + fw });
+              const menteseSol = s.tip === 'kapak' && acilim === 'yana' ? (n === 1 ? s.menteseYonu !== 'sag' : k % 2 === 0) : true;
+              const o = { x1: fx, x2: fx + fw, menteseSol };
+              if (egimliSatir) { o.y2sol = on.y2 + ekstra(fx); o.y2sag = on.y2 + ekstra(fx + fw); }
+              if (kulpVar) o.kulp = kulpDelikleri(kulpC, s.tip, acilim, fw, on.h, menteseSol, hb + on.y1);
+              geo.onler.push(o);
+            }
+            const kulpNotu = kulpVar ? geo.onler[0].kulp.not : null;
+            const notBirlestir = (...L) => L.filter(Boolean).join(' · ') || null;
+            if (egimliSatir) {
+              // Her ön yüz ayrı yamuk parça: sol ve sağ kenar yükseklikleri farklı
+              if (s.tip === 'kapak' && kapakTuru !== 'panel') uyarilar.push(`${ek(i + 1)}: eğimli kapakta yalnızca düz panel desteklenir; düz panel yapıldı.`);
+              if (s.tip === 'cekmece') uyarilar.push(`${ek(i + 1)}: eğimli satırda çekmece — ön yüz yamuk kesilir, kutu alçak tarafa göre boyutlanır; üst satırı kapak yapmak daha uygundur.`);
+              geo.onler.forEach((o, k) => {
+                const hL = on.h + ekstra(o.x1);
+                const hR = on.h + ekstra(o.x2);
+                const sg = sekilGeometrisi('egimli', fw, hL, hR, 0);
+                const ad = s.tip === 'kapak' ? `Kapak (${ek(i + 1)}) – eğimli ${k + 1}` : `Çekmece önü (${ek(i + 1)}) – eğimli ${k + 1}`;
+                ekle(ad, 'kapak', sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
+                  sekil: { tur: 'egimli', alan: sg.alan, cevre: sg.cevre, egri: 0, duz: sg.duz },
+                  bantUzunluk: sg.cevre,
+                  not: notBirlestir(`Yamuk: sol ${r1(hL)}, sağ ${r1(hR)} mm; ${sg.bilgi.join(', ')}`, s.tip === 'kapak' && acilim === 'yana' ? mentesheNotu(Math.min(hL, hR), mentesheAdedi(Math.max(hL, hR))) : null, o.kulp && o.kulp.not),
+                });
+              });
             }
             if (s.tip === 'kapak') {
               const yonNotu = n === 1 ? (s.menteseYonu === 'sag' ? ' · menteşe sağ kenarda' : ' · menteşe sol kenarda') : ' · çiftte menteşeler dış kenarlarda';
               const mNotu = acilim === 'yana' ? mentesheNotu(on.h, mentesheAdedi(on.h)) + yonNotu : null;
-              const camli = kapakParcalari(T, A, `Kapak (${ek(i + 1)})`, on.h, fw, n, kapakTuru, acilim === 'yana' ? mNotu : null) === 'cam';
+              const camli = egimliSatir ? false : kapakParcalari(T, A, `Kapak (${ek(i + 1)})`, on.h, fw, n, kapakTuru, notBirlestir(acilim === 'yana' ? mNotu : null, kulpNotu)) === 'cam';
               kulpEkle(T, HS.kulp, n, fw);
               if (acilim === 'yukari') {
                 mentesheEkle(T, HS.mentese, modul.kapakTipi, 2 * n, false);
@@ -1722,7 +2056,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
             const k = cekmeceKutusu(ek(i + 1), secW, on.h - say(A.cekmeceUstBosluk, 40), icH - 15, s.kutuYukseklik, cekmeceDerinlik, s.rayBoyu, bolum);
             const fw = geo.onGenislik;
             if (k) {
-              ekle(`Çekmece önü (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 });
+              if (!(egim && i === 0)) ekle(`Çekmece önü (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 }, geo.onler[0] && geo.onler[0].kulp ? { not: geo.onler[0].kulp.not } : undefined);
               kulpEkle(T, HS.kulp, n, fw);
             } else {
               // Kutu sığmadı: ön yüz yine kapanmalı, sabit (açılmayan) panel olarak monte edilir
@@ -1783,6 +2117,40 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     baglantiEkle(T, HS.baglanti, birlesim, Ds, kusakNokta);
     baglantiEkle(T, araBaglantiTuru(HS), araBirlesim, Ds, 0);
 
+    if (egim) {
+      // Yanlar farklı yükseklikte, üst tabla eğik, arkalık yamuk
+      const cos = Math.cos(egim.alfa);
+      const aci = egim.aciDer;
+      const cikar = (ad) => { const i = T.parcalar.findIndex((p) => p.ad === ad); if (i >= 0) T.parcalar.splice(i, 1); };
+      cikar('Yan');
+      cikar('Üst tabla');
+      const tablaBoydan = modul.yapi === 'tabla_boydan';
+      const yanH = (h) => (tablaBoydan ? h - t - t / cos : h);
+      const yanNot = `Üst kenarı kalınlık boyunca ${aci}° eğimli kesilir`;
+      ekle('Sol yan', 'govde', yanH(egim.HcL), Ds, 1, { u: 1, k: 0 }, { not: yanNot });
+      ekle('Sağ yan', 'govde', yanH(egim.HcR), Ds, 1, { u: 1, k: 0 }, { not: yanNot });
+      const ustBoy = (tablaBoydan ? W : iw) / cos;
+      ekle('Üst tabla (eğimli)', 'govde', ustBoy, Ds, 1, { u: 1, k: tablaBoydan ? 2 : 0 }, { not: `Eğim ${aci}°: iki ucu dikey (${aci}° açılı) kesilir; boy eğik yüzeyde ölçülür` });
+      const arkaAd = modul.arkalik === 'kanal' ? 'Arkalık (kanallı)' : 'Arkalık (çakma)';
+      if (modul.arkalik !== 'yok') {
+        cikar(arkaAd);
+        const kd = say(A.arkalikKanalDerinligi, 8);
+        const p = say(A.arkalikCakmaPay, 2);
+        const en = modul.arkalik === 'kanal' ? iw + 2 * (kd - 1) : W - 2 * p;
+        // Kenar yükseklikleri arkalığın kendi sol/sağ kenarındaki gövde yüksekliğinden; böylece
+        // arkalığın eğimi gövdeyle aynı olur. Kanallıda üst tablanın düşey kalınlığı t/cos'tur.
+        const xa = modul.arkalik === 'kanal' ? t - (kd - 1) : p;
+        const hX = (x) => (modul.arkalik === 'kanal' ? HcX(x) - t / cos - t + 2 * (kd - 1) : HcX(x) - 2 * p);
+        const hL = hX(xa);
+        const hR = hX(xa + en);
+        const sg = sekilGeometrisi('egimli', en, hL, hR, 0);
+        ekle(`${arkaAd} – yamuk`, 'arkalik', sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
+          sekil: { tur: 'egimli', alan: sg.alan, cevre: sg.cevre, egri: 0, duz: sg.duz }, bantUzunluk: 0,
+          not: `Yamuk: sol ${r1(hL)}, sağ ${r1(hR)} mm; ${sg.bilgi.join(', ')}`,
+        });
+      }
+    }
+
     return {
       parcalar: T.parcalar,
       hirdavat: T.hirdavat,
@@ -1790,7 +2158,9 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       malzemeler: M,
       hirdavatSecimi: HS,
       geo: {
-        W, H, D, Hc, hb, t, ta, Ds, icDerinlik, tk, db,
+        W, H: egim ? hb + egim.max : H, D, Hc, hb, t, ta, Ds, icDerinlik, cekmeceDerinlik, tk, db,
+        egim: egim ? { HcL: egim.HcL, HcR: egim.HcR, aci: egim.aciDer } : null,
+        kulpTur: HS.kulp, montajYuksekligi: kulpC.montaj,
         kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: modul.ust, yapi: modul.yapi,
         baza: { tip: baza.tip, yukseklik: hb, geriCekme: say(baza.geriCekme, 0) },
         korPanel,
@@ -2077,7 +2447,113 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       if (L && Y.duvarB > 0 && y > Y.duvarB) uyarilar.push(`Yerleşim: ${ad} B duvarını ${r1(y - Y.duvarB)} mm aşıyor.`);
       if (doluluk[sira].koseBosluguB > 0) uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok; B duvarı ${r1(baslangicB)} mm köşe boşluğuyla başlıyor (kör köşe dolap veya dolgu düşünün).`);
     }
-    return { tip: L ? 'L' : 'duz', duvarA: say(Y.duvarA, 0), duvarB: say(Y.duvarB, 0), yerler, doluluk, uyarilar };
+    const engelAdlari = {};
+    for (const [k, v] of Object.entries(ENGEL_TURLERI)) engelAdlari[k] = v.ad;
+    return { tip: L ? 'L' : 'duz', duvarA: say(Y.duvarA, 0), duvarB: say(Y.duvarB, 0), yerler, doluluk, uyarilar, engeller: Y.engeller || [], tavan: say(Y.tavan, 0), engelAdlari };
+  }
+
+  /**
+   * Yerinde montaj hırdavatı: yan yana dolapların birleştirme vidaları, asma dolap askıları,
+   * boy dolap devrilme önleyicileri. Yerleşimden çıkarılır (adetli modüllerin her kopyası sayılır).
+   */
+  function montajHirdavati(proje, yer, A) {
+    const L = [];
+    const ekle = (kod, ad, adet, birim, fm) => {
+      if (!(adet > 0)) return;
+      const v = L.find((x) => x.ad === ad);
+      if (v) { v.adet = r3(v.adet + adet); v.fiyatMiktari = r3(v.fiyatMiktari + (fm == null ? adet : fm)); }
+      else L.push({ kod, ad, adet: r3(adet), birim: birim || 'adet', fiyatMiktari: r3(fm == null ? adet : fm) });
+    };
+    const govdeli = (y) => y.modul.tip !== 'panel';
+    let birlesim = 0;
+    if (!proje.yerlesim || proje.yerlesim.birlestir !== false) {
+      for (const sira of ['zemin', 'duvar']) {
+        for (const duvar of ['A', 'B']) {
+          const genis = (y) => (y.duvar === 'kose' ? (duvar === 'B' ? y.W2 : y.W) : y.W);
+          const dizi = yer.yerler.filter((y) => y.sira === sira && govdeli(y) && (y.duvar === duvar || (y.duvar === 'kose' && (duvar === 'A' || yer.tip === 'L')))).sort((a, b) => a.bas - b.bas);
+          for (let i = 0; i + 1 < dizi.length; i++) {
+            const a = dizi[i];
+            const b = dizi[i + 1];
+            if (Math.abs(a.bas + genis(a) - b.bas) < 2) {
+              birlesim++;
+              ekle('dolap_birlestirme', 'Dolap birleştirme vidası (somunlu)', Math.max(a.geo.H, b.geo.H) >= 1500 ? 4 : 2);
+            }
+          }
+        }
+      }
+    }
+    let rayM = 0;
+    for (const y of yer.yerler.filter(govdeli)) {
+      if (y.sira === 'duvar') {
+        if (A.duvarAski === 'ray') rayM += (y.W + (y.duvar === 'kose' ? y.W2 : 0)) / 1000;
+        ekle('aski_aparati', 'Asma dolap askı aparatı', y.duvar === 'kose' ? 4 : 2);
+      } else if (y.geo.H >= 1500) ekle('devrilme', 'Devrilme önleyici duvar bağlantısı', 2);
+    }
+    if (rayM > 0) ekle('aski_rayi', 'Asma dolap askı rayı', r1(rayM), 'm', rayM);
+    return { liste: L, birlesim };
+  }
+
+  /**
+   * Yerinde ölçü kontrolü: engellerle (pencere, kapı, kolon, priz, su, gaz…) ve tavanla çakışmalar.
+   * Duvar boyunca konum köşeden (düz yerleşimde duvarın solundan) ölçülür; yükseklik zeminden.
+   * Nokta engeller (priz, su, gaz) bir dolabın arkasına denk gelirse arkalık delik konumu verilir.
+   */
+  function sahaKontrol(proje, yer) {
+    const Y = proje.yerlesim || {};
+    const uyarilar = [];
+    const notlar = [];
+    const engeller = Y.engeller || [];
+    const kutular = [];
+    for (const y of yer.yerler) {
+      const alt = y.montaj;
+      const ust = y.montaj + y.geo.H;
+      if (y.duvar === 'kose') {
+        kutular.push({ y, duvar: 'A', x1: 0, x2: y.W, alt, ust, kose: true });
+        if (yer.tip === 'L') kutular.push({ y, duvar: 'B', x1: 0, x2: y.W2, alt, ust, kose: true, ikinci: true });
+      } else kutular.push({ y, duvar: yer.tip === 'L' ? y.duvar : 'A', x1: y.bas, x2: y.bas + y.W, alt, ust });
+    }
+    const kesisir = (a1, a2, b1, b2) => Math.min(a2, b2) - Math.max(a1, b1) > 1;
+    for (const e of engeller) {
+      const tanim = ENGEL_TURLERI[e.tur] || ENGEL_TURLERI.diger;
+      const duvar = yer.tip === 'L' ? e.duvar : 'A';
+      const ad = `${tanim.ad}${e.not ? ` (${e.not})` : ''}`;
+      for (const k of kutular.filter((q) => q.duvar === duvar)) {
+        const m = k.y.modul;
+        if (tanim.alan) {
+          const x2 = e.x + e.genislik;
+          const yAlt = e.tur === 'kolon' || e.tur === 'kapi' ? 0 : e.y;
+          const yUst = e.tur === 'kolon' ? Infinity : e.tur === 'kapi' ? e.yukseklik : e.y + e.yukseklik;
+          if (!kesisir(k.x1, k.x2, e.x, x2)) continue;
+          if (kesisir(k.alt, k.ust, yAlt, yUst)) {
+            uyarilar.push(`Saha: "${m.ad}" ${duvar} duvarındaki ${ad.toLocaleLowerCase('tr')} ile çakışıyor (${r1(e.x)}–${r1(x2)} mm).`);
+          } else if (e.tur === 'pencere' && k.y.sira === 'zemin' && k.ust + 40 > e.y) {
+            uyarilar.push(`Saha: "${m.ad}" + tezgah (40 mm) pencere denizliğinden (${e.y} mm) yüksek.`);
+          }
+        } else if (e.x > k.x1 && e.x < k.x2 && e.y > k.alt && e.y < k.ust) {
+          // Nokta engel dolabın arkasında: modül içi konum (soldan, gövde altından)
+          const soldan = duvar === 'B' ? k.x2 - e.x : e.x - k.x1;
+          const alttan = e.y - k.alt - (k.y.geo.hb || 0);
+          if (k.kose) notlar.push({ modul: m.ad, metin: `${ad} köşe dolabın arkasında (${duvar} kolu): köşeden ${r1(e.x)}, zeminden ${r1(e.y)} mm` });
+          else notlar.push({ modul: m.ad, metin: `${ad}: arkalıkta delik/kesim — soldan ${r1(soldan)}, gövde altından ${r1(alttan)} mm` });
+          if (e.tur === 'gaz') uyarilar.push(`Saha: gaz vanası "${m.ad}" içinde kalıyor; erişim kapağı ve havalandırma bırakın, vana önünü kapatmayın.`);
+        }
+      }
+    }
+    if (Y.tavan > 0) {
+      for (const k of kutular) {
+        if (k.ikinci) continue;
+        const bosluk = Y.tavan - k.ust;
+        const kosegen = Math.hypot(k.y.geo.H, k.y.geo.D || 0);
+        if (bosluk < 0) uyarilar.push(`Saha: "${k.y.modul.ad}" tavanı ${r1(-bosluk)} mm aşıyor (tavan ${Y.tavan} mm).`);
+        else {
+          if (k.y.geo.H >= 1500 && k.alt < 1 && kosegen > Y.tavan) uyarilar.push(`Saha: "${k.y.modul.ad}" yatık getirilip kaldırılamaz: köşegeni ${r1(kosegen)} mm tavandan (${Y.tavan}) uzun; gövdeyi yerinde birleştirin.`);
+          if (bosluk < 100 && (k.y.sira === 'duvar' || k.y.geo.H >= 1500)) notlar.push({ modul: k.y.modul.ad, metin: `Tavana ${r1(bosluk)} mm kalıyor: tavan dolgusu veya korniş önerilir` });
+        }
+      }
+    }
+    if (yer.tip === 'L' && Math.abs((Y.koseAcisi || 90) - 90) >= 1) uyarilar.push(`Saha: köşe açısı ${Y.koseAcisi}° (90° değil); L köşe ve köşe dolaplarında dolgu payı bırakın.`);
+    if (Y.duvarSapma > 5) uyarilar.push(`Saha: duvar düzlüğünde ${Y.duvarSapma} mm sapma var; dolap dizisinin ucunda dolgu/kapama payı bırakın.`);
+    return { uyarilar: [...new Set(uyarilar)], notlar };
   }
 
   /** Tüm projeyi hesaplar: birleşik kesim listesi, hırdavat, malzeme özetleri, yerleşim. */
@@ -2153,6 +2629,9 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
     const yerlesim = yerlesimHesapla(proje, modulSonuclari);
     for (const u of yerlesim.uyarilar) uyarilar.push(u);
+    const montaj = montajHirdavati(proje, yerlesim, A);
+    const saha = sahaKontrol(proje, yerlesim);
+    for (const u of saha.uyarilar) uyarilar.push(u);
 
     return {
       kesimListesi,
@@ -2161,6 +2640,9 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       uyarilar,
       modulSonuclari,
       yerlesim,
+      montajHirdavat: montaj.liste,
+      birlesimSayisi: montaj.birlesim,
+      saha,
     };
   }
 
@@ -2170,6 +2652,13 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     KULLANIM_AD,
     MALZEME_TURLERI,
     SATIR_TIPLERI,
+    KULP_KONUMLARI,
+    KULP_YONLERI,
+    ENGEL_TURLERI,
+    kulpDelikleri,
+    kulpBaglami,
+    sahaKontrol,
+    montajHirdavati,
     CEKMECE_ICLERI,
     MENTESE_YONLERI,
     SEKILLER,
@@ -2241,7 +2730,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const A = proje.ayarlar;
     const F = A.fiyat;
     const bantCarpan = 1 + sayi(F.bantFire) / 100;
-    const kalemler = { malzeme: [], hirdavat: [], hizmet: [], iscilik: [], diger: [] };
+    const kalemler = { malzeme: [], hirdavat: [], hizmet: [], iscilik: [], montaj: [], diger: [] };
     const eksikFiyat = [];
 
     // ---------- Plaka malzeme, işlem (boya vb.), bant ----------
@@ -2295,6 +2784,14 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       });
     }
 
+    // ---------- Yerinde montaj hırdavatı (birleştirme, askı, devrilme önleyici) ----------
+    for (const h of sonuc.montajHirdavat || []) {
+      const birimFiyat = hirdavatFiyati(A, h.kod);
+      const katalog = Hesap.HIRDAVAT_KALEMLERI[h.kod];
+      if (!(birimFiyat > 0)) eksikFiyat.push(`${katalog ? katalog.ad : h.ad} fiyatı`);
+      kalemler.montaj.push({ kod: h.kod, ad: h.ad, adet: h.adet, birim: h.birim, fiyatMiktari: h.fiyatMiktari, fiyatBirimi: katalog ? katalog.birim : h.birim, birimFiyat, tutar: kurus(h.fiyatMiktari * birimFiyat) });
+    }
+
     // ---------- İşçilik ----------
     // Dolap işçiliği yalnızca gövdeli modüllere; tek parça paneller ayrı (düşük) birim fiyatla
     const adetOf = (m) => Math.max(1, Math.floor(sayi(m.adet) || 1));
@@ -2314,9 +2811,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       hirdavat: topla(kalemler.hirdavat),
       hizmet: topla(kalemler.hizmet),
       iscilik: topla(kalemler.iscilik),
+      montaj: topla(kalemler.montaj),
       diger: topla(kalemler.diger),
     };
-    const maliyet = kurus(ara.malzeme + ara.hirdavat + ara.hizmet + ara.iscilik + ara.diger);
+    const maliyet = kurus(ara.malzeme + ara.hirdavat + ara.hizmet + ara.iscilik + ara.montaj + ara.diger);
 
     // ---------- Modül başına maliyet dağılımı ----------
     // Malzeme/ebatlama net alan payına, bant metre payına göre; hırdavat ve işçilik modülün kendisinden.
@@ -2352,12 +2850,16 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       const birimFiyat = kurus(x.birim * karCarpan);
       return { ad: m.ad, aciklama: olcu, adet: x.adet, birimFiyat, tutar: kurus(birimFiyat * x.adet) };
     });
+    if (ara.montaj > 0) {
+      const birimFiyat = kurus(ara.montaj * karCarpan);
+      teklifSatirlari.push({ ad: 'Montaj aksesuarları (birleştirme, askı)', aciklama: '', adet: 1, birimFiyat, tutar: birimFiyat });
+    }
     for (const d of kalemler.diger) {
       const birimFiyat = kurus(d.tutar * karCarpan);
       teklifSatirlari.push({ ad: d.ad, aciklama: '', adet: 1, birimFiyat, tutar: birimFiyat });
     }
     // Modüllere dağıtılamayan küçük kalan (yuvarlama, modül dışı malzeme) son satıra değil ayrı izlenir
-    const dagitilan = kurus(modulMaliyetleri.reduce((a, x) => a + x.toplam, 0) + ara.diger);
+    const dagitilan = kurus(modulMaliyetleri.reduce((a, x) => a + x.toplam, 0) + ara.diger + ara.montaj);
     const satisKdvHaric = kurus(teklifSatirlari.reduce((a, x) => a + x.tutar, 0));
     const kdv = kurus(satisKdvHaric * sayi(F.kdvOrani) / 100);
     return {
@@ -2379,7 +2881,44 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     };
   }
 
-  return { maliyetHesapla, hirdavatFiyati, kurus };
+  /** Hazır teklif seçenekleri (kullanıcı düzenler). Boş alan = proje ayarı. */
+  const HAZIR_SECENEKLER = [
+    { ad: 'Ekonomik', aciklama: 'Suntalam kapak, standart menteşe ve ray', kullanim: { kapak: 'sl18' }, hirdavat: { mentese: 'standart', ray: 'bilyeli', kulp: 'kulp' }, karOrani: null },
+    { ad: 'Standart', aciklama: 'Proje ayarlarındaki malzeme ve hırdavat', kullanim: {}, hirdavat: {}, karOrani: null },
+    { ad: 'Lüks', aciklama: 'Lake kapak, frenli menteşe, gizli ray, kulpsuz', kullanim: { kapak: 'lake18' }, hirdavat: { mentese: 'frenli', ray: 'gizli', kulp: 'gola' }, karOrani: null },
+  ];
+
+  /** Bir seçeneğin uygulandığı proje kopyası (modüle özel seçimler korunur). */
+  function secenekProjesi(proje, sec) {
+    const p = JSON.parse(JSON.stringify(proje));
+    for (const [k, v] of Object.entries(sec.kullanim || {})) if (v && p.ayarlar.malzemeler.some((m) => m.id === v)) p.ayarlar.kullanim[k] = v;
+    for (const [k, v] of Object.entries(sec.hirdavat || {})) if (v && Hesap.HIRDAVAT_SECENEKLERI[k] && Hesap.HIRDAVAT_SECENEKLERI[k].secenekler[v]) p.ayarlar.hirdavat[k] = v;
+    if (sec.karOrani != null && Number.isFinite(Number(sec.karOrani))) p.ayarlar.fiyat.karOrani = Number(sec.karOrani);
+    return p;
+  }
+
+  /**
+   * Seçenekli teklif: her seçenek için tam hesap (kesim, plaka, maliyet).
+   * plakaSayisiHesapla(proje, sonuc) → { malzemeId: plaka } (yerleşim modülünden).
+   */
+  function secenekleriHesapla(proje, secenekler, plakaSayisiHesapla) {
+    return secenekler.map((sec) => {
+      const p = secenekProjesi(proje, sec);
+      const sonuc = Hesap.projeHesapla(p);
+      const r = maliyetHesapla(p, sonuc, plakaSayisiHesapla(p, sonuc));
+      const malz = (k) => (Hesap.malzemeBul(p.ayarlar, p.ayarlar.kullanim[k]) || {}).ad;
+      const hs = (k) => Hesap.HIRDAVAT_SECENEKLERI[k].secenekler[p.ayarlar.hirdavat[k]].ad;
+      return {
+        secenek: sec, proje: p, sonuc, maliyet: r,
+        ozellikler: [
+          ['Gövde', malz('govde')], ['Kapak', malz('kapak')], ['Çekmece kutusu', malz('cekmece')],
+          ['Menteşe', hs('mentese')], ['Çekmece rayı', hs('ray')], ['Kulp', hs('kulp')], ['Bağlantı', hs('baglanti')],
+        ],
+      };
+    });
+  }
+
+  return { maliyetHesapla, hirdavatFiyati, kurus, HAZIR_SECENEKLER, secenekProjesi, secenekleriHesapla };
 });
 
 </script>
@@ -2389,6 +2928,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
  * Giyotin kesim mantığıyla parçaları plakalara yerleştirir: her yerleşim
  * kalan boş alanı tek düz kesimle iki dikdörtgene böler, böylece çıkan
  * plan panel ebatlama makinesinde birebir uygulanabilir.
+ *
+ * Artık stoku: önceki işlerden kalan parçalar (artıklar) varsa, bir parça açık
+ * plakalara sığmadığında önce ona sığan en küçük artık kullanılır; sonra yeni
+ * tam plaka açılır. İşten çıkacak kullanılabilir artıklar da raporlanır.
  */
 (function (root, factory) {
   const api = factory();
@@ -2399,27 +2942,31 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
   /**
    * @param parcalar  [{ no, ad, w, h, adet, damar }]  w: plaka uzun kenarı yönündeki ölçü
-   * @param plaka     { uzun, kisa }
-   * @param secenek   { testere, kenarPayi }
+   * @param plaka     { uzun, kisa }  tam plaka ölçüsü
+   * @param secenek   { testere, kenarPayi, artiklar: [{ id, uzun, kisa, adet }], artikMin }
    */
   function yerlestir(parcalar, plaka, secenek) {
     const kerf = secenek.testere || 0;
     const kenar = secenek.kenarPayi || 0;
-    const PW = plaka.uzun - 2 * kenar;
-    const PH = plaka.kisa - 2 * kenar;
+    const artikMin = secenek.artikMin == null ? 250 : secenek.artikMin;
 
     const tekil = [];
     for (const p of parcalar) for (let i = 0; i < p.adet; i++) tekil.push(p);
     tekil.sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h) || b.w * b.h - a.w * a.h);
 
+    // Kullanılabilir artık parçalar (her adet ayrı); kenarları temiz kabul edilir (kenar payı yok)
+    const artikHavuzu = [];
+    for (const a of secenek.artiklar || []) {
+      for (let i = 0; i < (a.adet || 1); i++) artikHavuzu.push({ id: a.id, uzun: Math.max(a.uzun, a.kisa), kisa: Math.min(a.uzun, a.kisa), kullanildi: false });
+    }
+    artikHavuzu.sort((a, b) => a.uzun * a.kisa - b.uzun * b.kisa);
+
     const plakalar = [];
     const sigmayan = [];
 
-    const yeniPlaka = () => {
-      const pl = { bos: [{ x: 0, y: 0, w: PW, h: PH }], yerlesen: [] };
-      plakalar.push(pl);
-      return pl;
-    };
+    const plakaAc = (uzun, kisa, pay, artikId) => ({
+      bos: [{ x: 0, y: 0, w: uzun - 2 * pay, h: kisa - 2 * pay }], yerlesen: [], uzun, kisa, kenar: pay, artik: artikId || null,
+    });
 
     // En iyi kısa kenar uyumu: artan kısa kenar boşluğu en az olan yeri seç.
     const enIyiYer = (pl, p) => {
@@ -2451,13 +2998,28 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         }
       }
       if (!secilen) {
-        const pl = yeniPlaka();
+        // Önce parçaya sığan en küçük artık, yoksa yeni tam plaka
+        for (const a of artikHavuzu) {
+          if (a.kullanildi) continue;
+          const pl = plakaAc(a.uzun, a.kisa, 0, a.id);
+          const yer = enIyiYer(pl, p);
+          if (yer) {
+            a.kullanildi = true;
+            plakalar.push(pl);
+            secilen = yer;
+            secilenPlaka = pl;
+            break;
+          }
+        }
+      }
+      if (!secilen) {
+        const pl = plakaAc(plaka.uzun, plaka.kisa, kenar, null);
         const yer = enIyiYer(pl, p);
         if (!yer) {
-          plakalar.pop();
           sigmayan.push(p);
           continue;
         }
+        plakalar.push(pl);
         secilen = yer;
         secilenPlaka = pl;
       }
@@ -2480,17 +3042,37 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       if (alt.w > 0 && alt.h > 0) secilenPlaka.bos.push(alt);
     }
 
-    const plakaAlani = plaka.uzun * plaka.kisa;
+    // Tam plakalar önce, artıklar sonra listelenir
+    plakalar.sort((a, b) => (a.artik ? 1 : 0) - (b.artik ? 1 : 0));
+    const cikanArtiklar = [];
     for (const pl of plakalar) {
       const dolu = pl.yerlesen.reduce((a, b) => a + b.w * b.h, 0);
-      pl.doluluk = dolu / plakaAlani;
-      pl.kenar = kenar;
+      pl.doluluk = dolu / (pl.uzun * pl.kisa);
+      // Giyotin boşlukları birbirinden ayrıktır; yeterince büyük olanlar yeni artıktır
+      pl.artiklar = pl.bos.filter((r) => Math.min(r.w, r.h) >= artikMin).map((r) => ({ uzun: Math.round(Math.max(r.w, r.h)), kisa: Math.round(Math.min(r.w, r.h)), x: r.x, y: r.y, w: r.w, h: r.h }));
+      for (const a of pl.artiklar) cikanArtiklar.push({ uzun: a.uzun, kisa: a.kisa });
     }
-    return { plakalar, sigmayan, plaka, kenar };
+    const kullanilanArtiklar = [];
+    for (const a of artikHavuzu.filter((x) => x.kullanildi)) {
+      const v = kullanilanArtiklar.find((k) => k.id === a.id);
+      if (v) v.adet++;
+      else kullanilanArtiklar.push({ id: a.id, adet: 1, uzun: a.uzun, kisa: a.kisa });
+    }
+    return {
+      plakalar, sigmayan, plaka, kenar,
+      tamPlaka: plakalar.filter((p) => !p.artik).length,
+      kullanilanArtiklar,
+      cikanArtiklar,
+    };
   }
 
-  /** Kesim listesini malzemelere göre gruplayıp her birini yerleştirir. */
-  function projeYerlesimi(kesimListesi, ayarlar) {
+  const anahtar = (ad, kalinlik) => `${String(ad || '').trim().toLocaleLowerCase('tr')}|${Number(kalinlik)}`;
+
+  /**
+   * Kesim listesini malzemelere göre gruplayıp her birini yerleştirir.
+   * artikStok: [{ id, malzemeAd, kalinlik, boy, en, adet }] — aynı ad ve kalınlıktaki artıklar kullanılır.
+   */
+  function projeYerlesimi(kesimListesi, ayarlar, artikStok) {
     const gruplar = new Map();
     for (const p of kesimListesi) {
       const malz = ayarlar.malzemeler.find((m) => m.id === p.malzeme);
@@ -2504,16 +3086,28 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const sonuc = [];
     for (const g of gruplar.values()) {
       const plaka = { uzun: Number(g.malzeme.plakaUzun), kisa: Number(g.malzeme.plakaKisa) };
+      const k = anahtar(g.malzeme.ad, g.malzeme.kalinlik);
+      const artiklar = (artikStok || []).filter((a) => anahtar(a.malzemeAd, a.kalinlik) === k && a.adet > 0)
+        .map((a) => ({ id: a.id, uzun: Number(a.boy), kisa: Number(a.en), adet: Number(a.adet) }));
       const y = yerlestir(g.parcalar, plaka, {
         testere: Number(ayarlar.testereKalinligi) || 0,
         kenarPayi: Number(ayarlar.plakaKenarPayi) || 0,
+        artikMin: Number(ayarlar.artikMin) || 250,
+        artiklar,
       });
       sonuc.push(Object.assign({ malzemeId: g.malzeme.id, malzemeAd: g.malzeme.ad, kalinlik: g.malzeme.kalinlik }, y));
     }
     return sonuc;
   }
 
-  return { yerlestir, projeYerlesimi };
+  /** Malzeme başına kullanılan TAM plaka sayısı (maliyet için; artıklar bedelsiz). */
+  function plakaSayilari(gruplar) {
+    const s = {};
+    for (const g of gruplar) s[g.malzemeId] = g.tamPlaka;
+    return s;
+  }
+
+  return { yerlestir, projeYerlesimi, plakaSayilari };
 });
 
 </script>
@@ -2600,8 +3194,15 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       s += rect(b.x1, b.y1, b.x2, b.y2, 'cekmece-on baza-cekmece');
       s += `<circle class="basac-isaret" cx="${f((b.x1 + b.x2) / 2)}" cy="${f(-(b.y1 + b.y2) / 2)}" r="${f(Math.min(10, (b.y2 - b.y1) / 4))}"/>`;
     }
-    s += rect(0, yb, W, yb + Hc, 'govde');
-    s += rect(t, yb + t, W - t, yb + Hc - t, 'ic');
+    const cokgen = (pts, cls) => `<polygon class="${cls}" points="${pts.map(([x, y]) => `${f(x)},${f(-y)}`).join(' ')}"/>`;
+    if (geo.egim) {
+      const { HcL, HcR } = geo.egim;
+      s += cokgen([[0, yb], [W, yb], [W, yb + HcR], [0, yb + HcL]], 'govde');
+      s += cokgen([[t, yb + t], [W - t, yb + t], [W - t, yb + HcR - t], [t, yb + HcL - t]], 'ic');
+    } else {
+      s += rect(0, yb, W, yb + Hc, 'govde');
+      s += rect(t, yb + t, W - t, yb + Hc - t, 'ic');
+    }
 
     // Boydan bölme dikmeleri ve ara tablalar
     for (const dx of geo.dikmeX) s += rect(dx, yb + t, dx + t, yb + Hc - t, 'panel');
@@ -2634,6 +3235,19 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       }
     }
 
+    // Kulp: delik konumları varsa onlara göre; gömme kulp küçük oyuk; gola ve bas-aç görünmez
+    const kulpCiz = (o, y1, y2, varsayilan) => {
+      if (o.kulp && o.kulp.delikler.length) {
+        const xs = o.kulp.delikler.map((d) => o.x1 + d.x);
+        const ys = o.kulp.delikler.map((d) => y1 + d.y);
+        const yat = o.kulp.yatay;
+        return rect(Math.min(...xs) - (yat ? 12 : 6), Math.min(...ys) - (yat ? 6 : 12), Math.max(...xs) + (yat ? 12 : 6), Math.max(...ys) + (yat ? 6 : 12), 'kulp');
+      }
+      if (geo.kulpTur === 'gola' || geo.kulpTur === 'basac') return '';
+      if (geo.kulpTur === 'gomme') return rect(varsayilan.x - 40, varsayilan.y - 8, varsayilan.x + 40, varsayilan.y + 8, 'kulp gomme');
+      return '';
+    };
+
     // Ön yüzler (sürgü kapaklı dolapta iç çekmece önleri yalnızca iç görünüşte)
     if (!ic && geo.korPanel) s += rect(geo.korPanel.x1, yb + geo.db, geo.korPanel.x2, yb + Hc - geo.db, 'kor-panel');
     if (!ic && !surgu) {
@@ -2643,36 +3257,31 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         const y2 = yb + sat.on.y2;
         const n = sat.onler.length;
         sat.onler.forEach((o, k) => {
+          const yamuk = o.y2sol != null;
+          const onCiz = (cls) => (yamuk ? cokgen([[o.x1, y1], [o.x2, y1], [o.x2, yb + o.y2sag], [o.x1, yb + o.y2sol]], cls) : rect(o.x1, y1, o.x2, y2, cls));
           if (sat.tip !== 'kapak') {
-            s += rect(o.x1, y1, o.x2, y2, sat.sahteOn ? 'cekmece-on sahte' : 'cekmece-on');
+            s += onCiz(sat.sahteOn ? 'cekmece-on sahte' : 'cekmece-on');
             if (sat.sahteOn) return;
-            const kw = Math.min(160, (o.x2 - o.x1) * 0.4);
-            const cx = (o.x1 + o.x2) / 2;
-            const ky = y2 - Math.min(50, (y2 - y1) / 3);
-            s += rect(cx - kw / 2, ky - 6, cx + kw / 2, ky + 6, 'kulp');
+            s += kulpCiz(o, y1, y2, { x: (o.x1 + o.x2) / 2, y: y2 - 30 });
             return;
           }
-          s += rect(o.x1, y1, o.x2, y2, onSinifi(sat.kapakTuru));
+          s += onCiz(onSinifi(sat.kapakTuru));
           if (sat.kapakTuru === 'cam_cerceve') s += rect(o.x1 + 70, y1 + 70, o.x2 - 70, y2 - 70, 'cam-kapak');
           const mx = (o.x1 + o.x2) / 2;
           if (sat.acilim === 'yukari') {
             s += `<polyline class="acilis" points="${f(o.x1)},${f(-y1)} ${f(mx)},${f(-y2)} ${f(o.x2)},${f(-y1)}"/>`;
-            const kw = Math.min(160, (o.x2 - o.x1) * 0.3);
-            s += rect(mx - kw / 2, y1 + 30, mx + kw / 2, y1 + 42, 'kulp');
+            s += kulpCiz(o, y1, y2, { x: mx, y: y1 + 36 });
           } else if (sat.acilim === 'asagi') {
             s += `<polyline class="acilis" points="${f(o.x1)},${f(-y2)} ${f(mx)},${f(-y1)} ${f(o.x2)},${f(-y2)}"/>`;
-            const kw = Math.min(160, (o.x2 - o.x1) * 0.3);
-            s += rect(mx - kw / 2, y2 - 42, mx + kw / 2, y2 - 30, 'kulp');
+            s += kulpCiz(o, y1, y2, { x: mx, y: y2 - 36 });
           } else {
             // Menteşe tarafı: tek kapak solda, çiftlerde dışlarda
-            const solMentese = n === 1 ? sat.menteseYonu !== 'sag' : k % 2 === 0;
+            const solMentese = o.menteseSol != null ? o.menteseSol : n === 1 ? sat.menteseYonu !== 'sag' : k % 2 === 0;
             const hx = solMentese ? o.x1 : o.x2;
             const ax = solMentese ? o.x2 : o.x1;
-            s += `<polyline class="acilis" points="${f(ax)},${f(-y2)} ${f(hx)},${f(-(y1 + y2) / 2)} ${f(ax)},${f(-y1)}"/>`;
-            const kx = solMentese ? o.x2 - 35 : o.x1 + 35;
-            const kh = Math.min(160, (y2 - y1) * 0.3);
-            const ky = sat.on.y1 < geo.Hc / 2 && geo.hb + geo.Hc > 1200 ? y2 - 80 - kh : y1 + (y2 - y1) / 2 - kh / 2;
-            s += rect(kx - 6, ky, kx + 6, ky + kh, 'kulp');
+            const ust = yamuk ? yb + Math.min(o.y2sol, o.y2sag) : y2;
+            s += `<polyline class="acilis" points="${f(ax)},${f(-ust)} ${f(hx)},${f(-(y1 + ust) / 2)} ${f(ax)},${f(-y1)}"/>`;
+            s += kulpCiz(o, y1, y2, { x: solMentese ? o.x2 - 35 : o.x1 + 35, y: (y1 + y2) / 2 });
           }
         });
       }
@@ -2856,7 +3465,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
     // Ölçüler: toplam, baza, son bölmenin satırları (sağda), bölme genişlikleri (altta)
     s += olcuYatay(0, W, -fs * 2.2, fs);
-    s += olcuDikey(0, H, -fs * 2.2, fs);
+    s += olcuDikey(0, geo.egim ? hb + geo.egim.HcL : H, -fs * 2.2, fs);
+    if (geo.egim) s += olcuDikey(0, hb + geo.egim.HcR, W + fs * 3.6, fs, `${f(hb + geo.egim.HcR)} · ${geo.egim.aci}°`);
     if (hb > 0) s += olcuDikey(0, hb, W + fs * 1.6, fs * 0.8);
     const tekBolme = geo.sutunlar.length === 1;
     const icGorunur = (sat) => ic || ((sat.tip === 'acik' || sat.tip === 'nis') && !geo.surgu);
@@ -2951,6 +3561,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const konum = (y) => (duvar === 'B' ? duvarL - (y.duvar === 'kose' ? 0 : y.bas) - genislik(y) : y.bas);
     let Hmax = 0;
     for (const y of ogeler) Hmax = Math.max(Hmax, y.montaj + y.geo.H);
+    if (yer.tavan > 0) Hmax = Math.max(Hmax, yer.tavan);
     const fs = Math.max(L, Hmax) / 45;
     let s = '';
     s += `<rect class="duvar" x="0" y="${f(-Hmax - fs * 2)}" width="${f(duvarL)}" height="${f(Hmax + fs * 2)}"/>`;
@@ -2961,6 +3572,25 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       if (y.sira === 'zemin') s += olcuYatay(x, x + w, -fs * 2, fs * 0.85);
       else s += olcuYatay(x, x + w, y.montaj + y.geo.H + fs * 2.2, fs * 0.85);
     }
+    // Yerinde ölçü engelleri (bu duvardakiler); B duvarında görünüş ters çevrilir
+    for (const e of yer.engeller || []) {
+      if ((yer.tip === 'L' ? e.duvar : 'A') !== duvar) continue;
+      const ex = (x) => (duvar === 'B' ? duvarL - x : x);
+      const ad = (yer.engelAdlari && yer.engelAdlari[e.tur]) || e.tur;
+      if (e.genislik > 0) {
+        const x1 = Math.min(ex(e.x), ex(e.x + e.genislik));
+        const x2 = Math.max(ex(e.x), ex(e.x + e.genislik));
+        const y1 = e.tur === 'kolon' || e.tur === 'kapi' ? 0 : e.y;
+        const y2 = e.tur === 'kolon' ? Hmax + fs * 2 : e.tur === 'kapi' ? e.yukseklik : e.y + e.yukseklik;
+        s += `<rect class="engel engel-${e.tur}" x="${f(x1)}" y="${f(-y2)}" width="${f(x2 - x1)}" height="${f(y2 - y1)}"/>`;
+        s += yazi((x1 + x2) / 2, (y1 + y2) / 2, ad, fs * 0.7, 'engel-yazi');
+      } else {
+        s += `<circle class="engel-nokta engel-${e.tur}" cx="${f(ex(e.x))}" cy="${f(-e.y)}" r="${f(fs * 0.45)}"/>`;
+        s += yazi(ex(e.x), e.y + fs * 0.7, ad, fs * 0.6, 'engel-yazi');
+      }
+    }
+    if (yer.tavan > 0) s += cizgi(0, yer.tavan, duvarL, yer.tavan, 'tavan') + yazi(duvarL / 2, yer.tavan + fs * 0.4, `tavan ${f(yer.tavan)}`, fs * 0.7, 'engel-yazi');
+
     // Montaj yükseklikleri
     const montajlar = [...new Set(ogeler.filter((y) => y.montaj > 0).map((y) => y.montaj))].sort((a, b) => a - b);
     const solKenar = Math.min(0, ...ogeler.map(konum));
@@ -3010,6 +3640,13 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         if (y.sira === 'zemin') s += `<text class="plan-yazi" x="${f(y.bas + y.W / 2)}" y="${f(D / 2)}" font-size="${f(fs * 0.8)}">${esc(y.modul.ad)}</text>`;
       }
     }
+    // Kolon ve kirişler (derinliği olan engeller)
+    for (const e of yer.engeller || []) {
+      if (e.tur !== 'kolon' || !(e.genislik > 0)) continue;
+      const d = e.derinlik || 300;
+      const duvarB = L && e.duvar === 'B';
+      s += duvarB ? `<rect class="engel engel-kolon" x="0" y="${f(e.x)}" width="${f(d)}" height="${f(e.genislik)}"/>` : `<rect class="engel engel-kolon" x="${f(e.x)}" y="0" width="${f(e.genislik)}" height="${f(d)}"/>`;
+    }
     // Ölçüler (zemin sırası modül genişlikleri ve duvar boyları)
     const t = fs * 0.4;
     const yat = (x1, x2, y, m) => `<line class="olcu" x1="${f(x1)}" y1="${f(y)}" x2="${f(x2)}" y2="${f(y)}"/><line class="olcu" x1="${f(x1)}" y1="${f(y - t)}" x2="${f(x1)}" y2="${f(y + t)}"/><line class="olcu" x1="${f(x2)}" y1="${f(y - t)}" x2="${f(x2)}" y2="${f(y + t)}"/><text class="olcu-yazi" x="${f((x1 + x2) / 2)}" y="${f(y - fs * 0.3)}" font-size="${f(fs)}">${m}</text>`;
@@ -3031,6 +3668,25 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     return `<svg class="cizim plan" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
+  /** Delik planı: parça yüzü, delikler (türüne göre renk), kanallar ve ölçü çizgileri. */
+  function delikCizimi(p) {
+    const w = p.w;
+    const h = p.h;
+    const fs = Math.max(w, h) / 30;
+    const pay = fs * 4;
+    let s = rect(0, 0, w, h, 'delik-parca');
+    for (const k of p.kanallar) s += rect(k.x1, k.y1, k.x2, k.y2, 'delik-kanal');
+    for (const d of p.delikler) {
+      const r = Math.max(d.cap / 2, fs * 0.12);
+      if (d.yuz.endsWith('uç')) {
+        // Uçtan delik: kenarda yarım daire işareti
+        s += `<circle class="delik d-${d.tur} uc" cx="${f(d.x)}" cy="${f(-d.y)}" r="${f(r)}"/>`;
+      } else s += `<circle class="delik d-${d.tur}${d.yuz === 'iç yüz' && p.eksen.includes('önden') ? ' arka' : ''}" cx="${f(d.x)}" cy="${f(-d.y)}" r="${f(r)}"/>`;
+    }
+    s += olcuYatay(0, w, -fs * 1.8, fs) + olcuDikey(0, h, -fs * 1.8, fs);
+    return `<svg class="cizim delik-svg" viewBox="${f(-pay)} ${f(-h - fs)} ${f(w + 2 * pay)} ${f(h + fs + pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+
   /** Bantlı kenarları kalın gösteren küçük parça simgesi. Uzun kenar yatay çizilir. */
   function bantSimgesi(bant, boyut) {
     const w = boyut || 34;
@@ -3044,8 +3700,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
   /** Plaka kesim planı. Plaka sol üst köşesi (0,0), SVG y aşağı. */
   function plakaCizimi(plaka, boyut, renkler) {
-    const W = boyut.uzun;
-    const H = boyut.kisa;
+    const W = plaka.uzun || boyut.uzun;
+    const H = plaka.kisa || boyut.kisa;
     const k = plaka.kenar;
     const fs = Math.min(W, H) / 28;
     let s = `<rect class="plaka" x="0" y="0" width="${W}" height="${H}"/>`;
@@ -3062,10 +3718,747 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         s += `<text class="plaka-yazi ince" x="${f(x + y.w / 2)}" y="${f(yy + y.h / 2 + yfs * 0.95)}" font-size="${f(yfs * 0.75)}">${f(y.parca.w)}×${f(y.parca.h)}</text>`;
       }
     }
+    for (const a of plaka.artiklar || []) {
+      s += `<rect class="cikan-artik" x="${f(k + a.x)}" y="${f(k + a.y)}" width="${f(a.w)}" height="${f(a.h)}"/>`;
+      const afs = Math.min(fs * 0.8, Math.min(a.w, a.h) / 4);
+      if (afs > 8) s += `<text class="plaka-yazi ince" x="${f(k + a.x + a.w / 2)}" y="${f(k + a.y + a.h / 2)}" font-size="${f(afs)}">artık ${a.uzun}×${a.kisa}</text>`;
+    }
     return `<svg class="plaka-svg" viewBox="-10 -10 ${W + 20} ${H + 20}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { onGorunus, yanKesit, duvarGorunus, planCizimi, plakaCizimi, bantSimgesi };
+  return { onGorunus, yanKesit, duvarGorunus, planCizimi, plakaCizimi, bantSimgesi, delikCizimi };
+});
+
+</script>
+  <script>
+/*
+ * Delik planı: bir dolabın parçalarındaki delik ve kanal koordinatları.
+ * Koordinatlar parçanın görünen yüzünde, sol-alt köşeden mm:
+ *  - Yan ve dikmeler: x ön kenardan arkaya, y alt kenardan yukarı (iç yüzden bakış).
+ *  - Tablalar, ara tabla, sabit raf: x sol uçtan, y ön kenardan (üst yüzden bakış).
+ *  - Kapak ve çekmece önü: x sol kenardan, y alt kenardan (önden bakış; menteşe çanakları iç yüzde).
+ * Delik türleri: baglanti (bağlantı elemanı), pim (raf pimi), mentese (çanak), plaka (menteşe plakası),
+ * ray (ray vidası), kulp, kanal (arkalık kanalı çizgisi).
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Delik = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const ICERI = 37; // 32 mm sistemde ön ve arka kenardan standart mesafe
+
+  /** Bağlantı elemanının yan/dikme yüzündeki ve tabla ucundaki delikleri. */
+  const BAGLANTI = {
+    minifix: { yuz: { cap: 5, derinlik: 12, ad: 'Minifix pimi Ø5' }, uc: { cap: 8, derinlik: 34, ad: 'Pim geçişi Ø8 (uçtan)' }, canak: { cap: 15, derinlik: 13, ad: 'Minifix gövdesi Ø15', mesafe: 34 } },
+    konfirmat: { yuz: { cap: 7, derinlik: 0, ad: 'Konfirmat Ø7 (boydan, havşalı)' }, uc: { cap: 5, derinlik: 50, ad: 'Konfirmat kılavuz Ø5 (uçtan)' } },
+    kavela: { yuz: { cap: 8, derinlik: 12, ad: 'Kavela Ø8' }, uc: { cap: 8, derinlik: 25, ad: 'Kavela Ø8 (uçtan)' } },
+    seffaf_kose: { isaret: 'Şeffaf köşe bağlantı yeri (4 vida Ø3 kılavuz)' },
+    seffaf_t: { isaret: 'Şeffaf T bağlantı yeri (4 vida Ø3 kılavuz)' },
+  };
+
+  /** Derinlik boyunca bağlantı konumları (ön ve arka kenardan 37 mm; derin parçada ortada da). */
+  function derinlikKonumlari(z0, z1, derinlik) {
+    const L = [z0 + ICERI, z1 - ICERI];
+    if (derinlik >= 350) L.splice(1, 0, (z0 + z1) / 2);
+    return L.filter((z, i, a) => z > z0 && z < z1 && (i === 0 || z - a[i - 1] > 20));
+  }
+
+  /** Minifix yanındaki kavelanın konumları: pim + 32, başka bağlantıyla çakışmıyorsa. */
+  function kavelaKonumlari(konumlar, z1) {
+    return konumlar.map((z) => z + 32).filter((k) => k < z1 - 20 && konumlar.every((z) => Math.abs(z - k) > 20));
+  }
+
+  function mentesheKonumlari(h, adet) {
+    const uc = h < 400 ? Math.max(50, h * 0.2) : 100;
+    if (adet <= 1) return [h / 2];
+    const L = [];
+    for (let i = 0; i < adet; i++) L.push(uc + (i * (h - 2 * uc)) / (adet - 1));
+    return L;
+  }
+  function mentesheAdedi(h) {
+    if (h <= 900) return 2;
+    if (h <= 1600) return 3;
+    if (h <= 2000) return 4;
+    return 5;
+  }
+
+  /**
+   * @param modul  proje modülü
+   * @param sonuc  Hesap.modulHesapla sonucu
+   * @param ayar   proje ayarları
+   * @returns { destek, mesaj, parcalar: [{ ad, kaynak, w, h, eksen, delikler, kanallar, notlar }] }
+   */
+  function delikPlani(modul, sonuc, ayar) {
+    const g = sonuc && sonuc.geo;
+    if (!g) return { destek: false, mesaj: 'Geçerli ölçü yok.', parcalar: [] };
+    if (g.lkose) return { destek: false, mesaj: 'L köşe dolap için ayrıntılı delik planı henüz yok; parça notlarını kullanın.', parcalar: [] };
+    if (g.panel) return { destek: false, mesaj: 'Tek parça panelde bağlantı delikleri montaj yerine göre açılır.', parcalar: [] };
+
+    const HS = sonuc.hirdavatSecimi;
+    const govdeTur = HS.baglanti;
+    const araTur = HS.araBaglanti === 'ayni' ? (HS.baglanti === 'seffaf_kose' ? 'seffaf_t' : HS.baglanti) : HS.araBaglanti;
+    const { t, Ds, W, hb } = g;
+    const tablaBoydan = g.yapi === 'tabla_boydan';
+    const icOn = g.kapakTipi === 'ic' || g.surgu ? g.tk : 0;
+    const icSon = icOn + g.icDerinlik;
+    const kusakEn = Number(ayar.kusakGenisligi) || 100;
+    const kanalGeri = Number(ayar.arkalikGeriPay) || 10;
+    const HcSol = g.egim ? g.egim.HcL : g.Hc;
+    const HcSag = g.egim ? g.egim.HcR : g.Hc;
+
+    const parcalar = [];
+    const yeniParca = (ad, kaynak, w, h, eksen) => {
+      const p = { ad, kaynak, w: r1(w), h: r1(h), eksen, delikler: [], kanallar: [], notlar: [] };
+      parcalar.push(p);
+      return p;
+    };
+    const delik = (p, tur, x, y, cap, derinlik, ad, yuz) => {
+      if (x < -0.5 || y < -0.5 || x > p.w + 0.5 || y > p.h + 0.5) return;
+      p.delikler.push({ tur, x: r1(x), y: r1(y), cap, derinlik, ad, yuz: yuz || '' });
+    };
+
+    // ---------- Dikey parçalar: sol yan, sağ yan, bölme dikmeleri ----------
+    // Her dikey yüzün hangi bölmeye baktığı: sol yanın iç yüzü → ilk bölmenin solu, vb.
+    const yuzler = [];
+    const solYanH = tablaBoydan ? HcSol - 2 * t : HcSol;
+    const sagYanH = tablaBoydan ? HcSag - 2 * t : HcSag;
+    const solYan = yeniParca(g.egim ? 'Sol yan' : 'Yan (sol)', g.egim ? 'Sol yan' : 'Yan', Ds, solYanH, 'x: ön kenardan · y: alt kenardan (iç yüz)');
+    const sagYan = yeniParca(g.egim ? 'Sağ yan' : 'Yan (sağ)', g.egim ? 'Sağ yan' : 'Yan', Ds, sagYanH, 'x: ön kenardan · y: alt kenardan (iç yüz)');
+    const yanY0 = tablaBoydan ? t : 0;
+    yuzler.push({ parca: solYan, sutun: 0, taraf: 'sol', y0: yanY0, z0: 0, yuz: 'iç yüz' });
+    g.dikmeX.forEach((dx, k) => {
+      const ad = `Bölme dikmesi ${k + 1}`;
+      const dik = yeniParca(ad, g.egim ? `Bölme dikmesi (boydan) ${k + 1}` : 'Bölme dikmesi (boydan)', g.icDerinlik, g.Hc - 2 * t, 'x: ön kenardan · y: alt kenardan');
+      dik.dx = dx;
+      yuzler.push({ parca: dik, sutun: k, taraf: 'sag', y0: t, z0: icOn, yuz: 'sol yüz' });
+      yuzler.push({ parca: dik, sutun: k + 1, taraf: 'sol', y0: t, z0: icOn, yuz: 'sağ yüz' });
+    });
+    yuzler.push({ parca: sagYan, sutun: g.sutunlar.length - 1, taraf: 'sag', y0: yanY0, z0: 0, yuz: 'iç yüz' });
+
+    // Bağlantı deliği: yan/dikme yüzüne yatay bir panelin ucu bağlanır
+    const yuzBaglanti = (f, tur, yc, z0, z1) => {
+      const b = BAGLANTI[tur] || BAGLANTI.minifix;
+      const konumlar = derinlikKonumlari(z0, z1, z1 - z0);
+      const y = yc - f.y0;
+      for (const z of konumlar) {
+        if (b.isaret) delik(f.parca, 'baglanti', z - f.z0, y, 3, 0, b.isaret, f.yuz);
+        else delik(f.parca, 'baglanti', z - f.z0, y, b.yuz.cap, b.yuz.derinlik, b.yuz.ad, f.yuz);
+      }
+      if (tur === 'minifix') for (const k of kavelaKonumlari(konumlar, z1)) delik(f.parca, 'baglanti', k - f.z0, y, 8, 12, 'Kavela Ø8', f.yuz);
+    };
+
+    for (const f of yuzler) {
+      const sutun = g.sutunlar[f.sutun];
+      const kenarFace = f.parca === solYan || f.parca === sagYan;
+      // Alt / üst tabla (yalnızca yanlar; yanlar boydan yapıda tablalar yanın yüzüne bağlanır)
+      if (kenarFace && !tablaBoydan) {
+        yuzBaglanti(f, govdeTur, t / 2, 0, Ds);
+        if (g.ust === 'kusak') {
+          yuzBaglanti(f, govdeTur, (f.taraf === 'sol' ? HcSol : HcSag) - t / 2, 0, kusakEn);
+          yuzBaglanti(f, govdeTur, (f.taraf === 'sol' ? HcSol : HcSag) - t / 2, Ds - kusakEn, Ds);
+        } else yuzBaglanti(f, govdeTur, (f.taraf === 'sol' ? HcSol : HcSag) - t / 2, 0, Ds);
+      }
+      // Ara tablalar ve sabit raflar bu yüzün bölmesinde
+      for (const b of sutun.sinirlar) if (b.panel) yuzBaglanti(f, araTur, b.y, icOn, icSon);
+      for (const sat of sutun.satirlar) {
+        const ilk = sat.bolumler[0];
+        const son = sat.bolumler[sat.bolumler.length - 1];
+        const bolumBuYuzde = f.taraf === 'sol' ? ilk : son;
+        if (!bolumBuYuzde) continue;
+        // Raflar: sabit → bağlantı, hareketli → pim sırası (±32 ayar payıyla)
+        for (const ry of sat.raflar) {
+          if (sat.rafSabit) yuzBaglanti(f, araTur, ry, icOn, icSon);
+          else {
+            for (const z of [icOn + ICERI, icSon - ICERI]) {
+              for (const d of [-32, 0, 32]) delik(f.parca, 'pim', z - f.z0, ry + d - f.y0, 5, 10, 'Raf pimi Ø5', f.yuz);
+            }
+          }
+        }
+        // Ray vidaları (bu yüze bakan bölümdeki çekmeceler)
+        const cekmeceler = sat.cekmeceler.filter((c) => (f.taraf === 'sol' ? Math.abs(c.x1 - ilk.x1) < 30 : Math.abs(c.x2 - son.x2) < 30));
+        for (const c of cekmeceler) {
+          const y = c.y1 + 22 - f.y0;
+          const L = c.L || 400;
+          for (const z of [icOn + ICERI, icOn + Math.max(ICERI + 64, L - 32)]) delik(f.parca, 'ray', z - f.z0, y, 4, 10, 'Ray vidası Ø4 (ray ekseni kutu tabanı +22)', f.yuz);
+        }
+        if ((sat.icCekmeceler || []).length) f.parca.notlar.push('İç çekmece rayları dolgu paneline takılır; dolgu paneli bu yüze vidalanır.');
+        // Menteşe montaj plakaları: bu yüzde menteşelenen kapaklar
+        if (sat.tip === 'kapak' && sat.acilim === 'yana' && !g.surgu) {
+          const o = f.taraf === 'sol' ? sat.onler[0] : sat.onler[sat.onler.length - 1];
+          if (o && (f.taraf === 'sol' ? o.menteseSol : !o.menteseSol)) {
+            const h = sat.on.y2 - sat.on.y1;
+            for (const pos of mentesheKonumlari(h, mentesheAdedi(h))) {
+              const yc = sat.on.y2 - pos - f.y0;
+              for (const d of [-16, 16]) delik(f.parca, 'plaka', ICERI + icOn - f.z0, yc + d, 5, 12, 'Menteşe plakası Ø5', f.yuz);
+            }
+          }
+        }
+      }
+      // Arkalık kanalı (yanlarda)
+      if (kenarFace && g.arkalik === 'kanal') f.parca.kanallar.push({ x1: r1(Ds - kanalGeri - g.ta), x2: r1(Ds - kanalGeri), y1: 0, y2: f.parca.h, ad: `Arkalık kanalı ${g.ta}×${Number(ayar.arkalikKanalDerinligi) || 8} mm` });
+      // Tablalar boydan: yanın alt/üst kenarından bağlantı
+      if (kenarFace && tablaBoydan) f.parca.notlar.push(`Yan, tablaların arasına oturur: alt ve üst kenarlara ${(BAGLANTI[govdeTur] && BAGLANTI[govdeTur].uc ? BAGLANTI[govdeTur].uc.ad : 'bağlantı')} ön/arka kenardan ${ICERI} mm.`);
+    }
+
+    // ---------- Yatay parçalar: alt/üst tabla, ara tabla, sabit raf ----------
+    const tablaDelikleri = (p, tur, uzunluk, z0, z1, ucNot) => {
+      const b = BAGLANTI[tur] || BAGLANTI.minifix;
+      const konumlar = derinlikKonumlari(z0, z1, z1 - z0);
+      if (tur === 'minifix') {
+        for (const k of kavelaKonumlari(konumlar, z1)) {
+          delik(p, 'baglanti', 0, k - z0, 8, 25, 'Kavela Ø8 (uçtan)', 'sol uç');
+          delik(p, 'baglanti', uzunluk, k - z0, 8, 25, 'Kavela Ø8 (uçtan)', 'sağ uç');
+        }
+      }
+      for (const z of konumlar) {
+        const y = z - z0;
+        if (b.isaret) {
+          delik(p, 'baglanti', 20, y, 3, 0, b.isaret, 'alt yüz');
+          delik(p, 'baglanti', uzunluk - 20, y, 3, 0, b.isaret, 'alt yüz');
+          continue;
+        }
+        delik(p, 'baglanti', 0, y, b.uc.cap, b.uc.derinlik, b.uc.ad, 'sol uç');
+        delik(p, 'baglanti', uzunluk, y, b.uc.cap, b.uc.derinlik, b.uc.ad, 'sağ uç');
+        if (b.canak) {
+          delik(p, 'baglanti', b.canak.mesafe, y, b.canak.cap, b.canak.derinlik, b.canak.ad, 'alt yüz');
+          delik(p, 'baglanti', uzunluk - b.canak.mesafe, y, b.canak.cap, b.canak.derinlik, b.canak.ad, 'alt yüz');
+        }
+      }
+      if (ucNot) p.notlar.push(ucNot);
+    };
+    const iw = W - 2 * t;
+    if (!tablaBoydan) {
+      const alt = yeniParca('Alt tabla', 'Alt tabla', iw, Ds, 'x: sol uçtan · y: ön kenardan (üst yüz)');
+      tablaDelikleri(alt, govdeTur, iw, 0, Ds);
+      if (g.ust !== 'kusak' && !g.egim) {
+        const ust = yeniParca('Üst tabla', 'Üst tabla', iw, Ds, 'x: sol uçtan · y: ön kenardan (alt yüz)');
+        tablaDelikleri(ust, govdeTur, iw, 0, Ds);
+      } else if (g.ust === 'kusak') {
+        for (const ad of ['Ön kuşak', 'Arka kuşak']) tablaDelikleri(yeniParca(ad, ad, iw, kusakEn, 'x: sol uçtan · y: ön kenardan'), govdeTur, iw, 0, kusakEn);
+      }
+      // Bölme dikmeleri tablalara alttan/üstten bağlanır
+      for (const dx of g.dikmeX) {
+        for (const p of parcalar.filter((x) => x.ad === 'Alt tabla' || x.ad === 'Üst tabla')) {
+          const b = BAGLANTI[araTur] || BAGLANTI.minifix;
+          for (const z of derinlikKonumlari(icOn, icSon, g.icDerinlik)) {
+            if (b.isaret) delik(p, 'baglanti', dx - t + t / 2, z, 3, 0, b.isaret, 'iç yüz');
+            else delik(p, 'baglanti', dx - t + t / 2, z, b.yuz.cap, b.yuz.derinlik, `${b.yuz.ad} (bölme dikmesi)`, 'iç yüz');
+          }
+        }
+      }
+    } else {
+      const alt = yeniParca('Alt tabla', 'Alt tabla', W, Ds, 'x: sol uçtan · y: ön kenardan (üst yüz)');
+      const ust = g.egim ? null : yeniParca('Üst tabla', 'Üst tabla', W, Ds, 'x: sol uçtan · y: ön kenardan (alt yüz)');
+      const b = BAGLANTI[govdeTur] || BAGLANTI.minifix;
+      for (const p of [alt, ust].filter(Boolean)) {
+        for (const z of derinlikKonumlari(0, Ds, Ds)) {
+          for (const x of [t / 2, W - t / 2]) {
+            if (b.isaret) delik(p, 'baglanti', x, z, 3, 0, b.isaret, 'iç yüz');
+            else delik(p, 'baglanti', x, z, b.yuz.cap, b.yuz.derinlik, b.yuz.ad, 'iç yüz');
+          }
+        }
+      }
+    }
+    g.sutunlar.forEach((c, si) => {
+      const cw = c.x2 - c.x1;
+      const araSayi = c.sinirlar.filter((b) => b.panel).length;
+      if (araSayi) {
+        const p = yeniParca(g.sutunlar.length > 1 ? `Ara tabla (bölme ${si + 1})` : 'Ara tabla (sabit raf)', g.sutunlar.length > 1 ? `Ara tabla (bölme ${si + 1})` : 'Ara tabla (sabit raf)', cw, g.icDerinlik, 'x: sol uçtan · y: ön kenardan');
+        p.adet = araSayi;
+        tablaDelikleri(p, araTur, cw, icOn, icSon);
+      }
+      const sabitRaflar = c.satirlar.filter((s) => s.rafSabit && s.raflar.length);
+      for (const s of sabitRaflar) {
+        const w = s.bolumler[0].x2 - s.bolumler[0].x1;
+        const p = yeniParca('Sabit raf', 'Sabit raf', w, g.icDerinlik, 'x: sol uçtan · y: ön kenardan');
+        p.adet = s.raflar.length * s.bolumler.length;
+        tablaDelikleri(p, araTur, w, icOn, icSon);
+      }
+    });
+
+    // ---------- Ön yüzler: kapaklar ve çekmece önleri ----------
+    const satirAdi = (sat) => (g.sutunlar.length > 1 ? `bölme ${sat.sutun + 1}, satır ${g.sutunlar[sat.sutun].satirlar.indexOf(sat) + 1}` : `satır ${g.sutunlar[sat.sutun].satirlar.indexOf(sat) + 1}`);
+    for (const sat of g.satirlar) {
+      if (g.surgu || !sat.onler.length || sat.sahteOn) continue;
+      const h = sat.on.y2 - sat.on.y1;
+      sat.onler.forEach((o, k) => {
+        const w = o.x2 - o.x1;
+        const kapak = sat.tip === 'kapak';
+        const yan = sat.onler.length > 1 ? (k === 0 ? ' – sol' : k === sat.onler.length - 1 ? ' – sağ' : ` – ${k + 1}`) : '';
+        const ad = `${kapak ? 'Kapak' : 'Çekmece önü'} (${satirAdi(sat)})${yan}`;
+        const p = yeniParca(ad, `${kapak ? 'Kapak' : 'Çekmece önü'} (${satirAdi(sat)})`, w, h, 'x: sol kenardan · y: alt kenardan (önden bakış)');
+        if (kapak && sat.acilim === 'yana') {
+          for (const pos of mentesheKonumlari(h, mentesheAdedi(h))) {
+            delik(p, 'mentese', o.menteseSol ? 22.5 : w - 22.5, h - pos, 35, 12.5, 'Menteşe çanağı Ø35 (iç yüz)', 'iç yüz');
+          }
+        } else if (kapak && sat.acilim === 'yukari') {
+          for (const x of [w * 0.2, w * 0.8]) delik(p, 'mentese', x, h - 22.5, 35, 12.5, 'Menteşe çanağı Ø35 (iç yüz, üst kenar)', 'iç yüz');
+        } else if (kapak && sat.acilim === 'asagi') {
+          for (const x of [w * 0.2, w * 0.8]) p.notlar.push(`Klapa menteşesi alt kenarda, soldan ${r1(x)} mm (menteşe kataloğuna göre frezelenir).`);
+        }
+        if (o.kulp) for (const d of o.kulp.delikler) delik(p, 'kulp', d.x, d.y, 5, 0, 'Kulp Ø5 (boydan)', 'ön yüz');
+        if (!kapak) p.notlar.push('Çekmece kutusuna içten 4 vida ile bağlanır (ayar için öne bağlantı aparatı kullanılabilir).');
+        if (o.y2sol != null) p.notlar.push(`Yamuk kapak: sol kenar ${r1(o.y2sol - sat.on.y1)}, sağ kenar ${r1(o.y2sag - sat.on.y1)} mm; delikler dikdörtgen kısma göre.`);
+      });
+    }
+
+    // Boş parça listesinden yalnızca delik/kanal/notu olanlar
+    const dolu = parcalar.filter((p) => p.delikler.length || p.kanallar.length || p.notlar.length);
+    for (const p of dolu) {
+      const tur = {};
+      for (const d of p.delikler) tur[d.ad] = (tur[d.ad] || 0) + 1;
+      p.ozet = Object.entries(tur).map(([a, n]) => `${n} × ${a}`);
+    }
+    return { destek: true, mesaj: '', parcalar: dolu, eksenNotu: `Bağlantı noktaları ön/arka kenardan ${ICERI} mm (32 mm sistem); derin parçalarda ortada da.` };
+  }
+
+  return { delikPlani, BAGLANTI, derinlikKonumlari };
+});
+
+</script>
+  <script>
+/*
+ * Montaj kılavuzu: bir dolabın adım adım kurulum sırası.
+ * Parçalar kesim listesindeki numaralarıyla (#no) anılır; ölçüler hesaptan gelir
+ * (gönye köşegeni, ray yükseklikleri, menteşe ve kapak boşlukları).
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Montaj = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const r0 = (x) => Math.round(x);
+  const tr = (x) => String(x).replace('.', ',');
+  const BAGLANTI_AD = {
+    minifix: 'minifix + kavela', konfirmat: 'konfirmat vida', kavela: 'kavela + tutkal',
+    seffaf_kose: 'şeffaf köşe bağlantı', seffaf_t: 'şeffaf T bağlantı',
+  };
+
+  /**
+   * @param modul, sonuc (Hesap.modulHesapla), proje, projeSonuc (Hesap.projeHesapla)
+   * @returns [{ baslik, adimlar: [metin] }]
+   */
+  function kilavuz(modul, sonuc, proje, projeSonuc) {
+    const g = sonuc && sonuc.geo;
+    if (!g) return [{ baslik: 'Uyarı', adimlar: ['Geçerli ölçü yok; önce ölçüleri düzeltin.'] }];
+    const A = proje.ayarlar;
+    const HS = sonuc.hirdavatSecimi;
+    const govdeB = BAGLANTI_AD[HS.baglanti] || HS.baglanti;
+    const araTur = HS.araBaglanti === 'ayni' ? (HS.baglanti === 'seffaf_kose' ? 'seffaf_t' : HS.baglanti) : HS.araBaglanti;
+    const araB = BAGLANTI_AD[araTur] || araTur;
+
+    // Parça numarası: kesim listesinde bu modüle ait, aynı ad ve ölçüdeki satır
+    const numara = (adBasi) => {
+      const L = sonuc.parcalar.filter((p) => p.ad === adBasi || p.ad.startsWith(adBasi));
+      const nolar = [];
+      for (const p of L) {
+        const k = projeSonuc.kesimListesi.find((x) => x.malzeme === p.malzeme && x.ad === p.ad && x.boy === p.boy && x.en === p.en && x.moduller.includes(modul.ad));
+        if (k && !nolar.includes(k.no)) nolar.push(k.no);
+      }
+      return nolar.length ? nolar.map((n) => `#${n}`).join(', ') : '';
+    };
+    const parca = (ad, adBasi) => {
+      const n = numara(adBasi || ad);
+      return n ? `${ad} (${n})` : ad;
+    };
+    const var_ = (adBasi) => sonuc.parcalar.some((p) => p.ad === adBasi || p.ad.startsWith(adBasi));
+    const hir = (kod) => sonuc.hirdavat.filter((h) => h.kod === kod).reduce((a, h) => a + h.adet, 0);
+
+    const bolumler = [];
+    const bolum = (baslik, adimlar) => { if (adimlar.filter(Boolean).length) bolumler.push({ baslik, adimlar: adimlar.filter(Boolean) }); };
+
+    // 1. Hazırlık
+    bolum('Hazırlık', [
+      `Bu modülün parçalarını etiket numaralarına göre ayırın: ${sonuc.parcalar.map((p) => `${p.ad} ×${p.adet}`).join(', ')}.`,
+      'Delik planındaki delikleri açın ya da CNC deliklerini kontrol edin; kenar bantlarının yapıştığını ve köşelerin temizlendiğini kontrol edin.',
+      `Gövde bağlantısı: ${govdeB}; ara bağlantılar: ${araB}.`,
+    ]);
+
+    if (g.panel) {
+      bolum('Montaj', [
+        `${parca(sonuc.parcalar[0].ad)} panelini yerine göre ölçüp gerekirse duvara göre traşlayın.`,
+        g.tur === 'raf' ? `Gizli raf taşıyıcılarını (${hir('raf_tasiyici')} adet) teraziyle duvara sabitleyin, rafı taşıyıcılara geçirin.` : null,
+        g.tur === 'yan_kapama' || g.tur === 'dolgu' ? 'Paneli komşu dolaba içten köşebent ve sunta vidasıyla bağlayın; vida boyu panel + gövde kalınlığını geçmemeli.' : null,
+        g.tur === 'bulasik' ? 'Kapağı bulaşık makinesinin kendi montaj şablonuna göre makine kapağına vidalayın; kapak üst kenarı komşu kapaklarla hizalı olmalı.' : null,
+        g.tur === 'tabla' ? 'Tablayı alttan köşebentlerle taşıyıcılara bağlayın; derzlerin terazide olduğunu kontrol edin.' : null,
+        g.tur === 'baza' ? 'Baza bandını ayakların klipslerine takın; köşelerde gönye kesin.' : null,
+      ]);
+      return bolumler;
+    }
+
+    if (g.lkose) {
+      bolum('Gövde', [
+        `İki parçalı alt tablayı (${numara('Alt tabla')}) ve üst tablayı (${numara('Üst tabla')}) köşede birleştirin (${araB}).`,
+        `Kol uçlarındaki yanları (${numara('Yan (kol ucu)')}) tablalara bağlayın (${govdeB}).`,
+        `Arkalıkları (${numara('Arkalık')}) gönyeyi kontrol ederek her kola çakın; B kolu arkalığı A kolunun arkasına dayanır.`,
+      ]);
+      bolum('Kapaklar', [
+        `Katlanır kapakları (${numara('Köşe kapağı')}) kapak-kapak menteşesiyle birleştirin, B kapağını B kolu yanına asın.`,
+        'Kapaklar katlanırken komşu dolabın kulpuna çarpmamalı; gerekirse komşu dolapta dolgu kullanın.',
+      ]);
+      return bolumler;
+    }
+
+    const t = g.t;
+    const W = g.W;
+    const Hc = g.egim ? Math.max(g.egim.HcL, g.egim.HcR) : g.Hc;
+    const tablaBoydan = g.yapi === 'tabla_boydan';
+
+    // 2. Çekmece kutuları
+    const cekmeceVar = g.satirlar.some((s) => s.cekmeceler.length || (s.icCekmeceler || []).length) || g.bazaCekmece;
+    if (cekmeceVar) {
+      bolum('Çekmece kutuları', [
+        HS.ray === 'metal'
+          ? `Metal yanlı çekmece setlerini kataloğa göre kurun; tabanları (${numara('Çekmece tabanı')}) ve arkalıkları (${numara('Çekmece arkalığı')}) takın.`
+          : `Kutuları birleştirin: yanlar (${numara('Çekmece yanı')}) arasına ön/arka parçaları (${numara('Çekmece ön/arka')}) bağlayın.`,
+        HS.ray === 'metal' ? null : (A.cekmeceTabani === 'kanal'
+          ? `Tabanı (${numara('Çekmece tabanı')}) kanala kaydırıp dördüncü parçayı takın.`
+          : `Kutunun köşegenlerini eşitleyip tabanı (${numara('Çekmece tabanı')}) alttan çakın/zımbalayın.`),
+        'Her kutunun köşegenlerini ölçün; fark 1 mm\'yi geçmesin.',
+      ]);
+    }
+
+    // 3. Gövde
+    const gov = [];
+    if (tablaBoydan) gov.push(`Yanları (${numara(g.egim ? 'Sol yan' : 'Yan')}${g.egim ? ', ' + numara('Sağ yan') : ''}) alt tablanın (${numara('Alt tabla')}) üstüne oturtup ${govdeB} ile bağlayın.`);
+    else gov.push(`Alt tablayı (${numara('Alt tabla')}) iki yanın (${numara(g.egim ? 'Sol yan' : 'Yan')}${g.egim ? ', ' + numara('Sağ yan') : ''}) arasına ${govdeB} ile bağlayın.`);
+    if (g.dikmeX.length) gov.push(`Boydan bölme dikmelerini (${numara('Bölme dikmesi')}) alt tablaya ${araB} ile bağlayın; aralarını delik planındaki ölçüye göre kontrol edin.`);
+    if (var_('Ara tabla')) gov.push(`Ara tablaları (${numara('Ara tabla')}) ${araB} ile yerleştirin.`);
+    if (var_('Ara dikme')) gov.push(`Satır içi ara dikmeleri (${numara('Ara dikme')}) bağlayın.`);
+    if (g.arkalik === 'kanal') gov.push(`Arkalığı (${numara('Arkalık')}) yanların ve alt tablanın kanalına kaydırın.`);
+    if (g.egim) gov.push(`Eğimli üst tablayı (${numara('Üst tabla')}) ${g.egim.aci}° açılı uçlarıyla yerleştirip bağlayın.`);
+    else if (g.ust === 'kusak') gov.push(`Ön ve arka kuşakları (${numara('Ön kuşak')}, ${numara('Arka kuşak')}) takın.`);
+    else gov.push(`Üst tablayı (${numara('Üst tabla')}) takın.`);
+    if (g.egim) {
+      // Yamuk gövdede köşegenler eşit değildir: her biri kendi değeriyle kontrol edilir
+      const k1 = r0(Math.hypot(W, g.egim.HcR));
+      const k2 = r0(Math.hypot(W, g.egim.HcL));
+      gov.push(`Gövdeyi sırtüstü yatırıp köşegenleri ölçün: sol alt → sağ üst ≈ ${k1} mm, sağ alt → sol üst ≈ ${k2} mm olmalı (sapma ≤ 2 mm). Gönye tamam olmadan arkalığı sabitlemeyin.`);
+    } else {
+      const kosegen = r0(Math.hypot(W, Hc));
+      gov.push(`Gövdeyi sırtüstü yatırıp köşegenleri ölçün: ikisi de ≈ ${kosegen} mm olmalı (fark ≤ 2 mm). Gönye tamam olmadan arkalığı sabitlemeyin.`);
+    }
+    if (g.arkalik === 'cakma') gov.push(`Arkalığı (${numara('Arkalık')}) yaklaşık 15 cm aralıkla çakın/zımbalayın (${hir('arkalik_vida')} adet).`);
+    if (g.arkalik === 'yok') gov.push('Arkalık yok: gövdeyi duvara bağlamadan önce gönyeyi koruyan geçici çapraz çıta kullanın.');
+    bolum('Gövde', gov);
+
+    // 4. Baza
+    if (g.baza.tip === 'ayak') bolum('Ayaklar', [`Ayarlı ayakları (${hir('ayak_plastik') || hir('ayak_metal')} adet, ${g.baza.yukseklik} mm) alt tablaya, köşelerden yaklaşık 50 mm içeriden vidalayın.`]);
+    else if (g.baza.tip === 'tekerlek') bolum('Tekerlekler', [`Tekerlekleri (${hir('tekerlek')} adet) alt tablaya vidalayın; frenli olanları öne takın.`]);
+    else if (g.baza.tip === 'panel') bolum('Baza', [`Baza çerçevesini (${numara('Baza')}) kurun, terazide olduğunu kontrol edip gövdeyi üstüne bağlayın.`]);
+    if (g.bazaCekmece) bolum('Baza çekmecesi', [`Taşıyıcıları (${numara('Baza çekmecesi taşıyıcı')}) gövde altına bağlayın, rayları ve bas-aç mekanizmasını takın; çekmece önünü (${numara('Baza çekmecesi önü')}) süpürgelik hizasına ayarlayın.`]);
+
+    // 5. İç donanım
+    const ic = [];
+    const yatay = g.surgu ? g.tk : g.kapakTipi === 'ic' ? g.tk : 0;
+    g.satirlar.forEach((s) => {
+      const ad = g.sutunlar.length > 1 ? `bölme ${s.sutun + 1}, satır ${g.sutunlar[s.sutun].satirlar.indexOf(s) + 1}` : `satır ${g.sutunlar[s.sutun].satirlar.indexOf(s) + 1}`;
+      if (s.cekmeceler.length) {
+        const yuk = s.cekmeceler.map((c) => r0(c.y1 + 22 - t));
+        ic.push(`${ad}: rayları yanlara takın — ray ekseni gövde iç tabanından ${[...new Set(yuk)].join(' / ')} mm, önden ${37 + yatay} mm.`);
+      }
+      if ((s.icCekmeceler || []).length) ic.push(`${ad}: iç çekmece dolgu panellerini (${numara('İç çekmece dolgu paneli')}) yanlara vidalayın, rayları dolgulara takın; iç önleri (${numara('İç çekmece önü')}) kapak kapanınca çarpmayacak şekilde ayarlayın.`);
+      if (s.raflar.length) ic.push(s.rafSabit
+        ? `${ad}: sabit rafları (${numara('Sabit raf')}) ${araB} ile bağlayın.`
+        : `${ad}: raf pimlerini takıp rafları (${numara(s.rafTipi === 'cam' ? 'Cam raf' : 'Raf')}) yerleştirin${s.rafTipi === 'cam' ? ' (cam raf pimi kullanın)' : ''}.`);
+      if (s.aski) ic.push(`${ad}: askı borusunu flanşlarla, üstten yaklaşık 60 mm aşağıya takın.`);
+      if (s.led) ic.push(`${ad}: LED profilini satırın üst iç kenarına yapıştırın/vidalayın; kabloyu arkalık köşesinden adaptöre götürün.`);
+    });
+    bolum('İç donanım', ic);
+
+    // 6. Önler
+    const on = [];
+    if (var_('Çekmece önü')) on.push(`Çekmece önlerini (${numara('Çekmece önü')}) kutulara içten bağlayın; aralar ${tr(A.kapakBoslugu)} mm, dış kenarlar ${tr(A.disBosluk)} mm olacak şekilde ayarlayın.`);
+    if (var_('Kapak')) {
+      const camli = g.satirlar.some((s) => s.tip === 'kapak' && s.kapakTuru !== 'panel');
+      on.push(`Menteşeleri kapaklara (${numara('Kapak')}) takın (Ø35 çanak, kenardan 22,5 mm), montaj plakalarını yanlara vidalayın.`);
+      on.push(`Kapakları asın; menteşe vidalarıyla aralıkları ${tr(A.kapakBoslugu)} mm, dış kenarları ${tr(A.disBosluk)} mm yapın, üst kenarları hizalayın.`);
+      if (camli) on.push('Cam kapaklarda cam menteşesi / profil adaptörü kullanın; cam yüzeyi koruyucu film çıkarılmadan sıkmayın.');
+      if (g.satirlar.some((s) => s.acilim === 'yukari')) on.push('Kaldırmalı kapakta mekanizma kuvvetini kapak ağırlığına göre ayarlayın (kapak her konumda durmalı).');
+      if (g.satirlar.some((s) => s.acilim === 'asagi')) on.push('Klapa kapakta taşıma kolunun kapağı yatay tuttuğunu kontrol edin.');
+    }
+    if (g.korPanel) on.push(`Kör paneli (${numara('Kör köşe paneli')}) bağlantı çıtasıyla (${numara('Kör panel bağlantı çıtası')}) gövdeye sabitleyin.`);
+    if (g.surgu) on.push(`Alt ve üst sürgü raylarını takın, kapakları (${numara('Sürgü kapak')}) arka raydan başlayarak yerleştirin; tekerlek ayarıyla kapaklar arası paralel boşluğu eşitleyin.`);
+    if (HS.kulp === 'kulp') on.push('Kulpları delik planındaki deliklere takın; vida boyu = ön kalınlığı + kulp diş derinliği.');
+    else if (HS.kulp === 'gola') on.push('Gola profilini gövdeye takın; önlerin profil tarafında boşluk bıraktığını kontrol edin.');
+    else if (HS.kulp === 'basac') on.push('Bas-aç mekanizmalarını takın, basma mesafesini ayarlayın.');
+    bolum('Önler ve kulplar', on);
+
+    // 7. Yerinde montaj
+    const yer = [];
+    const yerler = projeSonuc.yerlesim.yerler.filter((y) => (y.kaynak || y.modul).id === modul.id);
+    if (yerler.some((y) => y.sira === 'duvar')) yer.push(`Askı ${A.duvarAski === 'ray' ? 'rayını teraziyle duvara dübelleyip aparatları raya asın' : 'aparatlarını dolabın üst arka köşelerine takıp duvara dübelleyin'}; dolabı askıdan ayarlayarak hizalayın.`);
+    if (yerler.some((y) => y.sira === 'zemin')) yer.push('Ayakları ayarlayarak dolabı terazileyin; tezgah gelecekse komşu dolaplarla aynı yüksekliğe getirin.');
+    if (g.H >= 1500) yer.push('Boy dolabı devrilme önleyici bağlantılarla duvara sabitleyin.');
+    if (projeSonuc.birlesimSayisi > 0 && proje.yerlesim.birlestir !== false) yer.push('Komşu dolaplarla ön kenarlarını hizalayıp birleştirme vidalarıyla (yanlardan, menteşe plakalarının arasından) bağlayın.');
+    for (const n of (projeSonuc.saha && projeSonuc.saha.notlar) || []) if (n.modul === modul.ad) yer.push(n.metin + '.');
+    bolum('Yerinde montaj', yer);
+    return bolumler;
+  }
+
+  return { kilavuz };
+});
+
+</script>
+  <script>
+/*
+ * 3D görünüm: dışa bağımlılık olmadan, SVG çokgenleriyle çizilen döndürülebilir model.
+ * Her parça 8 köşeli bir altı yüzlüdür (dikdörtgen kutu ya da eğimli/yamuk parça).
+ * Dünya koordinatı: X sağa (A duvarı boyunca), Y yukarı, Z odaya doğru (duvar Z=0).
+ * Çizim: döndürme (yaw, pitch) + dik izdüşüm, uzaktan yakına sıralama (ressam algoritması).
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Uc = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const RENK = {
+    govde: '#efe6d6', ic: '#e4d9c4', panel: '#d6c3a3', kapak: '#e7cfa8', cekmece: '#dcc19a',
+    cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', ayak: '#555555', kulp: '#6f6658', led: '#ffd84d', baza: '#c9bba3',
+  };
+
+  /** Eksenlere paralel kutu (8 köşe). */
+  function kutu(x1, x2, y1, y2, z1, z2, tur, ek) {
+    const [a, b] = x1 < x2 ? [x1, x2] : [x2, x1];
+    const [c, d] = y1 < y2 ? [y1, y2] : [y2, y1];
+    const [e, f] = z1 < z2 ? [z1, z2] : [z2, z1];
+    return Object.assign({ k: [[a, c, e], [b, c, e], [b, d, e], [a, d, e], [a, c, f], [b, c, f], [b, d, f], [a, d, f]], tur }, ek || {});
+  }
+  /** Üst yüzü eğimli kutu: sol (x1) üst yüksekliği ySol, sağ (x2) üst yüksekliği ySag. */
+  function egimliKutu(x1, x2, y1, ySol, ySag, z1, z2, tur, ek) {
+    return Object.assign({ k: [[x1, y1, z1], [x2, y1, z1], [x2, ySag, z1], [x1, ySol, z1], [x1, y1, z2], [x2, y1, z2], [x2, ySag, z2], [x1, ySol, z2]], tur }, ek || {});
+  }
+  /** Eğik plaka (eğimli üst tabla): alt ve üst yüzleri eğik. */
+  function egikPlaka(x1, x2, yAltSol, yAltSag, kal, z1, z2, tur) {
+    return { k: [[x1, yAltSol, z1], [x2, yAltSag, z1], [x2, yAltSag + kal, z1], [x1, yAltSol + kal, z1], [x1, yAltSol, z2], [x2, yAltSag, z2], [x2, yAltSag + kal, z2], [x1, yAltSol + kal, z2]], tur };
+  }
+
+  /**
+   * Bir modülün yerel parçaları. Yerel: x 0..W (önden bakınca soldan sağa), y zeminden,
+   * z 0 = arka (duvar), z = D gövde ön yüzü; kapaklar z > D.
+   */
+  function modulParcalari(geo, secenek) {
+    const kapaksiz = !!(secenek && secenek.kapaksiz);
+    const P = [];
+    if (!geo) return P;
+    if (geo.panel) return panelParcalari(geo);
+    if (geo.lkose) return lKoseParcalari(geo, kapaksiz);
+    const { W, D, Ds, t, hb, tk } = geo;
+    const Hc = geo.Hc;
+    const HcL = geo.egim ? geo.egim.HcL : Hc;
+    const HcR = geo.egim ? geo.egim.HcR : Hc;
+    const HX = (x) => HcL + ((HcR - HcL) * x) / W;
+    const zArka = D - Ds;
+    const icOn = geo.kapakTipi === 'ic' || geo.surgu ? tk : 0;
+    const zIcOn = D - icOn;
+    const zIcArka = zIcOn - geo.icDerinlik;
+    const tabla = geo.yapi === 'tabla_boydan';
+    // Baza
+    if (geo.baza.tip === 'ayak' || geo.baza.tip === 'tekerlek') {
+      for (const x of [50, W - 50]) for (const z of [zArka + 50, D - 50]) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
+    } else if (geo.baza.tip === 'panel') {
+      P.push(kutu(0, W, 0, hb, zArka, D - geo.baza.geriCekme, 'baza'));
+    }
+    if (geo.bazaCekmece && !kapaksiz) P.push(kutu(geo.bazaCekmece.x1, geo.bazaCekmece.x2, geo.bazaCekmece.y1, geo.bazaCekmece.y2, D - geo.baza.geriCekme - tk, D - geo.baza.geriCekme, 'kapak'));
+    // Gövde
+    const yanAlt = hb + (tabla ? t : 0);
+    P.push(kutu(0, t, yanAlt, hb + HcL - (tabla ? t : 0), zArka, D, 'govde'));
+    P.push(kutu(W - t, W, yanAlt, hb + HcR - (tabla ? t : 0), zArka, D, 'govde'));
+    P.push(kutu(tabla ? 0 : t, tabla ? W : W - t, hb, hb + t, zArka, D, 'govde'));
+    if (geo.egim) P.push(egikPlaka(tabla ? 0 : t, tabla ? W : W - t, hb + HX(tabla ? 0 : t) - t, hb + HX(tabla ? W : W - t) - t, t, zArka, D, 'govde'));
+    else if (geo.ust === 'kusak') {
+      P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, D - 100, D, 'govde'));
+      P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, zArka, zArka + 100, 'govde'));
+    } else P.push(kutu(tabla ? 0 : t, tabla ? W : W - t, hb + Hc - t, hb + Hc, zArka, D, 'govde'));
+    // Arkalık
+    if (geo.arkalik === 'kanal') {
+      const z = zArka + 10;
+      P.push(geo.egim ? egimliKutu(t, W - t, hb + t, hb + HcL - t, hb + HcR - t, z, z + geo.ta, 'arkalik') : kutu(t, W - t, hb + t, hb + Hc - t, z, z + geo.ta, 'arkalik'));
+    } else if (geo.arkalik === 'cakma') {
+      P.push(geo.egim ? egimliKutu(0, W, hb, hb + HcL, hb + HcR, zArka - geo.ta, zArka, 'arkalik') : kutu(0, W, hb, hb + Hc, zArka - geo.ta, zArka, 'arkalik'));
+    }
+    // Kapaklar kapalıyken yalnızca açık, niş ya da camlı satırların içi görünür
+    const acikSatir = (s) => kapaksiz || (!geo.surgu && (s.tip === 'acik' || s.tip === 'nis' || (s.tip === 'kapak' && ['cam', 'cam_profil', 'cam_cerceve'].includes(s.kapakTuru))));
+    const herhangiAcik = kapaksiz || geo.satirlar.some(acikSatir);
+    // Bölme dikmeleri, ara tablalar
+    if (herhangiAcik) for (const dx of geo.dikmeX) P.push(kutu(dx, dx + t, hb + t, hb + HX(dx + t / 2) - t, zIcArka, zIcOn, 'panel'));
+    for (const c of geo.sutunlar) {
+      c.sinirlar.forEach((b, i) => {
+        if (!b.panel) return;
+        if (!kapaksiz && !acikSatir(c.satirlar[i]) && !acikSatir(c.satirlar[i + 1])) return;
+        P.push(kutu(b.x1, b.x2, hb + b.y - t / 2, hb + b.y + t / 2, zIcArka, zIcOn, 'panel'));
+      });
+    }
+    // Satır içleri
+    for (const s of geo.satirlar) {
+      if (!acikSatir(s)) continue;
+      for (const dx of s.dikmeX) P.push(kutu(dx, dx + t, hb + s.icAlt, hb + s.icUst, zIcArka, zIcOn, 'panel'));
+      for (const b of s.bolumler) {
+        for (const ry of s.raflar) {
+          const cam = s.rafTipi === 'cam';
+          P.push(kutu(b.x1 + 1, b.x2 - 1, hb + ry - (cam ? 4 : t / 2), hb + ry + (cam ? 4 : t / 2), zIcArka, zIcOn - 20, cam ? 'cam' : 'panel', cam ? { saydam: 0.45 } : null));
+        }
+        if (s.aski) P.push(kutu(b.x1, b.x2, hb + s.icUst - 70, hb + s.icUst - 55, (zIcArka + zIcOn) / 2 - 8, (zIcArka + zIcOn) / 2 + 8, 'kulp'));
+        if (s.led) P.push(kutu(b.x1 + 10, b.x2 - 10, hb + s.icUst - 6, hb + s.icUst - 1, zIcOn - 40, zIcOn - 20, 'led'));
+      }
+      if (kapaksiz) {
+        for (const c of s.cekmeceler) P.push(kutu(c.x1, c.x2, hb + c.y1, hb + c.y2, zIcOn - c.L, zIcOn, 'ic'));
+        for (const c of s.icCekmeceler || []) P.push(kutu(c.x1, c.x2, hb + c.y1, hb + c.y2, zIcOn - (c.L || 300), zIcOn - 25, 'cekmece'));
+      }
+    }
+    if (kapaksiz) return P;
+    // Ön yüzler
+    const zOn1 = geo.kapakTipi === 'ic' ? D - tk : D;
+    const zOn2 = zOn1 + tk;
+    if (geo.korPanel) P.push(kutu(geo.korPanel.x1, geo.korPanel.x2, hb + geo.db, hb + Hc - geo.db, zOn1, zOn2, 'kapak'));
+    if (geo.surgu) {
+      const s = geo.surgu;
+      const tur = s.tur === 'ayna' ? 'ayna' : s.tur === 'cam_profil' ? 'cam' : 'kapak';
+      for (const k of s.kapaklar) {
+        const z = D + (k.arka ? 5 : 12 + tk);
+        P.push(kutu(k.x1, k.x2, hb + s.y1, hb + s.y2, z, z + tk, tur, tur === 'cam' ? { saydam: 0.5 } : null));
+      }
+      return P;
+    }
+    for (const s of geo.satirlar) {
+      if (!s.onler.length) continue;
+      for (const o of s.onler) {
+        const tur = s.tip === 'kapak' ? (s.kapakTuru === 'ayna' ? 'ayna' : s.kapakTuru === 'cam' || s.kapakTuru === 'cam_profil' ? 'cam' : 'kapak') : 'cekmece';
+        const ek = tur === 'cam' ? { saydam: 0.45 } : null;
+        if (o.y2sol != null) P.push(egimliKutu(o.x1, o.x2, hb + s.on.y1, hb + o.y2sol, hb + o.y2sag, zOn1, zOn2, tur, ek));
+        else P.push(kutu(o.x1, o.x2, hb + s.on.y1, hb + s.on.y2, zOn1, zOn2, tur, ek));
+        if (o.kulp && o.kulp.delikler.length) {
+          const d = o.kulp.delikler;
+          const xs = d.map((p) => o.x1 + p.x);
+          const ys = d.map((p) => hb + s.on.y1 + p.y);
+          const yatay = o.kulp.yatay;
+          const x1 = Math.min(...xs) - (yatay ? 10 : 6);
+          const x2 = Math.max(...xs) + (yatay ? 10 : 6);
+          const y1 = Math.min(...ys) - (yatay ? 6 : 10);
+          const y2 = Math.max(...ys) + (yatay ? 6 : 10);
+          P.push(kutu(x1, x2, y1, y2, zOn2 + 18, zOn2 + 28, 'kulp'));
+        }
+      }
+    }
+    return P;
+  }
+
+  function lKoseParcalari(g, kapaksiz) {
+    const { W, W2, D, t, hb, tk, db } = g;
+    const Hc = g.Hc;
+    const P = [];
+    if (g.baza.tip === 'ayak') for (const [x, z] of [[50, 50], [W - 50, 50], [W - 50, D - 50], [50, W2 - 50], [D - 50, W2 - 50], [D - 50, D - 50]]) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
+    for (const y of [hb, hb + Hc - t]) {
+      P.push(kutu(0, W, y, y + t, 0, D, 'govde'));
+      P.push(kutu(0, D, y, y + t, D, W2, 'govde'));
+    }
+    P.push(kutu(W - t, W, hb, hb + Hc, 0, D, 'govde'));
+    P.push(kutu(0, D, hb, hb + Hc, W2 - t, W2, 'govde'));
+    P.push(kutu(0, W, hb, hb + Hc, 0, g.ta, 'arkalik'));
+    P.push(kutu(0, g.ta, hb, hb + Hc, g.ta, W2, 'arkalik'));
+    if (!kapaksiz) {
+      P.push(kutu(D + tk + 3, W - db, hb + db, hb + Hc - db, D, D + tk, 'kapak'));
+      P.push(kutu(D, D + tk, hb + db, hb + Hc - db, D, W2 - db, 'kapak'));
+    }
+    return P;
+  }
+
+  function panelParcalari(g) {
+    const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
+    if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
+    if (g.tur === 'raf' || g.tur === 'tabla') return [kutu(0, g.boy, 0, g.t, 0, g.en, tur)];
+    if (g.tur === 'baza') return [kutu(0, g.boy, 0, g.en, 0, g.t, tur)];
+    // Dolgu, bulaşık kapağı, serbest: ön düzlemde dik panel (komşu dolapların önüne hizalı)
+    const z = 560;
+    return [kutu(0, g.W, 0, g.H, z, z + g.t, tur)];
+  }
+
+  /** Yerleşimdeki her modülü dünya koordinatına taşır. */
+  function projeParcalari(yer, secenek) {
+    const P = [];
+    for (const y of yer.yerler) {
+      const yerel = modulParcalari(y.geo, secenek);
+      const donustur = (p) => {
+        if (y.duvar === 'kose' || y.duvar === 'A' || yer.tip !== 'L') return [y.duvar === 'kose' ? p[0] : y.bas + p[0], y.montaj + p[1], p[2]];
+        // B duvarı: modül +X yönüne bakar; yerel sol (x=0) köşeden uzakta
+        return [p[2], y.montaj + p[1], y.bas + y.W - p[0]];
+      };
+      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad }));
+    }
+    return P;
+  }
+
+  // Altı yüzün köşe indisleri (dış normal yönünde saat yönünün tersi)
+  const YUZLER = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]];
+  const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+
+  /**
+   * Parçaları SVG'ye çizer. gorus: { yaw, pitch } (derece), yakin: yakınlaştırma (1 = sığdır).
+   * Dönüş: SVG metni.
+   */
+  function ciz(parcalar, gorus, secenek) {
+    const yaw = ((gorus.yaw || 0) * Math.PI) / 180;
+    const pitch = ((gorus.pitch || 0) * Math.PI) / 180;
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const don = ([x, y, z]) => {
+      const x1 = cy * x + sy * z;
+      const z1 = -sy * x + cy * z;
+      const y2 = cp * y - sp * z1;
+      const z2 = sp * y + cp * z1;
+      return [x1, y2, z2];
+    };
+    const isik = (() => { const v = [0.35, 0.75, 0.55]; const n = Math.hypot(...v); return v.map((a) => a / n); })();
+    // Ressam algoritması parça bazında: her parçanın ağırlık merkezi derinliğine göre uzaktan yakına.
+    // Dışbükey bir parçanın kendi görünen yüzleri birbirini örtmez.
+    const cizilecek = [];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of parcalar) {
+      const v = p.k.map(don);
+      for (const q of v) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); minY = Math.min(minY, -q[1]); maxY = Math.max(maxY, -q[1]); }
+      const derinlik = v.reduce((a, q) => a + q[2], 0) / 8;
+      const [r, g, bb] = hexRgb(RENK[p.tur] || RENK.govde);
+      const yuzler = [];
+      for (const idx of YUZLER) {
+        const pts = idx.map((i2) => v[i2]);
+        const a = pts[1].map((c, k) => c - pts[0][k]);
+        const b = pts[3].map((c, k) => c - pts[0][k]);
+        let n = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+        const nl = Math.hypot(...n) || 1;
+        n = n.map((c) => c / nl);
+        if (n[2] <= 0.0001) continue; // arka yüz
+        const parlak = 0.62 + 0.38 * Math.max(0, n[0] * isik[0] + n[1] * isik[1] + n[2] * isik[2]);
+        yuzler.push({ pts, renk: `rgb(${Math.round(r * parlak)},${Math.round(g * parlak)},${Math.round(bb * parlak)})` });
+      }
+      cizilecek.push({ derinlik, yuzler, saydam: p.saydam });
+    }
+    if (!cizilecek.length) return '<p class="bos">Gösterilecek parça yok.</p>';
+    cizilecek.sort((a, b) => a.derinlik - b.derinlik);
+    const f = (x) => Math.round(x * 10) / 10;
+    let s = '';
+    for (const p of cizilecek) {
+      for (const y of p.yuzler) {
+        s += `<polygon points="${y.pts.map((q) => `${f(q[0])},${f(-q[1])}`).join(' ')}" fill="${y.renk}"${p.saydam ? ` fill-opacity="${p.saydam}"` : ''} stroke="rgba(40,32,22,.45)" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
+      }
+    }
+    const w = maxX - minX;
+    const h = maxY - minY;
+    const yakin = Math.max(0.2, (secenek && secenek.yakin) || 1);
+    const pay = Math.max(w, h) * 0.06;
+    const vw = (w + 2 * pay) / yakin;
+    const vh = (h + 2 * pay) / yakin;
+    const cx = (minX + maxX) / 2;
+    const cyy = (minY + maxY) / 2;
+    return `<svg class="uc-svg" viewBox="${f(cx - vw / 2)} ${f(cyy - vh / 2)} ${f(vw)} ${f(vh)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+
+  return { modulParcalari, projeParcalari, ciz, kutu, RENK };
 });
 
 </script>
@@ -3087,6 +4480,26 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   let seciliId = null;
   let sonuc = null;
   let plakaGruplari = [];
+  // Artık stoku atölyeye aittir (projeler arası ortak), tarayıcıda ayrı tutulur
+  const ARTIK_ANAHTARI = 'mobilya-olcu-artik-v1';
+  function artikYukle() {
+    try {
+      const L = JSON.parse(localStorage.getItem(ARTIK_ANAHTARI) || '[]');
+      return (Array.isArray(L) ? L : []).slice(0, 500).map((a) => ({
+        id: /^[A-Za-z0-9_-]{1,40}$/.test(a && a.id) ? a.id : 'ar' + Math.random().toString(36).slice(2, 9),
+        malzemeAd: String((a && a.malzemeAd) || '').slice(0, 80),
+        kalinlik: Math.max(1, Number(a && a.kalinlik) || 18),
+        boy: Math.max(1, Number(a && a.boy) || 0),
+        en: Math.max(1, Number(a && a.en) || 0),
+        adet: Math.max(0, Math.floor(Number(a && a.adet) || 0)),
+        not: String((a && a.not) || '').slice(0, 80),
+        tarih: String((a && a.tarih) || '').slice(0, 20),
+      })).filter((a) => a.adet > 0 && a.boy > 0 && a.en > 0);
+    } catch (e) { return []; }
+  }
+  let artikStok = artikYukle();
+  function artikKaydet() { try { localStorage.setItem(ARTIK_ANAHTARI, JSON.stringify(artikStok)); } catch (e) { /* depolama kapalı */ } }
+  const plakaHesapla = (p, s) => Yerlesim.plakaSayilari(Yerlesim.projeYerlesimi(s.kesimListesi, p.ayarlar, proje.artikKullan ? artikStok : null));
   let maliyet = null;
   const para = (x) => Number(x || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
 
@@ -3410,6 +4823,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
              <label>Sürgü kapak türü${secim('surguTuru', m.surguTuru, Object.entries(Hesap.SURGU_TURLERI))}</label>`
           : `<label>Kapak tipi${secim('kapakTipi', m.kapakTipi, [['tam', 'Tam bini (bindirme)'], ['ic', 'Gömme (iç bini)']])}</label>`}
         ${bazaAlanlari}
+        ${surgu ? '' : `<label class="onay" title="Çatı altı / merdiven altı: üst kenar eğimli"><input data-alan="egimli" type="checkbox" ${m.egimli ? 'checked' : ''}> Eğimli üst</label>`}
+        ${m.egimli && !surgu ? `<label title="Sağ kenarın zeminden yüksekliği (sol = Yükseklik)">Sağ yükseklik (mm)${sayiGir('sagYukseklik', m.sagYukseklik, 'min="200"')}</label>` : ''}
+        <label>Kulp yönü${secim('kulpYon', m.kulpYon, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_YONLERI)])}</label>
+        <label>Kulp konumu${secim('kulpKonum', m.kulpKonum, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_KONUMLARI).map(([k, v]) => [k, v.split(' (')[0]])])}</label>
         ${surgu ? '' : `<label title="Kör köşe dolapta komşu dolabın önünde kalan sabit panel">Kör panel (mm)${sayiGir('korPanel', m.korPanel, 'min="0"')}</label>
         <label>Kör panel tarafı${secim('korTaraf', m.korTaraf, [['sol', 'Solda'], ['sag', 'Sağda']], m.korPanel > 0 ? '' : 'disabled')}</label>`}
       </div>
@@ -3540,12 +4957,63 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       <label>Yerleşim${secim('tip', Y.tip, [['duz', 'Düz (tek duvar)'], ['L', 'L (köşeli)']])}</label>
       <label>A duvarı uzunluğu (mm)<input data-alan="duvarA" type="number" min="0" value="${Y.duvarA}"></label>
       <label>B duvarı uzunluğu (mm)<input data-alan="duvarB" type="number" min="0" value="${Y.duvarB}" ${Y.tip === 'L' ? '' : 'disabled'}></label>`;
+    sahaCiz();
     const yer = sonuc.yerlesim;
     $('#cizimPlan').innerHTML = Cizim.planCizimi(yer);
     $('#cizimDuvarA').innerHTML = Cizim.duvarGorunus(yer, 'A');
     $('#duvarBKap').hidden = Y.tip !== 'L';
     if (Y.tip === 'L') $('#cizimDuvarB').innerHTML = Cizim.duvarGorunus(yer, 'B');
   }
+  function sahaCiz() {
+    const Y = proje.yerlesim;
+    const L = Y.tip === 'L';
+    $('#sahaForm').innerHTML = `
+      <label title="Zeminden tavana; 0 = girilmedi">Tavan yüksekliği (mm)<input data-saha="tavan" type="number" min="0" value="${esc(Y.tavan)}"></label>
+      <label title="İki duvar arası açı (L mutfak)">Köşe açısı (°)<input data-saha="koseAcisi" type="number" min="45" max="135" value="${esc(Y.koseAcisi)}" ${L ? '' : 'disabled'}></label>
+      <label title="Duvar boyunca en büyük düzlük sapması">Duvar sapması (mm)<input data-saha="duvarSapma" type="number" min="0" value="${esc(Y.duvarSapma)}"></label>
+      <label class="onay" title="Yan yana dolaplar için birleştirme vidası, asma dolap askısı, boy dolap devrilme önleyici"><input data-saha="birlestir" type="checkbox" ${Y.birlestir !== false ? 'checked' : ''}> Yan yana dolapları birbirine bağla</label>`;
+    const tur = Object.entries(Hesap.ENGEL_TURLERI).map(([k, v]) => [k, v.ad]);
+    $('#engelTablo').innerHTML = Y.engeller.length
+      ? `<table class="liste engel-tablo"><thead><tr><th>Tür</th>${L ? '<th>Duvar</th>' : ''}<th title="Köşeden / duvarın solundan">Konum</th><th title="Zeminden (pencere: denizlik)">Yükseklik</th><th>Genişlik</th><th title="Pencere/kapı/kalorifer yüksekliği">Boy</th><th title="Kolon derinliği">Derinlik</th><th>Not</th><th></th></tr></thead><tbody>
+        ${Y.engeller.map((e, i) => {
+          const alan = Hesap.ENGEL_TURLERI[e.tur].alan;
+          return `<tr data-engel="${i}"><td>${secim('tur', e.tur, tur)}</td>${L ? `<td>${secim('duvar', e.duvar, [['A', 'A'], ['B', 'B']])}</td>` : ''}
+            <td><input data-alan="x" type="number" min="0" value="${esc(e.x)}"></td>
+            <td><input data-alan="y" type="number" min="0" value="${esc(e.y)}" ${e.tur === 'kolon' || e.tur === 'kapi' ? 'disabled' : ''}></td>
+            <td><input data-alan="genislik" type="number" min="0" value="${esc(e.genislik)}" ${alan ? '' : 'disabled'}></td>
+            <td><input data-alan="yukseklik" type="number" min="0" value="${esc(e.yukseklik)}" ${alan && e.tur !== 'kolon' ? '' : 'disabled'}></td>
+            <td><input data-alan="derinlik" type="number" min="0" value="${esc(e.derinlik)}" ${e.tur === 'kolon' ? '' : 'disabled'}></td>
+            <td><input data-alan="not" value="${esc(e.not)}"></td>
+            <td><button data-islem="engelSil" class="ikincil kucuk-buton" title="Sil">✕</button></td></tr>`;
+        }).join('')}</tbody></table>`
+      : '<p class="bos">Engel yok. Pencere, kapı, kolon, priz, su ve gaz çıkışlarını ekleyin; program dolaplarla çakışmaları uyarır.</p>';
+    const notlar = (sonuc.saha && sonuc.saha.notlar) || [];
+    const sahaUyari = sonuc.uyarilar.filter((u) => u.startsWith('Saha:'));
+    $('#sahaNotlari').innerHTML = (sahaUyari.length ? `<ul class="saha-uyari">${sahaUyari.map((u) => `<li>${esc(u.replace('Saha: ', ''))}</li>`).join('')}</ul>` : '')
+      + (notlar.length ? `<h4>Montaj notları</h4><ul>${notlar.map((n) => `<li><b>${esc(n.modul)}:</b> ${esc(n.metin)}</li>`).join('')}</ul>` : '');
+    if (Y.engeller.length || Y.tavan > 0) $('#sahaKutu').open = true;
+  }
+  $('#sahaKutu').addEventListener('change', (e) => {
+    const el = e.target;
+    const Y = proje.yerlesim;
+    const tr = el.closest('tr[data-engel]');
+    if (tr) {
+      const en = Y.engeller[Number(tr.dataset.engel)];
+      const alan = el.dataset.alan;
+      en[alan] = el.type === 'number' ? Math.max(0, Number(el.value) || 0) : el.value;
+    } else if (el.dataset.saha) {
+      Y[el.dataset.saha] = el.type === 'checkbox' ? el.checked : Math.max(0, Number(el.value) || 0);
+    } else return;
+    tumunuCiz(true);
+  });
+  $('#sahaKutu').addEventListener('click', (e) => {
+    const Y = proje.yerlesim;
+    if (e.target.dataset.islem === 'engelEkle') Y.engeller.push({ tur: 'priz', duvar: 'A', x: 300, y: 1100, genislik: 0, yukseklik: 0, derinlik: 0, not: '' });
+    else if (e.target.dataset.islem === 'engelSil') Y.engeller.splice(Number(e.target.closest('tr').dataset.engel), 1);
+    else return;
+    tumunuCiz(true);
+  });
+
   $('#yerlesimForm').addEventListener('change', (e) => {
     const el = e.target;
     const alan = el.dataset.alan;
@@ -3589,21 +5057,76 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     $('#kesimTablo').innerHTML = kesimTablosuHtml(false);
   }
 
-  function plakaHtml() {
+  function plakaHtml(yazdir) {
     const y = plakaGruplari;
     if (!y.length) return '<p class="bos">Parça yok.</p>';
-    let html = `<p class="not">Giyotin kesim planı · testere payı ${proje.ayarlar.testereKalinligi} mm · plaka kenar payı ${proje.ayarlar.plakaKenarPayi} mm. Damarlı malzemede parçalar döndürülmez. Cam ve ayna plakaya yerleştirilmez; kesim listesindeki cam listesine bakın.</p>`;
+    let html = `<p class="not">Giyotin kesim planı · testere payı ${proje.ayarlar.testereKalinligi} mm · plaka kenar payı ${proje.ayarlar.plakaKenarPayi} mm. Damarlı malzemede parçalar döndürülmez. Cam ve ayna plakaya yerleştirilmez; kesim listesindeki cam listesine bakın. Yeşil kesikli alanlar stoka alınabilecek artıklardır (en az ${proje.ayarlar.artikMin} mm).</p>`;
+    const toplamKullanilan = y.reduce((a, g) => a + g.kullanilanArtiklar.reduce((b, k) => b + k.adet, 0), 0);
+    const toplamCikan = y.reduce((a, g) => a + g.cikanArtiklar.length, 0);
+    if (!yazdir && (toplamKullanilan || toplamCikan)) {
+      html += `<div class="artik-ozet"><span>Bu iş: <b>${toplamKullanilan}</b> artık kullanıyor, <b>${toplamCikan}</b> yeni artık çıkacak.</span> <button id="btnIsiTamamla" class="ikincil">Kesim tamamlandı: stoğu güncelle</button></div>`;
+    }
     for (const g of y) {
       const ort = g.plakalar.length ? g.plakalar.reduce((a, p) => a + p.doluluk, 0) / g.plakalar.length : 0;
-      html += `<section class="plaka-grup"><h3>${esc(g.malzemeAd)} — ${g.plakalar.length} plaka (${g.plaka.uzun}×${g.plaka.kisa}) · ortalama doluluk %${sayiYaz(ort * 100, 0)}</h3>`;
+      const artikAdet = g.plakalar.length - g.tamPlaka;
+      html += `<section class="plaka-grup"><h3>${esc(g.malzemeAd)} — ${g.tamPlaka} tam plaka (${g.plaka.uzun}×${g.plaka.kisa})${artikAdet ? ` + ${artikAdet} artık` : ''} · ortalama doluluk %${sayiYaz(ort * 100, 0)}</h3>`;
       if (g.sigmayan.length) html += `<p class="hata">Plakaya sığmayan parçalar: ${g.sigmayan.map((p) => `#${p.no} ${esc(p.ad)} (${p.w}×${p.h})`).join(', ')}</p>`;
-      g.plakalar.forEach((p, i) => {
-        html += `<figure class="plaka-kart"><figcaption>${esc(g.malzemeAd)} · Plaka ${i + 1}/${g.plakalar.length} · ${p.yerlesen.length} parça · doluluk %${sayiYaz(p.doluluk * 100, 0)}</figcaption>${Cizim.plakaCizimi(p, g.plaka, RENKLER)}</figure>`;
+      if (g.cikanArtiklar.length) html += `<p class="not">Çıkacak artıklar: ${g.cikanArtiklar.map((a) => `${a.uzun}×${a.kisa}`).join(', ')}</p>`;
+      let tamNo = 0;
+      let artikNo = 0;
+      g.plakalar.forEach((p) => {
+        const baslik = p.artik ? `Artık ${++artikNo} (${p.uzun}×${p.kisa}, stoktan)` : `Plaka ${++tamNo}/${g.tamPlaka}`;
+        html += `<figure class="plaka-kart${p.artik ? ' artik' : ''}"><figcaption>${esc(g.malzemeAd)} · ${baslik} · ${p.yerlesen.length} parça · doluluk %${sayiYaz(p.doluluk * 100, 0)}</figcaption>${Cizim.plakaCizimi(p, g.plaka, RENKLER)}</figure>`;
       });
       html += '</section>';
     }
     return html;
   }
+
+  function artikCiz() {
+    const malz = proje.ayarlar.malzemeler.filter((m) => !Hesap.camMi(m));
+    $('#artikKullan').checked = !!proje.artikKullan;
+    $('#artikMalz').innerHTML = malz.map((m) => `<option value="${esc(m.id)}">${esc(m.ad)}</option>`).join('');
+    const toplam = artikStok.reduce((a, x) => a + x.adet, 0);
+    $('#artikOzet').textContent = toplam ? `(${toplam} parça)` : '(boş)';
+    $('#artikTablo').innerHTML = artikStok.length
+      ? `<table class="liste"><thead><tr><th>Malzeme</th><th>Kalınlık</th><th>Boy × en</th><th>Adet</th><th>Not</th><th>Eklendi</th><th></th></tr></thead><tbody>${artikStok.map((a) => `<tr data-artik="${esc(a.id)}"><td>${esc(a.malzemeAd)}</td><td class="sag">${sayiYaz(a.kalinlik)}</td><td class="sag">${a.boy} × ${a.en}</td><td class="sag">${a.adet}</td><td class="kucuk">${esc(a.not)}</td><td class="kucuk">${esc(a.tarih)}</td><td><button data-islem="artikSil" class="ikincil kucuk-buton" title="Sil">✕</button></td></tr>`).join('')}</tbody></table>`
+      : '<p class="bos">Stokta artık yok.</p>';
+  }
+  $('#artikKullan').addEventListener('change', (e) => { proje.artikKullan = e.target.checked; tumunuCiz(false); plakaCiz(); });
+  $('#btnArtikEkle').addEventListener('click', () => {
+    const m = malzeme($('#artikMalz').value);
+    const boy = Number($('#artikBoy').value);
+    const en = Number($('#artikEn').value);
+    const adet = Math.max(1, Math.floor(Number($('#artikAdet').value) || 1));
+    if (!m || !(boy >= 50) || !(en >= 50)) { alert('Malzeme, boy ve en (en az 50 mm) girin.'); return; }
+    artikStok.push({ id: 'ar' + Date.now().toString(36), malzemeAd: m.ad, kalinlik: m.kalinlik, boy: Math.max(boy, en), en: Math.min(boy, en), adet, not: $('#artikNot').value.slice(0, 80), tarih: new Date().toLocaleDateString('tr-TR') });
+    artikKaydet();
+    $('#artikBoy').value = ''; $('#artikEn').value = ''; $('#artikNot').value = '';
+    tumunuCiz(false); artikCiz(); plakaCiz();
+  });
+  $('#artikTablo').addEventListener('click', (e) => {
+    if (e.target.dataset.islem !== 'artikSil') return;
+    const id = e.target.closest('tr').dataset.artik;
+    artikStok = artikStok.filter((a) => a.id !== id);
+    artikKaydet(); tumunuCiz(false); artikCiz(); plakaCiz();
+  });
+  $('#plakaAlan').addEventListener('click', (e) => {
+    if (e.target.id !== 'btnIsiTamamla') return;
+    const kullanilan = plakaGruplari.reduce((a, g) => a + g.kullanilanArtiklar.reduce((b, k) => b + k.adet, 0), 0);
+    const cikan = plakaGruplari.reduce((a, g) => a + g.cikanArtiklar.length, 0);
+    if (!confirm(`Kesim tamamlandı mı? ${kullanilan} artık stoktan düşülecek, ${cikan} yeni artık stoka eklenecek.`)) return;
+    const tarih = new Date().toLocaleDateString('tr-TR');
+    for (const g of plakaGruplari) {
+      for (const k of g.kullanilanArtiklar) {
+        const a = artikStok.find((x) => x.id === k.id);
+        if (a) a.adet -= k.adet;
+      }
+      g.cikanArtiklar.forEach((c, i) => artikStok.push({ id: `ar${Date.now().toString(36)}${g.malzemeId.slice(0, 6)}${i}`, malzemeAd: g.malzemeAd, kalinlik: g.kalinlik, boy: c.uzun, en: c.kisa, adet: 1, not: proje.ad || '', tarih }));
+    }
+    artikStok = artikStok.filter((a) => a.adet > 0);
+    artikKaydet(); tumunuCiz(false); artikCiz(); plakaCiz();
+  });
 
   function plakaCiz() {
     $('#plakaAlan').innerHTML = plakaHtml();
@@ -3622,8 +5145,16 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     return `<table class="liste"><thead><tr><th>Malzeme</th><th>Parça</th><th>Net alan</th>${plakaSayilari ? '<th>Plaka</th>' : ''}<th>Kenar bandı</th></tr></thead><tbody>${O.map((o) => `<tr><td>${esc(o.malzeme)}</td><td class="sag">${o.parcaAdedi}</td><td class="sag">${sayiYaz(o.alanM2, 2)} m²</td>${plakaSayilari ? `<td class="sag">${plakaSayilari[o.malzemeId] || 0}</td>` : ''}<td class="sag">${o.bantM ? `${sayiYaz(o.bantM, 1)} m <span class="kucuk">(+%10 fire: ${sayiYaz(o.bantM * 1.1, 1)} m, ${o.bantKalinlik} mm)</span>` : '—'}</td></tr>`).join('')}</tbody></table>`;
   }
 
+  function montajHirdavatHtml() {
+    const L = sonuc.montajHirdavat || [];
+    return L.length
+      ? `<table class="liste"><thead><tr><th>Kalem</th><th>Miktar</th></tr></thead><tbody>${L.map((h) => `<tr><td>${esc(h.ad)}</td><td class="sag">${sayiYaz(h.adet, 1)} ${h.birim}</td></tr>`).join('')}</tbody></table><p class="not">${sonuc.birlesimSayisi} dolap birleşimi (yan yana dolaplar). Yerleşim sekmesinden kapatılabilir.</p>`
+      : '<p class="bos">Yerinde montaj hırdavatı yok.</p>';
+  }
+
   function hirdavatCiz() {
     $('#hirdavatTablo').innerHTML = hirdavatHtml();
+    $('#montajHirdavatTablo').innerHTML = montajHirdavatHtml();
     $('#ozetTablo').innerHTML = ozetHtml();
   }
 
@@ -3635,6 +5166,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     ['disBosluk', 'Kapak dış kenar boşluğu (mm)'],
     ['cekmeceUstBosluk', 'Çekmece önü − kutu yük. farkı (mm)'],
     ['icCekmeceYukseklik', 'İç çekmece önü yüksekliği (mm)'],
+    ['kulpAralik', 'Kulp delik aralığı (mm, 0 = düğme)'],
+    ['kulpKenar', 'Kulp ekseni açılan kenardan (mm)'],
+    ['kulpUcMesafe', 'Kulp ucu kapak kenarından (mm)'],
+    ['artikMin', 'Stoka alınacak en küçük artık (mm)'],
     ['arkalikKanalDerinligi', 'Arkalık kanal derinliği (mm)'],
     ['arkalikGeriPay', 'Kanalın arkaya mesafesi (mm)'],
     ['arkalikCakmaPay', 'Çakma arkalık kenar payı (mm)'],
@@ -3678,6 +5213,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       <h3>Üretim payları</h3>
       <div class="form-izgara">
         ${AYAR_ALANLARI.map(([k, t]) => `<label>${t}<input data-ayar="${k}" type="number" step="0.5" min="0" value="${A[k]}"></label>`).join('')}
+        <label>Kulp yönü (kapak)<select data-ayar="kulpYon">${Object.entries(Hesap.KULP_YONLERI).map(([k, v]) => `<option value="${k}"${A.kulpYon === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label>Kulp konumu (kapak)<select data-ayar="kulpKonum">${Object.entries(Hesap.KULP_KONUMLARI).map(([k, v]) => `<option value="${k}"${A.kulpKonum === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label>Kulp konumu (çekmece)<select data-ayar="kulpCekmece"><option value="ust"${A.kulpCekmece === 'ust' ? ' selected' : ''}>Üstte</option><option value="orta"${A.kulpCekmece === 'orta' ? ' selected' : ''}>Ortada</option></select></label>
+        <label>Asma dolap askısı<select data-ayar="duvarAski"><option value="aparat"${A.duvarAski === 'aparat' ? ' selected' : ''}>Gizli askı aparatı</option><option value="ray"${A.duvarAski === 'ray' ? ' selected' : ''}>Askı rayı + aparat</option></select></label>
         <label>Çekmece tabanı<select data-ayar="cekmeceTabani"><option value="cakma"${A.cekmeceTabani === 'cakma' ? ' selected' : ''}>Alttan çakma</option><option value="kanal"${A.cekmeceTabani === 'kanal' ? ' selected' : ''}>Kanala geçme</option></select></label>
         <label class="onay"><input data-ayar="bantDus" type="checkbox" ${A.bantDus ? 'checked' : ''}> Bant kalınlığını kesim ölçüsünden düş</label>
       </div>
@@ -3882,6 +5421,193 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     </section>`;
   }
 
+  // ---------------- Seçenekli teklif ----------------
+  let secenekSonuclari = [];
+  const SECENEK_KULLANIM = ['govde', 'kapak', 'cekmece', 'cam'];
+  const SECENEK_HIRDAVAT = ['mentese', 'ray', 'kulp', 'baglanti'];
+  function secenekCiz() {
+    const T = proje.teklif;
+    const A = proje.ayarlar;
+    const L = T.secenekler;
+    if (!L.length) {
+      $('#secenekAlan').innerHTML = `<p class="not">Müşteriye aynı proje için birden çok fiyat sunun (ör. ekonomik / standart / lüks). Her seçenekte malzeme, hırdavat ve kâr oranı ayrı seçilir; boş bırakılan alanlar proje ayarını kullanır.</p>
+        <button data-islem="secHazir">Hazır 3 seçenek oluştur</button> <button data-islem="secEkle" class="ikincil">+ Boş seçenek</button>`;
+      secenekSonuclari = [];
+      return;
+    }
+    secenekSonuclari = Maliyet.secenekleriHesapla(proje, L, plakaHesapla);
+    const malzSec = (k, v) => secim('kul.' + k, v || '', [['', `Proje: ${malzemeEtiket(malzeme(A.kullanim[k]))}`], ...A.malzemeler.filter((m) => (k === 'cam') === Hesap.camMi(m)).map((m) => [m.id, m.ad])]);
+    const hirSec = (k, v) => secim('hir.' + k, v || '', [['', `Proje: ${HS[k].secenekler[A.hirdavat[k]].ad}`], ...Object.entries(HS[k].secenekler).map(([a, o]) => [a, o.ad])]);
+    const enUcuz = Math.min(...secenekSonuclari.map((r) => r.maliyet.genelToplam));
+    $('#secenekAlan').innerHTML = `
+      <div class="secenek-izgara">${L.map((sc, i) => {
+        const r = secenekSonuclari[i].maliyet;
+        return `<div class="secenek-kart" data-secenek="${i}">
+          <div class="sk-baslik"><input data-alan="ad" value="${esc(sc.ad)}" aria-label="Seçenek adı"><button data-islem="secSil" class="ikincil kucuk-buton" title="Seçeneği sil">✕</button></div>
+          <input data-alan="aciklama" value="${esc(sc.aciklama)}" placeholder="Kısa açıklama" aria-label="Açıklama">
+          ${SECENEK_KULLANIM.map((k) => `<label>${KULLANIM_AD[k]}${malzSec(k, sc.kullanim[k])}</label>`).join('')}
+          ${SECENEK_HIRDAVAT.map((k) => `<label>${HS[k].baslik}${hirSec(k, sc.hirdavat[k])}</label>`).join('')}
+          <label>Kâr oranı (%)<input data-alan="karOrani" type="number" min="0" value="${sc.karOrani == null ? '' : esc(sc.karOrani)}" placeholder="Proje: ${esc(A.fiyat.karOrani)}"></label>
+          <div class="sk-toplam${r.genelToplam === enUcuz ? ' ucuz' : ''}"><span>Genel toplam (KDV dahil)</span><b>${para(r.genelToplam)}</b><small>Maliyet ${para(r.maliyet)} · KDV hariç ${para(r.satisKdvHaric)}</small></div>
+        </div>`;
+      }).join('')}</div>
+      <div class="arac-satir">${L.length < 4 ? '<button data-islem="secEkle" class="ikincil">+ Seçenek</button>' : ''}<button id="btnYazdirSecenek">Seçenekli teklif PDF</button></div>`;
+  }
+  $('#secenekAlan').addEventListener('change', (e) => {
+    const el = e.target;
+    const kart = el.closest('[data-secenek]');
+    if (!kart) return;
+    const sc = proje.teklif.secenekler[Number(kart.dataset.secenek)];
+    const alan = el.dataset.alan;
+    if (alan.startsWith('kul.')) { const k = alan.slice(4); if (el.value) sc.kullanim[k] = el.value; else delete sc.kullanim[k]; }
+    else if (alan.startsWith('hir.')) { const k = alan.slice(4); if (el.value) sc.hirdavat[k] = el.value; else delete sc.hirdavat[k]; }
+    else if (alan === 'karOrani') sc.karOrani = el.value === '' ? null : Math.max(0, Number(el.value) || 0);
+    else sc[alan] = el.value.slice(alan === 'ad' ? 40 : 120);
+    kaydet();
+    secenekCiz();
+  });
+  $('#secenekAlan').addEventListener('click', (e) => {
+    const L = proje.teklif.secenekler;
+    const islem = e.target.dataset.islem;
+    if (e.target.id === 'btnYazdirSecenek') { yazdir('secenekli'); return; }
+    if (islem === 'secHazir') {
+      for (const h of Maliyet.HAZIR_SECENEKLER) {
+        L.push({ id: 'sc' + Math.random().toString(36).slice(2, 8), ad: h.ad, aciklama: h.aciklama, kullanim: Object.fromEntries(Object.entries(h.kullanim).filter(([, v]) => malzeme(v))), hirdavat: Object.assign({}, h.hirdavat), karOrani: h.karOrani });
+      }
+    } else if (islem === 'secEkle') L.push({ id: 'sc' + Math.random().toString(36).slice(2, 8), ad: `Seçenek ${L.length + 1}`, aciklama: '', kullanim: {}, hirdavat: {}, karOrani: null });
+    else if (islem === 'secSil') { if (!confirm('Seçenek silinsin mi?')) return; L.splice(Number(e.target.closest('[data-secenek]').dataset.secenek), 1); }
+    else return;
+    kaydet();
+    secenekCiz();
+  });
+
+  function secenekliYazdirHtml() {
+    secenekCiz();
+    const R = secenekSonuclari;
+    if (!R.length) return '<p>Seçenek yok.</p>';
+    const T = proje.teklif;
+    const Fi = proje.ayarlar.firma;
+    const tarih = new Date();
+    const gecerli = new Date(tarih.getTime() + T.gecerlilikGun * 86400000);
+    const gun = (d) => d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const sutun = R.map((r) => `<th>${esc(r.secenek.ad)}${r.secenek.aciklama ? `<br><small>${esc(r.secenek.aciklama)}</small>` : ''}</th>`).join('');
+    const ozellik = R[0].ozellikler.map(([ad], i) => `<tr><td>${esc(ad)}</td>${R.map((r) => `<td>${esc(r.ozellikler[i][1] || '—')}</td>`).join('')}</tr>`).join('');
+    const satirlar = R[0].maliyet.teklifSatirlari.map((x, i) => `<tr><td>${esc(x.ad)}${x.aciklama ? ` <small>${esc(x.aciklama)}</small>` : ''}${x.adet > 1 ? ` ×${x.adet}` : ''}</td>${R.map((r) => `<td class="sag">${para((r.maliyet.teklifSatirlari[i] || {}).tutar || 0)}</td>`).join('')}</tr>`).join('');
+    return `<section class="y-sayfa teklif">
+      <header class="t-ust">
+        <div><h1>${esc(Fi.ad || 'Fiyat Teklifi')}</h1>${Fi.telefon ? `<p>${esc(Fi.telefon)}</p>` : ''}${Fi.adres ? `<p>${esc(Fi.adres)}</p>` : ''}</div>
+        <div class="t-bilgi"><h2>SEÇENEKLİ FİYAT TEKLİFİ</h2>${T.teklifNo ? `<p>No: <b>${esc(T.teklifNo)}</b></p>` : ''}<p>Tarih: ${gun(tarih)}</p>${T.gecerlilikGun ? `<p>Geçerlilik: ${gun(gecerli)}</p>` : ''}</div>
+      </header>
+      <div class="t-musteri"><span>Sayın</span><b>${esc(T.musteri || '—')}</b>${T.telefon ? `<span>${esc(T.telefon)}</span>` : ''}${T.adres ? `<span>${esc(T.adres)}</span>` : ''}</div>
+      <p>Proje: <b>${esc(proje.ad || '')}</b> — aşağıdaki seçeneklerden birini işaretleyerek onaylayabilirsiniz.</p>
+      <table class="liste t-tablo secenek-tablo"><thead><tr><th></th>${sutun}</tr></thead><tbody>
+        <tr class="grup"><td colspan="${R.length + 1}">Malzeme ve donanım</td></tr>${ozellik}
+        <tr class="grup"><td colspan="${R.length + 1}">Ürünler (KDV hariç)</td></tr>${satirlar}
+      </tbody><tfoot>
+        <tr><td>Ara toplam (KDV hariç)</td>${R.map((r) => `<td class="sag">${para(r.maliyet.satisKdvHaric)}</td>`).join('')}</tr>
+        <tr><td>KDV</td>${R.map((r) => `<td class="sag">${para(r.maliyet.kdv)}</td>`).join('')}</tr>
+        <tr class="t-genel"><td>GENEL TOPLAM</td>${R.map((r) => `<td class="sag">${para(r.maliyet.genelToplam)}</td>`).join('')}</tr>
+        <tr><td>Seçim</td>${R.map(() => '<td class="secim-kutu">☐</td>').join('')}</tr>
+      </tfoot></table>
+      <div class="t-kosul">${T.teslimSuresi ? `<p><b>Teslim süresi:</b> ${esc(T.teslimSuresi)}</p>` : ''}${T.not ? `<p class="t-not">${esc(T.not)}</p>` : ''}</div>
+      <div class="t-imza"><div>Teklifi veren<br><br>…………………………</div><div>Onaylayan (müşteri)<br><br>…………………………</div></div>
+    </section>`;
+  }
+
+  // ---------------- Atölye: delik planı ve montaj kılavuzu ----------------
+  let atolyeModulId = null;
+  const kesimNo = (m, kaynak) => {
+    const L = sonuc.kesimListesi.filter((p) => p.moduller.includes(m.ad) && (p.ad === kaynak || p.ad.startsWith(kaynak)));
+    return L.length ? L.map((p) => `#${p.no}`).join(', ') : '';
+  };
+  function delikHtml(m) {
+    const s = sonuc.modulSonuclari[m.id];
+    const d = Delik.delikPlani(m, s, proje.ayarlar);
+    if (!d.destek) return `<p class="not">${esc(d.mesaj)}</p>`;
+    return `<p class="not">${esc(d.eksenNotu)} Kırmızı: bağlantı · mavi: raf pimi · kahverengi halka: menteşe çanağı · kahverengi: menteşe plakası · yeşil: ray · siyah: kulp · beyaz kırmızı halka: uçtan delik · gri şerit: kanal.</p>`
+      + d.parcalar.map((p) => `
+      <div class="delik-kart">
+        <h4>${esc(p.ad)} ${kesimNo(m, p.kaynak) ? `<span class="rozet">${esc(kesimNo(m, p.kaynak))}</span>` : ''} <small>${p.w} × ${p.h} mm${p.adet > 1 ? ` · ${p.adet} adet aynı` : ''} · ${esc(p.eksen)}</small></h4>
+        <div class="delik-icerik">
+          <div class="delik-resim">${Cizim.delikCizimi(p)}</div>
+          <div class="delik-liste">
+            ${p.ozet.length ? `<p class="kucuk">${esc(p.ozet.join(' · '))}</p>` : ''}
+            ${p.delikler.length ? `<div class="delik-tablo-kap"><table class="liste kucuk-tablo"><thead><tr><th>Delik</th><th>Yüz</th><th>x</th><th>y</th><th>Ø×der.</th></tr></thead><tbody>${p.delikler.map((x) => `<tr><td>${esc(x.ad)}</td><td>${esc(x.yuz)}</td><td class="sag">${sayiYaz(x.x)}</td><td class="sag">${sayiYaz(x.y)}</td><td class="sag">${x.cap}${x.derinlik ? '×' + sayiYaz(x.derinlik) : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}
+            ${p.kanallar.map((k) => `<p class="kucuk">${esc(k.ad)}: ön kenardan ${sayiYaz(k.x1)}–${sayiYaz(k.x2)} mm</p>`).join('')}
+            ${p.notlar.map((n) => `<p class="kucuk">• ${esc(n)}</p>`).join('')}
+          </div>
+        </div>
+      </div>`).join('');
+  }
+  function montajHtml(m) {
+    const k = Montaj.kilavuz(m, sonuc.modulSonuclari[m.id], proje, sonuc);
+    return k.map((b) => `<h4>${esc(b.baslik)}</h4><ol class="montaj-adim">${b.adimlar.map((a) => `<li>${esc(a)}</li>`).join('')}</ol>`).join('');
+  }
+  function atolyeCiz() {
+    if (!proje.moduller.some((m) => m.id === atolyeModulId)) atolyeModulId = seciliId;
+    $('#atolyeModul').innerHTML = proje.moduller.map((m) => `<option value="${esc(m.id)}"${m.id === atolyeModulId ? ' selected' : ''}>${esc(m.ad)}</option>`).join('');
+    const m = proje.moduller.find((x) => x.id === atolyeModulId);
+    if (!m) { $('#montajAlan').innerHTML = '<p class="bos">Modül yok.</p>'; $('#delikAlan').innerHTML = ''; return; }
+    $('#montajAlan').innerHTML = montajHtml(m);
+    $('#delikAlan').innerHTML = delikHtml(m);
+  }
+  $('#atolyeModul').addEventListener('change', (e) => { atolyeModulId = e.target.value; atolyeCiz(); });
+  const delikYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Delik planı — ${m.ad}`)}${delikHtml(m)}</section>`).join('');
+  const montajYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Montaj kılavuzu — ${m.ad}`)}<div class="y-modul"><div class="y-on">${Cizim.onGorunus(m, sonuc.modulSonuclari[m.id].geo, {})}</div><div>${montajHtml(m)}</div></div></section>`).join('');
+  $('#btnYazdirDelik').addEventListener('click', () => yazdir('delik'));
+  $('#btnYazdirMontaj').addEventListener('click', () => yazdir('montaj'));
+
+  // ---------------- 3D görünüm ----------------
+  const ucGorus = { yaw: -35, pitch: 22, yakin: 1 };
+  let ucBekleyen = false;
+  function ucCiz() {
+    const kapaksiz = $('#ucKapaksiz').checked;
+    let P;
+    if ($('#ucKapsam').value === 'proje') P = Uc.projeParcalari(sonuc.yerlesim, { kapaksiz });
+    else {
+      const m = seciliModul();
+      P = m && sonuc.modulSonuclari[m.id] ? Uc.modulParcalari(sonuc.modulSonuclari[m.id].geo, { kapaksiz }) : [];
+    }
+    $('#ucAlan').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
+  }
+  const ucIste = () => {
+    if (ucBekleyen) return;
+    ucBekleyen = true;
+    requestAnimationFrame(() => { ucBekleyen = false; ucCiz(); });
+  };
+  let surukle = null;
+  $('#ucAlan').addEventListener('pointerdown', (e) => { surukle = { x: e.clientX, y: e.clientY, yaw: ucGorus.yaw, pitch: ucGorus.pitch }; $('#ucAlan').setPointerCapture(e.pointerId); });
+  $('#ucAlan').addEventListener('pointermove', (e) => {
+    if (!surukle) return;
+    ucGorus.yaw = surukle.yaw + (e.clientX - surukle.x) * 0.4;
+    ucGorus.pitch = Math.max(-10, Math.min(89, surukle.pitch + (e.clientY - surukle.y) * 0.3));
+    ucIste();
+  });
+  const surukleBitir = () => { surukle = null; };
+  $('#ucAlan').addEventListener('pointerup', surukleBitir);
+  $('#ucAlan').addEventListener('pointercancel', surukleBitir);
+  $('#ucAlan').addEventListener('wheel', (e) => { e.preventDefault(); ucGorus.yakin = Math.max(0.3, Math.min(6, ucGorus.yakin * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); ucIste(); }, { passive: false });
+  $('#ucAlan').addEventListener('keydown', (e) => {
+    const adim = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, -5], ArrowDown: [0, 5] }[e.key];
+    if (!adim) return;
+    e.preventDefault();
+    ucGorus.yaw += adim[0];
+    ucGorus.pitch = Math.max(-10, Math.min(89, ucGorus.pitch + adim[1]));
+    ucIste();
+  });
+  document.querySelector('.uc-arac').addEventListener('click', (e) => {
+    const k = e.target.dataset.uc;
+    if (!k) return;
+    if (k === 'on') Object.assign(ucGorus, { yaw: 0, pitch: 0 });
+    else if (k === 'izo') Object.assign(ucGorus, { yaw: -35, pitch: 22 });
+    else if (k === 'ust') Object.assign(ucGorus, { yaw: 0, pitch: 85 });
+    else if (k === 'yak') ucGorus.yakin = Math.min(6, ucGorus.yakin * 1.25);
+    else if (k === 'uzak') ucGorus.yakin = Math.max(0.3, ucGorus.yakin / 1.25);
+    ucCiz();
+  });
+  $('#ucKapsam').addEventListener('change', ucCiz);
+  $('#ucKapaksiz').addEventListener('change', ucCiz);
+
   // ---------------- Sekmeler ----------------
   let aktifSekme = 'cizim';
   document.querySelector('.sekmeler').addEventListener('click', (e) => {
@@ -3890,9 +5616,11 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     aktifSekme = b.dataset.sekme;
     document.querySelectorAll('.sekmeler button').forEach((x) => x.classList.toggle('aktif', x === b));
     document.querySelectorAll('.sekme').forEach((x) => x.classList.toggle('aktif', x.id === 'sekme-' + aktifSekme));
-    if (aktifSekme === 'plaka') plakaCiz();
+    if (aktifSekme === 'plaka') { artikCiz(); plakaCiz(); }
     if (aktifSekme === 'yerlesim') yerlesimCiz();
-    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); maliyetCiz(); }
+    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); maliyetCiz(); secenekCiz(); }
+    if (aktifSekme === 'atolye') atolyeCiz();
+    if (aktifSekme === 'uc') ucCiz();
   });
 
   // ---------------- Yazdırma (PDF) ----------------
@@ -3902,11 +5630,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     return `<header class="y-baslik"><div><h1>${esc(proje.ad || 'Proje')}</h1><p>${esc(altBaslik)}</p></div><div class="y-tarih">${bugun()}<br>${proje.moduller.length} modül · ${sonuc.kesimListesi.reduce((a, p) => a + p.adet, 0)} parça</div></header>`;
   }
 
-  function plakaSayilari() {
-    const s = {};
-    for (const g of plakaGruplari) s[g.malzemeId] = g.plakalar.length;
-    return s;
-  }
+  const plakaSayilari = () => Yerlesim.plakaSayilari(plakaGruplari);
 
   function kesimYazdirHtml() {
     return `<section class="y-sayfa">${baslikHtml('Kesim listesi')}
@@ -3947,21 +5671,23 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     html += '</section>';
     const yer = sonuc.yerlesim;
     html += `<section class="y-sayfa">${baslikHtml('Yerleşim')}<h2>Kuşbakışı plan</h2>${Cizim.planCizimi(yer)}<h2>A duvarı</h2>${Cizim.duvarGorunus(yer, 'A')}${yer.tip === 'L' ? `<h2>B duvarı</h2>${Cizim.duvarGorunus(yer, 'B')}` : ''}</section>`;
+    html += `<section class="y-sayfa">${baslikHtml('3D görünüm')}<div class="y-uc">${Uc.ciz(Uc.projeParcalari(yer, {}), { yaw: -35, pitch: 22 }, {})}</div></section>`;
     html += kesimYazdirHtml();
-    html += `<section class="y-sayfa">${baslikHtml('Hırdavat listesi')}${hirdavatHtml()}</section>`;
+    html += `<section class="y-sayfa">${baslikHtml('Hırdavat listesi')}${hirdavatHtml()}<h2>Yerinde montaj hırdavatı</h2>${montajHirdavatHtml()}</section>`;
+    html += montajYazdirHtml();
     maliyetCiz();
     html += `<section class="y-sayfa">${baslikHtml('Maliyet (iç kullanım)')}${$('#maliyetOzet').innerHTML}<h2>Modül başına</h2>${$('#modulMaliyetTablo').innerHTML}<h2>Kalemler</h2>${$('#maliyetKalemleri').innerHTML}</section>`;
-    html += `<section class="y-sayfa">${baslikHtml('Plaka kesim planları')}${plakaHtml()}</section>`;
+    html += `<section class="y-sayfa">${baslikHtml('Plaka kesim planları')}${plakaHtml(true)}</section>`;
     return html;
   }
 
   function yazdir(tur) {
     const alan = $('#yazdirAlan');
     alan.className = 'yazdir-' + tur;
-    const icerik = { etiket: etiketYazdirHtml, kesim: kesimYazdirHtml, teklif: teklifYazdirHtml, tumu: tumYazdirHtml }[tur];
+    const icerik = { etiket: etiketYazdirHtml, kesim: kesimYazdirHtml, teklif: teklifYazdirHtml, tumu: tumYazdirHtml, secenekli: secenekliYazdirHtml, delik: delikYazdirHtml, montaj: montajYazdirHtml }[tur];
     alan.innerHTML = icerik();
     const eskiBaslik = document.title;
-    const adlar = { etiket: 'Parça etiketleri', kesim: 'Kesim listesi', teklif: 'Fiyat teklifi', tumu: 'Proje' };
+    const adlar = { etiket: 'Parça etiketleri', kesim: 'Kesim listesi', teklif: 'Fiyat teklifi', tumu: 'Proje', secenekli: 'Seçenekli teklif', delik: 'Delik planı', montaj: 'Montaj kılavuzu' };
     document.title = `${proje.ad || 'Proje'} - ${adlar[tur]}`;
     window.print();
     document.title = eskiBaslik;
@@ -4035,10 +5761,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   // ---------------- Ana döngü ----------------
   function tumunuCiz(formDa) {
     sonuc = Hesap.projeHesapla(proje);
-    plakaGruplari = Yerlesim.projeYerlesimi(sonuc.kesimListesi, proje.ayarlar);
-    const ps = {};
-    for (const g of plakaGruplari) ps[g.malzemeId] = g.plakalar.length;
-    maliyet = Maliyet.maliyetHesapla(proje, sonuc, ps);
+    plakaGruplari = Yerlesim.projeYerlesimi(sonuc.kesimListesi, proje.ayarlar, proje.artikKullan ? artikStok : null);
+    maliyet = Maliyet.maliyetHesapla(proje, sonuc, Yerlesim.plakaSayilari(plakaGruplari));
     modulListesiCiz();
     if (formDa) modulFormCiz();
     uyarilariCiz();
@@ -4047,7 +5771,9 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     hirdavatCiz();
     if (aktifSekme === 'plaka') plakaCiz();
     if (aktifSekme === 'yerlesim') yerlesimCiz();
-    if (aktifSekme === 'maliyet') maliyetCiz();
+    if (aktifSekme === 'maliyet') { maliyetCiz(); secenekCiz(); }
+    if (aktifSekme === 'atolye') atolyeCiz();
+    if (aktifSekme === 'uc') ucCiz();
     kaydet();
   }
 

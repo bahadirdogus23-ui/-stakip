@@ -25,6 +25,18 @@
 
   const SATIR_TIPLERI = { kapak: 'Kapak', cekmece: 'Çekmece', acik: 'Açık raf', nis: 'Cihaz nişi' };
   const KAPAK_TURLERI = { panel: 'Düz panel', cam: 'Cam (çerçevesiz)', cam_profil: 'Alüminyum profil + cam', cam_cerceve: 'MDF çerçeve + cam', ayna: 'Ayna' };
+  const KULP_KONUMLARI = { oto: 'Otomatik (alt dolap üstte, üst dolap altta, boy dolap el hizasında)', ust: 'Üstte', orta: 'Ortada', alt: 'Altta' };
+  const KULP_YONLERI = { dikey: 'Dikey', yatay: 'Yatay' };
+  const ENGEL_TURLERI = {
+    pencere: { ad: 'Pencere', alan: true },
+    kapi: { ad: 'Kapı', alan: true },
+    kolon: { ad: 'Kolon / kiriş', alan: true, derin: true },
+    kalorifer: { ad: 'Kalorifer / petek', alan: true },
+    priz: { ad: 'Priz / elektrik' },
+    su: { ad: 'Su tesisatı' },
+    gaz: { ad: 'Gaz vanası' },
+    diger: { ad: 'Diğer', alan: true },
+  };
   const CEKMECE_ICLERI = { yok: 'Boş', catal: 'Çatal-kaşıklık', bolucu: 'Bölücü seti' };
   const MENTESE_YONLERI = { oto: 'Otomatik', sol: 'Solda', sag: 'Sağda' };
   const ACILIMLAR = { yana: 'Yana açılır', yukari: 'Yukarı kalkar', asagi: 'Aşağı devrilir (klapa)' };
@@ -224,6 +236,10 @@
     arkalik_vida: { ad: 'Arkalık vidası / zımba çivisi', birim: 'adet', fiyat: 0.4 },
     kosebent: { ad: 'Bağlantı köşebendi', birim: 'adet', fiyat: 5 },
     catal_kasiklik: { ad: 'Çatal-kaşıklık', birim: 'adet', fiyat: 350 },
+    dolap_birlestirme: { ad: 'Dolap birleştirme vidası (somunlu)', birim: 'adet', fiyat: 4 },
+    aski_aparati: { ad: 'Asma dolap askı aparatı', birim: 'adet', fiyat: 45 },
+    aski_rayi: { ad: 'Asma dolap askı rayı', birim: 'm', fiyat: 120 },
+    devrilme: { ad: 'Devrilme önleyici duvar bağlantısı', birim: 'adet', fiyat: 25 },
     cekmece_bolucu: { ad: 'Çekmece bölücü seti', birim: 'takım', fiyat: 150 },
   };
 
@@ -267,12 +283,20 @@
     firma: { ad: '', telefon: '', adres: '' },
     testereKalinligi: 4,      // kesim bıçağı payı
     plakaKenarPayi: 10,       // plaka kenarından kırpılan pay
+    artikMin: 250,            // stoka alınacak artığın en küçük kenarı (mm)
     bantDus: true,            // bant kalınlığını kesim ölçüsünden düş
     kapakBoslugu: 3,          // kapaklar arası boşluk
     disBosluk: 1.5,           // tam bini kapakta dış kenar boşluğu
     cekmeceUstBosluk: 40,     // çekmece önü yüksekliği ile kutu yüksekliği farkı
     cekmeceTabani: 'cakma',   // 'cakma': alttan çakma, 'kanal': kanala geçme
     icCekmeceYukseklik: 140,  // iç (gizli) çekmece önü varsayılan yüksekliği
+    kulpYon: 'dikey',         // kapak kulpu yönü
+    kulpKonum: 'oto',         // kapakta kulp konumu
+    kulpCekmece: 'ust',       // çekmecede kulp: üstte / ortada
+    kulpAralik: 160,          // kulp vida (delik) aralığı; 0 = tek vidalı düğme kulp
+    kulpKenar: 40,            // kulp eksenine açılan kenardan mesafe
+    kulpUcMesafe: 60,         // üst/alt konumda kulp ucunun kapak kenarına mesafesi
+    duvarAski: 'aparat',      // asma dolap: 'aparat' (gizli askı aparatı) | 'ray' (askı rayı + aparat)
     arkalikKanalDerinligi: 8, // arkalık kanal derinliği
     arkalikGeriPay: 10,       // kanalın arka kenara uzaklığı
     arkalikCakmaPay: 2,       // çakma arkalıkta her kenardan içeri pay
@@ -491,6 +515,10 @@
       korPanel: sayiAl(x.korPanel, 0, 0, 2000),
       korTaraf: secenekAl(x.korTaraf, ['sol', 'sag'], 'sol'),
       bazaCekmece: !!x.bazaCekmece,
+      egimli: !!x.egimli,
+      sagYukseklik: sayiAl(x.sagYukseklik, sayiAl(x.yukseklik, 720, 0, 5000), 0, 5000),
+      kulpYon: secenekAl(x.kulpYon, ['proje', ...Object.keys(KULP_YONLERI)], 'proje'),
+      kulpKonum: secenekAl(x.kulpKonum, ['proje', ...Object.keys(KULP_KONUMLARI)], 'proje'),
       onTipi: secenekAl(x.onTipi, ['normal', 'surgu'], 'normal'),
       surguAdet: Math.floor(sayiAl(x.surguAdet, 2, 2, 4)),
       surguTuru: secenekAl(x.surguTuru, Object.keys(SURGU_TURLERI), 'panel'),
@@ -522,6 +550,10 @@
       else if (typeof v[k] === 'boolean') A[k] = g[k] == null ? v[k] : !!g[k];
     }
     A.cekmeceTabani = secenekAl(g.cekmeceTabani, ['cakma', 'kanal'], 'cakma');
+    A.kulpYon = secenekAl(g.kulpYon, Object.keys(KULP_YONLERI), 'dikey');
+    A.kulpKonum = secenekAl(g.kulpKonum, Object.keys(KULP_KONUMLARI), 'oto');
+    A.kulpCekmece = secenekAl(g.kulpCekmece, ['ust', 'orta'], 'ust');
+    A.duvarAski = secenekAl(g.duvarAski, ['aparat', 'ray'], 'aparat');
     A.malzemeler = (Array.isArray(g.malzemeler) && g.malzemeler.length ? g.malzemeler : v.malzemeler).slice(0, 100).map(malzemeNormallestir);
     const gorulen = new Set();
     for (const m of A.malzemeler) {
@@ -568,12 +600,27 @@
     const t = (p && p.teklif) || {};
     return {
       ad: metinAl(p && p.ad, 'Yeni proje', 80),
+      artikKullan: !!(p && p.artikKullan),
       ayarlar: A,
       moduller,
       yerlesim: {
         tip: secenekAl(y.tip, ['duz', 'L'], 'duz'),
         duvarA: sayiAl(y.duvarA, 3600, 0, 50000),
         duvarB: sayiAl(y.duvarB, 2400, 0, 50000),
+        birlestir: y.birlestir === undefined ? true : !!y.birlestir,
+        tavan: sayiAl(y.tavan, 0, 0, 10000),
+        koseAcisi: sayiAl(y.koseAcisi, 90, 45, 135),
+        duvarSapma: sayiAl(y.duvarSapma, 0, 0, 200),
+        engeller: (Array.isArray(y.engeller) ? y.engeller : []).slice(0, 60).map((e) => ({
+          tur: secenekAl(e && e.tur, Object.keys(ENGEL_TURLERI), 'diger'),
+          duvar: secenekAl(e && e.duvar, ['A', 'B'], 'A'),
+          x: sayiAl(e && e.x, 0, 0, 50000),
+          y: sayiAl(e && e.y, 0, 0, 10000),
+          genislik: sayiAl(e && e.genislik, 0, 0, 50000),
+          yukseklik: sayiAl(e && e.yukseklik, 0, 0, 10000),
+          derinlik: sayiAl(e && e.derinlik, 0, 0, 3000),
+          not: metinAl(e && e.not, '', 80),
+        })),
       },
       teklif: {
         musteri: metinAl(t.musteri, '', 80),
@@ -583,6 +630,14 @@
         gecerlilikGun: Math.floor(sayiAl(t.gecerlilikGun, 15, 0, 365)),
         teslimSuresi: metinAl(t.teslimSuresi, '', 60),
         not: metinAl(t.not, '', 1000),
+        secenekler: (Array.isArray(t.secenekler) ? t.secenekler : []).slice(0, 4).map((sc) => {
+          const kul = {};
+          const hrd = {};
+          for (const k of KULLANIMLAR) if (sc && sc.kullanim && A.malzemeler.some((m) => m.id === sc.kullanim[k])) kul[k] = sc.kullanim[k];
+          for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) if (sc && sc.hirdavat && HIRDAVAT_SECENEKLERI[k].secenekler[sc.hirdavat[k]]) hrd[k] = sc.hirdavat[k];
+          const kar = sayiAl(sc && sc.karOrani, null, 0, 1000);
+          return { id: kimlikAl(sc && sc.id, 'sc'), ad: metinAl(sc && sc.ad, 'Seçenek', 40), aciklama: metinAl(sc && sc.aciklama, '', 120), kullanim: kul, hirdavat: hrd, karOrani: kar };
+        }),
       },
     };
   }
@@ -618,6 +673,79 @@
       sonuc[k] = gecerli(secim) ? secim : gecerli(ayar.hirdavat && ayar.hirdavat[k]) ? ayar.hirdavat[k] : VARSAYILAN_AYARLAR.hirdavat[k];
     }
     return sonuc;
+  }
+
+  /** Modülün kulp ayarları (modül seçimi > proje). sinif: alt | ust | boy (otomatik konum için). */
+  function kulpBaglami(modul, A, H) {
+    const montaj = Math.max(0, say(modul.montajYuksekligi, 0));
+    return {
+      yon: modul.kulpYon && modul.kulpYon !== 'proje' ? modul.kulpYon : A.kulpYon || 'dikey',
+      konum: modul.kulpKonum && modul.kulpKonum !== 'proje' ? modul.kulpKonum : A.kulpKonum || 'oto',
+      cekmeceKonum: A.kulpCekmece || 'ust',
+      aralik: Math.max(0, say(A.kulpAralik, 160)),
+      kenar: Math.max(10, say(A.kulpKenar, 40)),
+      ucMesafe: Math.max(10, say(A.kulpUcMesafe, 60)),
+      sinif: montaj > ASILI_SINIR ? 'ust' : H >= 1500 ? 'boy' : 'alt',
+      montaj,
+    };
+  }
+
+  /**
+   * Kulp delik merkezleri (ön yüzün sol-alt köşesine göre, mm) ve atölye notu.
+   * tip: kapak | cekmece; menteseSol: menteşe sol kenarda mı (kulp açılan kenara konur);
+   * altYerden: ön yüz alt kenarının zeminden yüksekliği (boy dolapta el hizası için).
+   */
+  function kulpDelikleri(c, tip, acilim, w, h, menteseSol, altYerden) {
+    const a = c.aralik;
+    const yari = a / 2;
+    let cx;
+    let cy;
+    let yatay;
+    if (tip === 'cekmece' || acilim === 'yukari' || acilim === 'asagi') {
+      yatay = true;
+      cx = w / 2;
+      if (tip === 'cekmece') cy = c.cekmeceKonum === 'ust' ? h - Math.min(c.ucMesafe, h / 2) : h / 2;
+      else cy = acilim === 'yukari' ? Math.min(c.ucMesafe, h / 2) : h - Math.min(c.ucMesafe, h / 2);
+    } else {
+      yatay = c.yon === 'yatay';
+      const uzun = yatay ? 0 : yari;
+      const kenardan = c.kenar + (yatay ? yari : 0);
+      cx = menteseSol ? w - kenardan : kenardan;
+      let konum = c.konum;
+      if (konum === 'oto') konum = c.sinif === 'ust' ? 'alt' : c.sinif === 'boy' ? 'el' : 'ust';
+      const enAz = c.ucMesafe + uzun;
+      if (konum === 'ust') cy = h - enAz;
+      else if (konum === 'alt') cy = enAz;
+      else if (konum === 'el') cy = Math.min(h - enAz, Math.max(enAz, 1050 - altYerden));
+      else cy = h / 2;
+      cy = Math.min(Math.max(cy, Math.min(enAz, h / 2)), Math.max(h - enAz, h / 2));
+    }
+    const delikler = a <= 0 ? [{ x: cx, y: cy }]
+      : yatay ? [{ x: cx - yari, y: cy }, { x: cx + yari, y: cy }] : [{ x: cx, y: cy - yari }, { x: cx, y: cy + yari }];
+    const yuv = (L) => L.map((x) => r1(x)).join(' / ');
+    let not;
+    if (tip === 'kapak' && acilim === 'yana') {
+      const kenarMes = r1(menteseSol ? w - delikler[0].x : delikler[0].x);
+      not = yatay
+        ? `Kulp Ø5${a ? ` (aralık ${a})` : ''}: açılan kenardan ${yuv(delikler.map((d) => (menteseSol ? w - d.x : d.x)))}, alttan ${r1(cy)} mm`
+        : `Kulp Ø5${a ? ` (aralık ${a})` : ''}: açılan kenardan ${kenarMes}, alttan ${yuv(delikler.map((d) => d.y))} mm`;
+    } else {
+      not = `Kulp Ø5${a ? ` (aralık ${a})` : ''}: soldan ${yuv(delikler.map((d) => d.x))}, alttan ${r1(cy)} mm`;
+    }
+    // Delikler ön yüzün içinde (kenardan en az 15 mm) kalmalı. Kalmıyorsa yana açılan kapakta
+    // diğer yön denenir; o da olmazsa tek delikli düğme kulba düşülür.
+    const pay = 15;
+    const icinde = delikler.every((d) => d.x >= pay - 1e-6 && d.x <= w - pay + 1e-6 && d.y >= pay - 1e-6 && d.y <= h - pay + 1e-6);
+    if (!icinde && a > 0) {
+      if (tip === 'kapak' && acilim === 'yana' && !c.denendi) {
+        const alt = kulpDelikleri(Object.assign({}, c, { yon: yatay ? 'dikey' : 'yatay', denendi: true }), tip, acilim, w, h, menteseSol, altYerden);
+        if (!alt.dugme) return alt;
+      }
+      const x = Math.min(Math.max(cx, Math.min(pay, w / 2)), Math.max(w - pay, w / 2));
+      const y = Math.min(Math.max(cy, Math.min(pay, h / 2)), Math.max(h - pay, h / 2));
+      return { delikler: [{ x, y }], yatay, dugme: true, not: `Kulp sığmıyor (aralık ${a}): tek delikli düğme kulp Ø5, soldan ${r1(x)}, alttan ${r1(y)} mm` };
+    }
+    return { delikler, yatay, not };
   }
 
   /** Menteşe çanak (Ø35) delik merkezleri: kapak üst kenarından mm. Uçlar 100 mm, aralar eşit. */
@@ -690,6 +818,8 @@
         const m = M[kullanim];
         const cam = camMi(m);
         const p = Object.assign({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: cam ? { u: 0, k: 0 } : bant || { u: 0, k: 0 }, damar: !cam && !!m.damar, cam }, ek || {});
+        // Atölye notlarında Türkçe ondalık virgül
+        if (p.not) p.not = p.not.replace(/(\d)\.(\d)/g, '$1,$2');
         parcalar.push(p);
         return p;
       },
@@ -835,7 +965,7 @@
     const D = say(modul.derinlik, 0);
     const baza = modul.baza || { tip: 'yok', yukseklik: 0, geriCekme: 0 };
     const hb = baza.tip === 'yok' ? 0 : say(baza.yukseklik, 0);
-    const Hc = H - hb; // gövde (baza hariç) yüksekliği
+    let Hc = H - hb; // gövde (baza hariç) yüksekliği; eğimli dolapta alçak taraf
     const iw = W - 2 * t; // iç genişlik
     const surgu = modul.onTipi === 'surgu';
     const ic = modul.kapakTipi === 'ic';
@@ -851,6 +981,30 @@
       return bos();
     }
 
+    // ---------- Eğimli üst (çatı altı / merdiven altı) ----------
+    // Sol yükseklik = modül yüksekliği, sağ yükseklik = sagYukseklik. Satırlar alçak tarafa göre
+    // yerleşir; en üst satırın ön yüzleri ve üst tabla eğime göre kesilir.
+    let egim = null;
+    if (modul.egimli) {
+      const H2 = say(modul.sagYukseklik, H);
+      const HcR = H2 - hb;
+      if (surgu) uyarilar.push('Eğimli dolapta sürgü kapak desteklenmez; eğim uygulanmadı.');
+      else if (ic) uyarilar.push('Eğimli dolapta gömme kapak desteklenmez; eğim uygulanmadı.');
+      else if (HcR < 2 * t + 150) uyarilar.push(`Sağ yükseklik (${H2} mm) çok küçük; eğim uygulanmadı.`);
+      else if (Math.abs(HcR - Hc) >= 1) {
+        const alfa = Math.atan2(Math.abs(HcR - Hc), W);
+        if (alfa > Math.PI / 3) uyarilar.push(`Eğim ${r1((alfa * 180) / Math.PI)}°; 60°'den dik eğim desteklenmez, eğim uygulanmadı.`);
+        else {
+          egim = { HcL: Hc, HcR, dH: HcR - Hc, alfa, aciDer: r1((alfa * 180) / Math.PI), min: Math.min(Hc, HcR), max: Math.max(Hc, HcR) };
+          Hc = egim.min;
+        }
+      }
+    }
+    // x konumundaki gövde dış yüksekliği (eğim yoksa sabit)
+    const HcX = (x) => (egim ? egim.HcL + (egim.dH * x) / W : Hc);
+    const kulpC = kulpBaglami(modul, A, H);
+    const kulpVar = HS.kulp === 'kulp';
+
     // Yan derinliği: çakma arkalık gövdenin arkasına çakıldığı için yanlardan düşülür.
     const Ds = modul.arkalik === 'cakma' ? D - ta : D;
     // Ara tabla, dikme ve raflar için kullanılabilir derinlik
@@ -861,7 +1015,8 @@
     const cekmeceDerinlik = surgu && !ic ? icDerinlik - tk : icDerinlik;
 
     // ---------- Gövde ----------
-    const usttam = modul.ust !== 'kusak';
+    if (egim && modul.ust === 'kusak') uyarilar.push('Eğimli dolapta kuşak yerine tam üst tabla kullanıldı.');
+    const usttam = modul.ust !== 'kusak' || !!egim;
     const kusakEn = say(A.kusakGenisligi, 100);
     if (modul.yapi === 'tabla_boydan') {
       ekle('Alt tabla', 'govde', W, Ds, 1, { u: 1, k: 2 });
@@ -1024,7 +1179,14 @@
 
     // ---------- Dikey bölmeler (sütunlar) ----------
     if (ns > 1) {
-      ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
+      if (egim) {
+        let x = t;
+        for (let k = 0; k < ns - 1; k++) {
+          x += genislikler[k];
+          ekle(`Bölme dikmesi (boydan) ${k + 1}`, 'govde', HcX(x + t / 2) - t - t / Math.cos(egim.alfa), icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir` });
+          x += t;
+        }
+      } else ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
       araBirlesim += 2 * (ns - 1);
     }
 
@@ -1101,10 +1263,13 @@
           const geo = {
             tip: s.tip, sutun: si, on, icUst, icAlt, icH, bolumler, dikmeX: satirDikmeX, onler: [], raflar: [], cekmeceler: [],
             aski: false, kapakTuru, acilim, rafTipi: s.rafTipi || 'ahsap', led: !!s.led, menteseYonu: s.menteseYonu || 'oto',
+            rafSabit: !!s.rafSabit && s.rafTipi !== 'cam',
           };
 
           if (dikme > 0) {
-            ekle(`Ara dikme (${ek(i + 1)})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
+            if (egim && i === 0) {
+              satirDikmeX.forEach((dx, k) => ekle(`Ara dikme (${ek(i + 1)}) ${k + 1}`, 'govde', icH + HcX(dx + t / 2) - Hc, icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir` }));
+            } else ekle(`Ara dikme (${ek(i + 1)})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
             araBirlesim += 2 * dikme;
           }
           if (secW > 0 && secW < 100) uyarilar.push(`${ek(i + 1)}: bölme iç genişliği ${r1(secW)} mm, çok dar.`);
@@ -1114,14 +1279,39 @@
           if (onVar) {
             const ayr = icDuzen && n > 1 && dikme >= n - 1 ? t + 2 * g : g;
             const fw = (fx1 - fx0 - (n - 1) * ayr) / n;
+            // Eğimli dolabın en üst satırı: ön yüz üst kenarı eğime uyar
+            const egimliSatir = !!egim && i === 0;
+            const ekstra = (x) => (egimliSatir ? HcX(x) - Hc : 0);
             for (let k = 0; k < n; k++) {
               const fx = fx0 + k * (fw + ayr);
-              geo.onler.push({ x1: fx, x2: fx + fw });
+              const menteseSol = s.tip === 'kapak' && acilim === 'yana' ? (n === 1 ? s.menteseYonu !== 'sag' : k % 2 === 0) : true;
+              const o = { x1: fx, x2: fx + fw, menteseSol };
+              if (egimliSatir) { o.y2sol = on.y2 + ekstra(fx); o.y2sag = on.y2 + ekstra(fx + fw); }
+              if (kulpVar) o.kulp = kulpDelikleri(kulpC, s.tip, acilim, fw, on.h, menteseSol, hb + on.y1);
+              geo.onler.push(o);
+            }
+            const kulpNotu = kulpVar ? geo.onler[0].kulp.not : null;
+            const notBirlestir = (...L) => L.filter(Boolean).join(' · ') || null;
+            if (egimliSatir) {
+              // Her ön yüz ayrı yamuk parça: sol ve sağ kenar yükseklikleri farklı
+              if (s.tip === 'kapak' && kapakTuru !== 'panel') uyarilar.push(`${ek(i + 1)}: eğimli kapakta yalnızca düz panel desteklenir; düz panel yapıldı.`);
+              if (s.tip === 'cekmece') uyarilar.push(`${ek(i + 1)}: eğimli satırda çekmece — ön yüz yamuk kesilir, kutu alçak tarafa göre boyutlanır; üst satırı kapak yapmak daha uygundur.`);
+              geo.onler.forEach((o, k) => {
+                const hL = on.h + ekstra(o.x1);
+                const hR = on.h + ekstra(o.x2);
+                const sg = sekilGeometrisi('egimli', fw, hL, hR, 0);
+                const ad = s.tip === 'kapak' ? `Kapak (${ek(i + 1)}) – eğimli ${k + 1}` : `Çekmece önü (${ek(i + 1)}) – eğimli ${k + 1}`;
+                ekle(ad, 'kapak', sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
+                  sekil: { tur: 'egimli', alan: sg.alan, cevre: sg.cevre, egri: 0, duz: sg.duz },
+                  bantUzunluk: sg.cevre,
+                  not: notBirlestir(`Yamuk: sol ${r1(hL)}, sağ ${r1(hR)} mm; ${sg.bilgi.join(', ')}`, s.tip === 'kapak' && acilim === 'yana' ? mentesheNotu(Math.min(hL, hR), mentesheAdedi(Math.max(hL, hR))) : null, o.kulp && o.kulp.not),
+                });
+              });
             }
             if (s.tip === 'kapak') {
               const yonNotu = n === 1 ? (s.menteseYonu === 'sag' ? ' · menteşe sağ kenarda' : ' · menteşe sol kenarda') : ' · çiftte menteşeler dış kenarlarda';
               const mNotu = acilim === 'yana' ? mentesheNotu(on.h, mentesheAdedi(on.h)) + yonNotu : null;
-              const camli = kapakParcalari(T, A, `Kapak (${ek(i + 1)})`, on.h, fw, n, kapakTuru, acilim === 'yana' ? mNotu : null) === 'cam';
+              const camli = egimliSatir ? false : kapakParcalari(T, A, `Kapak (${ek(i + 1)})`, on.h, fw, n, kapakTuru, notBirlestir(acilim === 'yana' ? mNotu : null, kulpNotu)) === 'cam';
               kulpEkle(T, HS.kulp, n, fw);
               if (acilim === 'yukari') {
                 mentesheEkle(T, HS.mentese, modul.kapakTipi, 2 * n, false);
@@ -1222,7 +1412,7 @@
             const k = cekmeceKutusu(ek(i + 1), secW, on.h - say(A.cekmeceUstBosluk, 40), icH - 15, s.kutuYukseklik, cekmeceDerinlik, s.rayBoyu, bolum);
             const fw = geo.onGenislik;
             if (k) {
-              ekle(`Çekmece önü (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 });
+              if (!(egim && i === 0)) ekle(`Çekmece önü (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 }, geo.onler[0] && geo.onler[0].kulp ? { not: geo.onler[0].kulp.not } : undefined);
               kulpEkle(T, HS.kulp, n, fw);
             } else {
               // Kutu sığmadı: ön yüz yine kapanmalı, sabit (açılmayan) panel olarak monte edilir
@@ -1283,6 +1473,40 @@
     baglantiEkle(T, HS.baglanti, birlesim, Ds, kusakNokta);
     baglantiEkle(T, araBaglantiTuru(HS), araBirlesim, Ds, 0);
 
+    if (egim) {
+      // Yanlar farklı yükseklikte, üst tabla eğik, arkalık yamuk
+      const cos = Math.cos(egim.alfa);
+      const aci = egim.aciDer;
+      const cikar = (ad) => { const i = T.parcalar.findIndex((p) => p.ad === ad); if (i >= 0) T.parcalar.splice(i, 1); };
+      cikar('Yan');
+      cikar('Üst tabla');
+      const tablaBoydan = modul.yapi === 'tabla_boydan';
+      const yanH = (h) => (tablaBoydan ? h - t - t / cos : h);
+      const yanNot = `Üst kenarı kalınlık boyunca ${aci}° eğimli kesilir`;
+      ekle('Sol yan', 'govde', yanH(egim.HcL), Ds, 1, { u: 1, k: 0 }, { not: yanNot });
+      ekle('Sağ yan', 'govde', yanH(egim.HcR), Ds, 1, { u: 1, k: 0 }, { not: yanNot });
+      const ustBoy = (tablaBoydan ? W : iw) / cos;
+      ekle('Üst tabla (eğimli)', 'govde', ustBoy, Ds, 1, { u: 1, k: tablaBoydan ? 2 : 0 }, { not: `Eğim ${aci}°: iki ucu dikey (${aci}° açılı) kesilir; boy eğik yüzeyde ölçülür` });
+      const arkaAd = modul.arkalik === 'kanal' ? 'Arkalık (kanallı)' : 'Arkalık (çakma)';
+      if (modul.arkalik !== 'yok') {
+        cikar(arkaAd);
+        const kd = say(A.arkalikKanalDerinligi, 8);
+        const p = say(A.arkalikCakmaPay, 2);
+        const en = modul.arkalik === 'kanal' ? iw + 2 * (kd - 1) : W - 2 * p;
+        // Kenar yükseklikleri arkalığın kendi sol/sağ kenarındaki gövde yüksekliğinden; böylece
+        // arkalığın eğimi gövdeyle aynı olur. Kanallıda üst tablanın düşey kalınlığı t/cos'tur.
+        const xa = modul.arkalik === 'kanal' ? t - (kd - 1) : p;
+        const hX = (x) => (modul.arkalik === 'kanal' ? HcX(x) - t / cos - t + 2 * (kd - 1) : HcX(x) - 2 * p);
+        const hL = hX(xa);
+        const hR = hX(xa + en);
+        const sg = sekilGeometrisi('egimli', en, hL, hR, 0);
+        ekle(`${arkaAd} – yamuk`, 'arkalik', sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
+          sekil: { tur: 'egimli', alan: sg.alan, cevre: sg.cevre, egri: 0, duz: sg.duz }, bantUzunluk: 0,
+          not: `Yamuk: sol ${r1(hL)}, sağ ${r1(hR)} mm; ${sg.bilgi.join(', ')}`,
+        });
+      }
+    }
+
     return {
       parcalar: T.parcalar,
       hirdavat: T.hirdavat,
@@ -1290,7 +1514,9 @@
       malzemeler: M,
       hirdavatSecimi: HS,
       geo: {
-        W, H, D, Hc, hb, t, ta, Ds, icDerinlik, tk, db,
+        W, H: egim ? hb + egim.max : H, D, Hc, hb, t, ta, Ds, icDerinlik, cekmeceDerinlik, tk, db,
+        egim: egim ? { HcL: egim.HcL, HcR: egim.HcR, aci: egim.aciDer } : null,
+        kulpTur: HS.kulp, montajYuksekligi: kulpC.montaj,
         kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: modul.ust, yapi: modul.yapi,
         baza: { tip: baza.tip, yukseklik: hb, geriCekme: say(baza.geriCekme, 0) },
         korPanel,
@@ -1577,7 +1803,113 @@
       if (L && Y.duvarB > 0 && y > Y.duvarB) uyarilar.push(`Yerleşim: ${ad} B duvarını ${r1(y - Y.duvarB)} mm aşıyor.`);
       if (doluluk[sira].koseBosluguB > 0) uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok; B duvarı ${r1(baslangicB)} mm köşe boşluğuyla başlıyor (kör köşe dolap veya dolgu düşünün).`);
     }
-    return { tip: L ? 'L' : 'duz', duvarA: say(Y.duvarA, 0), duvarB: say(Y.duvarB, 0), yerler, doluluk, uyarilar };
+    const engelAdlari = {};
+    for (const [k, v] of Object.entries(ENGEL_TURLERI)) engelAdlari[k] = v.ad;
+    return { tip: L ? 'L' : 'duz', duvarA: say(Y.duvarA, 0), duvarB: say(Y.duvarB, 0), yerler, doluluk, uyarilar, engeller: Y.engeller || [], tavan: say(Y.tavan, 0), engelAdlari };
+  }
+
+  /**
+   * Yerinde montaj hırdavatı: yan yana dolapların birleştirme vidaları, asma dolap askıları,
+   * boy dolap devrilme önleyicileri. Yerleşimden çıkarılır (adetli modüllerin her kopyası sayılır).
+   */
+  function montajHirdavati(proje, yer, A) {
+    const L = [];
+    const ekle = (kod, ad, adet, birim, fm) => {
+      if (!(adet > 0)) return;
+      const v = L.find((x) => x.ad === ad);
+      if (v) { v.adet = r3(v.adet + adet); v.fiyatMiktari = r3(v.fiyatMiktari + (fm == null ? adet : fm)); }
+      else L.push({ kod, ad, adet: r3(adet), birim: birim || 'adet', fiyatMiktari: r3(fm == null ? adet : fm) });
+    };
+    const govdeli = (y) => y.modul.tip !== 'panel';
+    let birlesim = 0;
+    if (!proje.yerlesim || proje.yerlesim.birlestir !== false) {
+      for (const sira of ['zemin', 'duvar']) {
+        for (const duvar of ['A', 'B']) {
+          const genis = (y) => (y.duvar === 'kose' ? (duvar === 'B' ? y.W2 : y.W) : y.W);
+          const dizi = yer.yerler.filter((y) => y.sira === sira && govdeli(y) && (y.duvar === duvar || (y.duvar === 'kose' && (duvar === 'A' || yer.tip === 'L')))).sort((a, b) => a.bas - b.bas);
+          for (let i = 0; i + 1 < dizi.length; i++) {
+            const a = dizi[i];
+            const b = dizi[i + 1];
+            if (Math.abs(a.bas + genis(a) - b.bas) < 2) {
+              birlesim++;
+              ekle('dolap_birlestirme', 'Dolap birleştirme vidası (somunlu)', Math.max(a.geo.H, b.geo.H) >= 1500 ? 4 : 2);
+            }
+          }
+        }
+      }
+    }
+    let rayM = 0;
+    for (const y of yer.yerler.filter(govdeli)) {
+      if (y.sira === 'duvar') {
+        if (A.duvarAski === 'ray') rayM += (y.W + (y.duvar === 'kose' ? y.W2 : 0)) / 1000;
+        ekle('aski_aparati', 'Asma dolap askı aparatı', y.duvar === 'kose' ? 4 : 2);
+      } else if (y.geo.H >= 1500) ekle('devrilme', 'Devrilme önleyici duvar bağlantısı', 2);
+    }
+    if (rayM > 0) ekle('aski_rayi', 'Asma dolap askı rayı', r1(rayM), 'm', rayM);
+    return { liste: L, birlesim };
+  }
+
+  /**
+   * Yerinde ölçü kontrolü: engellerle (pencere, kapı, kolon, priz, su, gaz…) ve tavanla çakışmalar.
+   * Duvar boyunca konum köşeden (düz yerleşimde duvarın solundan) ölçülür; yükseklik zeminden.
+   * Nokta engeller (priz, su, gaz) bir dolabın arkasına denk gelirse arkalık delik konumu verilir.
+   */
+  function sahaKontrol(proje, yer) {
+    const Y = proje.yerlesim || {};
+    const uyarilar = [];
+    const notlar = [];
+    const engeller = Y.engeller || [];
+    const kutular = [];
+    for (const y of yer.yerler) {
+      const alt = y.montaj;
+      const ust = y.montaj + y.geo.H;
+      if (y.duvar === 'kose') {
+        kutular.push({ y, duvar: 'A', x1: 0, x2: y.W, alt, ust, kose: true });
+        if (yer.tip === 'L') kutular.push({ y, duvar: 'B', x1: 0, x2: y.W2, alt, ust, kose: true, ikinci: true });
+      } else kutular.push({ y, duvar: yer.tip === 'L' ? y.duvar : 'A', x1: y.bas, x2: y.bas + y.W, alt, ust });
+    }
+    const kesisir = (a1, a2, b1, b2) => Math.min(a2, b2) - Math.max(a1, b1) > 1;
+    for (const e of engeller) {
+      const tanim = ENGEL_TURLERI[e.tur] || ENGEL_TURLERI.diger;
+      const duvar = yer.tip === 'L' ? e.duvar : 'A';
+      const ad = `${tanim.ad}${e.not ? ` (${e.not})` : ''}`;
+      for (const k of kutular.filter((q) => q.duvar === duvar)) {
+        const m = k.y.modul;
+        if (tanim.alan) {
+          const x2 = e.x + e.genislik;
+          const yAlt = e.tur === 'kolon' || e.tur === 'kapi' ? 0 : e.y;
+          const yUst = e.tur === 'kolon' ? Infinity : e.tur === 'kapi' ? e.yukseklik : e.y + e.yukseklik;
+          if (!kesisir(k.x1, k.x2, e.x, x2)) continue;
+          if (kesisir(k.alt, k.ust, yAlt, yUst)) {
+            uyarilar.push(`Saha: "${m.ad}" ${duvar} duvarındaki ${ad.toLocaleLowerCase('tr')} ile çakışıyor (${r1(e.x)}–${r1(x2)} mm).`);
+          } else if (e.tur === 'pencere' && k.y.sira === 'zemin' && k.ust + 40 > e.y) {
+            uyarilar.push(`Saha: "${m.ad}" + tezgah (40 mm) pencere denizliğinden (${e.y} mm) yüksek.`);
+          }
+        } else if (e.x > k.x1 && e.x < k.x2 && e.y > k.alt && e.y < k.ust) {
+          // Nokta engel dolabın arkasında: modül içi konum (soldan, gövde altından)
+          const soldan = duvar === 'B' ? k.x2 - e.x : e.x - k.x1;
+          const alttan = e.y - k.alt - (k.y.geo.hb || 0);
+          if (k.kose) notlar.push({ modul: m.ad, metin: `${ad} köşe dolabın arkasında (${duvar} kolu): köşeden ${r1(e.x)}, zeminden ${r1(e.y)} mm` });
+          else notlar.push({ modul: m.ad, metin: `${ad}: arkalıkta delik/kesim — soldan ${r1(soldan)}, gövde altından ${r1(alttan)} mm` });
+          if (e.tur === 'gaz') uyarilar.push(`Saha: gaz vanası "${m.ad}" içinde kalıyor; erişim kapağı ve havalandırma bırakın, vana önünü kapatmayın.`);
+        }
+      }
+    }
+    if (Y.tavan > 0) {
+      for (const k of kutular) {
+        if (k.ikinci) continue;
+        const bosluk = Y.tavan - k.ust;
+        const kosegen = Math.hypot(k.y.geo.H, k.y.geo.D || 0);
+        if (bosluk < 0) uyarilar.push(`Saha: "${k.y.modul.ad}" tavanı ${r1(-bosluk)} mm aşıyor (tavan ${Y.tavan} mm).`);
+        else {
+          if (k.y.geo.H >= 1500 && k.alt < 1 && kosegen > Y.tavan) uyarilar.push(`Saha: "${k.y.modul.ad}" yatık getirilip kaldırılamaz: köşegeni ${r1(kosegen)} mm tavandan (${Y.tavan}) uzun; gövdeyi yerinde birleştirin.`);
+          if (bosluk < 100 && (k.y.sira === 'duvar' || k.y.geo.H >= 1500)) notlar.push({ modul: k.y.modul.ad, metin: `Tavana ${r1(bosluk)} mm kalıyor: tavan dolgusu veya korniş önerilir` });
+        }
+      }
+    }
+    if (yer.tip === 'L' && Math.abs((Y.koseAcisi || 90) - 90) >= 1) uyarilar.push(`Saha: köşe açısı ${Y.koseAcisi}° (90° değil); L köşe ve köşe dolaplarında dolgu payı bırakın.`);
+    if (Y.duvarSapma > 5) uyarilar.push(`Saha: duvar düzlüğünde ${Y.duvarSapma} mm sapma var; dolap dizisinin ucunda dolgu/kapama payı bırakın.`);
+    return { uyarilar: [...new Set(uyarilar)], notlar };
   }
 
   /** Tüm projeyi hesaplar: birleşik kesim listesi, hırdavat, malzeme özetleri, yerleşim. */
@@ -1653,6 +1985,9 @@
 
     const yerlesim = yerlesimHesapla(proje, modulSonuclari);
     for (const u of yerlesim.uyarilar) uyarilar.push(u);
+    const montaj = montajHirdavati(proje, yerlesim, A);
+    const saha = sahaKontrol(proje, yerlesim);
+    for (const u of saha.uyarilar) uyarilar.push(u);
 
     return {
       kesimListesi,
@@ -1661,6 +1996,9 @@
       uyarilar,
       modulSonuclari,
       yerlesim,
+      montajHirdavat: montaj.liste,
+      birlesimSayisi: montaj.birlesim,
+      saha,
     };
   }
 
@@ -1670,6 +2008,13 @@
     KULLANIM_AD,
     MALZEME_TURLERI,
     SATIR_TIPLERI,
+    KULP_KONUMLARI,
+    KULP_YONLERI,
+    ENGEL_TURLERI,
+    kulpDelikleri,
+    kulpBaglami,
+    sahaKontrol,
+    montajHirdavati,
     CEKMECE_ICLERI,
     MENTESE_YONLERI,
     SEKILLER,

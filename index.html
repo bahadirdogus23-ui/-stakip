@@ -40,10 +40,12 @@
       <section class="sag">
         <nav class="sekmeler" role="tablist">
           <button data-sekme="cizim" class="aktif">Çizim</button>
+          <button data-sekme="uc">3D</button>
           <button data-sekme="yerlesim">Mutfak / yerleşim</button>
           <button data-sekme="kesim">Kesim listesi</button>
           <button data-sekme="plaka">Plaka yerleşimi</button>
           <button data-sekme="hirdavat">Hırdavat & özet</button>
+          <button data-sekme="atolye">Atölye</button>
           <button data-sekme="maliyet">Fiyat & maliyet</button>
           <button data-sekme="ayarlar">Malzeme & ayarlar</button>
         </nav>
@@ -60,9 +62,50 @@
           </div>
         </div>
 
+        <div class="sekme" id="sekme-uc">
+          <div class="arac-satir uc-arac">
+            <select id="ucKapsam" aria-label="Kapsam"><option value="modul">Seçili modül</option><option value="proje">Tüm proje (yerleşim)</option></select>
+            <label class="onay"><input type="checkbox" id="ucKapaksiz"> Kapakları gizle</label>
+            <button data-uc="on" class="ikincil">Önden</button>
+            <button data-uc="izo" class="ikincil">Köşeden</button>
+            <button data-uc="ust" class="ikincil">Üstten</button>
+            <button data-uc="yak" class="ikincil" title="Yakınlaştır">＋</button>
+            <button data-uc="uzak" class="ikincil" title="Uzaklaştır">－</button>
+            <span class="not">Döndürmek için sürükleyin; fare tekerleği yakınlaştırır.</span>
+          </div>
+          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"></div>
+        </div>
+
+        <div class="sekme" id="sekme-atolye">
+          <div class="arac-satir">
+            <label>Modül <select id="atolyeModul"></select></label>
+            <button id="btnYazdirDelik">Delik planı PDF</button>
+            <button id="btnYazdirMontaj" class="ikincil">Montaj kılavuzu PDF</button>
+            <span class="not">PDF'ler tüm modülleri içerir.</span>
+          </div>
+          <div class="iki-kolon atolye">
+            <div>
+              <h3>Montaj kılavuzu</h3>
+              <div id="montajAlan"></div>
+            </div>
+            <div>
+              <h3>Delik planı</h3>
+              <div id="delikAlan"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="sekme" id="sekme-yerlesim">
           <div id="yerlesimForm" class="form-izgara yerlesim-form"></div>
           <p class="not">L yerleşimde köşe sol üsttedir: <b>A duvarı</b> köşeden sağa, <b>B duvarı</b> köşeden aşağı uzanır. Modüller listedeki sırayla köşeden başlayarak dizilir; her modülün duvarı modül formundan seçilir. L köşe dolap otomatik olarak köşeye yerleşir.</p>
+          <details class="saha" id="sahaKutu">
+            <summary>Yerinde ölçü (tavan, köşe, engeller)</summary>
+            <div id="sahaForm" class="form-izgara"></div>
+            <h4>Engeller <small>(konum köşeden — düz yerleşimde duvarın solundan — ve zeminden, mm)</small></h4>
+            <div id="engelTablo" class="tablo-kap"></div>
+            <button data-islem="engelEkle" class="ikincil" id="btnEngelEkle">+ Engel ekle</button>
+            <div id="sahaNotlari"></div>
+          </details>
           <h3>Kuşbakışı plan</h3>
           <div id="cizimPlan" class="cizim-kutu"></div>
           <h3>A duvarı görünüşü</h3>
@@ -84,6 +127,20 @@
         </div>
 
         <div class="sekme" id="sekme-plaka">
+          <details class="artik-kutu" id="artikKutu">
+            <summary>Artık stoku <span id="artikOzet" class="kucuk"></span></summary>
+            <p class="not">Önceki işlerden kalan parçalar. "Artıkları kullan" açıkken aynı ad ve kalınlıktaki malzemede, plaka açmadan önce bunlar kullanılır. Stok bu bilgisayardaki tarayıcıda tutulur; projeler arasında ortaktır.</p>
+            <label class="onay"><input type="checkbox" id="artikKullan"> Bu işte artıkları kullan</label>
+            <div id="artikTablo" class="tablo-kap"></div>
+            <div class="form-izgara artik-ekle">
+              <label>Malzeme<select id="artikMalz"></select></label>
+              <label>Boy (mm)<input id="artikBoy" type="number" min="50"></label>
+              <label>En (mm)<input id="artikEn" type="number" min="50"></label>
+              <label>Adet<input id="artikAdet" type="number" min="1" value="1"></label>
+              <label>Not<input id="artikNot"></label>
+              <button id="btnArtikEkle" class="ikincil">+ Stoka ekle</button>
+            </div>
+          </details>
           <div id="plakaAlan"></div>
         </div>
 
@@ -94,6 +151,8 @@
               <div id="hirdavatTablo" class="tablo-kap"></div>
             </div>
             <div>
+              <h3>Yerinde montaj hırdavatı</h3>
+              <div id="montajHirdavatTablo" class="tablo-kap"></div>
               <h3>Malzeme özeti</h3>
               <div id="ozetTablo" class="tablo-kap"></div>
             </div>
@@ -107,6 +166,8 @@
               <h3>Teklif</h3>
               <div id="teklifForm" class="form-izgara"></div>
               <div class="arac-satir"><button id="btnYazdirTeklif">Fiyat teklifi PDF</button><span class="not">Müşteriye gidecek teklif: modül bazında satış fiyatları, KDV ve genel toplam. Maliyet ayrıntısı içermez.</span></div>
+              <h3>Seçenekli teklif <small>(ekonomik / standart / lüks — düzenlenebilir)</small></h3>
+              <div id="secenekAlan"></div>
               <h3>Modül başına maliyet ve satış</h3>
               <div id="modulMaliyetTablo" class="tablo-kap"></div>
               <h3>Maliyet kalemleri</h3>
@@ -155,6 +216,9 @@
   <script src="js/maliyet.js"></script>
   <script src="js/yerlesim.js"></script>
   <script src="js/cizim.js"></script>
+  <script src="js/delik.js"></script>
+  <script src="js/montaj.js"></script>
+  <script src="js/uc.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

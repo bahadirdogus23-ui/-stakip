@@ -31,7 +31,7 @@
     const A = proje.ayarlar;
     const F = A.fiyat;
     const bantCarpan = 1 + sayi(F.bantFire) / 100;
-    const kalemler = { malzeme: [], hirdavat: [], hizmet: [], iscilik: [], diger: [] };
+    const kalemler = { malzeme: [], hirdavat: [], hizmet: [], iscilik: [], montaj: [], diger: [] };
     const eksikFiyat = [];
 
     // ---------- Plaka malzeme, işlem (boya vb.), bant ----------
@@ -85,6 +85,14 @@
       });
     }
 
+    // ---------- Yerinde montaj hırdavatı (birleştirme, askı, devrilme önleyici) ----------
+    for (const h of sonuc.montajHirdavat || []) {
+      const birimFiyat = hirdavatFiyati(A, h.kod);
+      const katalog = Hesap.HIRDAVAT_KALEMLERI[h.kod];
+      if (!(birimFiyat > 0)) eksikFiyat.push(`${katalog ? katalog.ad : h.ad} fiyatı`);
+      kalemler.montaj.push({ kod: h.kod, ad: h.ad, adet: h.adet, birim: h.birim, fiyatMiktari: h.fiyatMiktari, fiyatBirimi: katalog ? katalog.birim : h.birim, birimFiyat, tutar: kurus(h.fiyatMiktari * birimFiyat) });
+    }
+
     // ---------- İşçilik ----------
     // Dolap işçiliği yalnızca gövdeli modüllere; tek parça paneller ayrı (düşük) birim fiyatla
     const adetOf = (m) => Math.max(1, Math.floor(sayi(m.adet) || 1));
@@ -104,9 +112,10 @@
       hirdavat: topla(kalemler.hirdavat),
       hizmet: topla(kalemler.hizmet),
       iscilik: topla(kalemler.iscilik),
+      montaj: topla(kalemler.montaj),
       diger: topla(kalemler.diger),
     };
-    const maliyet = kurus(ara.malzeme + ara.hirdavat + ara.hizmet + ara.iscilik + ara.diger);
+    const maliyet = kurus(ara.malzeme + ara.hirdavat + ara.hizmet + ara.iscilik + ara.montaj + ara.diger);
 
     // ---------- Modül başına maliyet dağılımı ----------
     // Malzeme/ebatlama net alan payına, bant metre payına göre; hırdavat ve işçilik modülün kendisinden.
@@ -142,12 +151,16 @@
       const birimFiyat = kurus(x.birim * karCarpan);
       return { ad: m.ad, aciklama: olcu, adet: x.adet, birimFiyat, tutar: kurus(birimFiyat * x.adet) };
     });
+    if (ara.montaj > 0) {
+      const birimFiyat = kurus(ara.montaj * karCarpan);
+      teklifSatirlari.push({ ad: 'Montaj aksesuarları (birleştirme, askı)', aciklama: '', adet: 1, birimFiyat, tutar: birimFiyat });
+    }
     for (const d of kalemler.diger) {
       const birimFiyat = kurus(d.tutar * karCarpan);
       teklifSatirlari.push({ ad: d.ad, aciklama: '', adet: 1, birimFiyat, tutar: birimFiyat });
     }
     // Modüllere dağıtılamayan küçük kalan (yuvarlama, modül dışı malzeme) son satıra değil ayrı izlenir
-    const dagitilan = kurus(modulMaliyetleri.reduce((a, x) => a + x.toplam, 0) + ara.diger);
+    const dagitilan = kurus(modulMaliyetleri.reduce((a, x) => a + x.toplam, 0) + ara.diger + ara.montaj);
     const satisKdvHaric = kurus(teklifSatirlari.reduce((a, x) => a + x.tutar, 0));
     const kdv = kurus(satisKdvHaric * sayi(F.kdvOrani) / 100);
     return {
@@ -169,5 +182,42 @@
     };
   }
 
-  return { maliyetHesapla, hirdavatFiyati, kurus };
+  /** Hazır teklif seçenekleri (kullanıcı düzenler). Boş alan = proje ayarı. */
+  const HAZIR_SECENEKLER = [
+    { ad: 'Ekonomik', aciklama: 'Suntalam kapak, standart menteşe ve ray', kullanim: { kapak: 'sl18' }, hirdavat: { mentese: 'standart', ray: 'bilyeli', kulp: 'kulp' }, karOrani: null },
+    { ad: 'Standart', aciklama: 'Proje ayarlarındaki malzeme ve hırdavat', kullanim: {}, hirdavat: {}, karOrani: null },
+    { ad: 'Lüks', aciklama: 'Lake kapak, frenli menteşe, gizli ray, kulpsuz', kullanim: { kapak: 'lake18' }, hirdavat: { mentese: 'frenli', ray: 'gizli', kulp: 'gola' }, karOrani: null },
+  ];
+
+  /** Bir seçeneğin uygulandığı proje kopyası (modüle özel seçimler korunur). */
+  function secenekProjesi(proje, sec) {
+    const p = JSON.parse(JSON.stringify(proje));
+    for (const [k, v] of Object.entries(sec.kullanim || {})) if (v && p.ayarlar.malzemeler.some((m) => m.id === v)) p.ayarlar.kullanim[k] = v;
+    for (const [k, v] of Object.entries(sec.hirdavat || {})) if (v && Hesap.HIRDAVAT_SECENEKLERI[k] && Hesap.HIRDAVAT_SECENEKLERI[k].secenekler[v]) p.ayarlar.hirdavat[k] = v;
+    if (sec.karOrani != null && Number.isFinite(Number(sec.karOrani))) p.ayarlar.fiyat.karOrani = Number(sec.karOrani);
+    return p;
+  }
+
+  /**
+   * Seçenekli teklif: her seçenek için tam hesap (kesim, plaka, maliyet).
+   * plakaSayisiHesapla(proje, sonuc) → { malzemeId: plaka } (yerleşim modülünden).
+   */
+  function secenekleriHesapla(proje, secenekler, plakaSayisiHesapla) {
+    return secenekler.map((sec) => {
+      const p = secenekProjesi(proje, sec);
+      const sonuc = Hesap.projeHesapla(p);
+      const r = maliyetHesapla(p, sonuc, plakaSayisiHesapla(p, sonuc));
+      const malz = (k) => (Hesap.malzemeBul(p.ayarlar, p.ayarlar.kullanim[k]) || {}).ad;
+      const hs = (k) => Hesap.HIRDAVAT_SECENEKLERI[k].secenekler[p.ayarlar.hirdavat[k]].ad;
+      return {
+        secenek: sec, proje: p, sonuc, maliyet: r,
+        ozellikler: [
+          ['Gövde', malz('govde')], ['Kapak', malz('kapak')], ['Çekmece kutusu', malz('cekmece')],
+          ['Menteşe', hs('mentese')], ['Çekmece rayı', hs('ray')], ['Kulp', hs('kulp')], ['Bağlantı', hs('baglanti')],
+        ],
+      };
+    });
+  }
+
+  return { maliyetHesapla, hirdavatFiyati, kurus, HAZIR_SECENEKLER, secenekProjesi, secenekleriHesapla };
 });

@@ -296,7 +296,7 @@ test('maliyet: toplamlar tutarlı, modül dağılımı maliyete eşit', () => {
   const p = Hesap.projeyiNormallestir(proje([Hesap.yeniModul('alt'), u, Hesap.yeniModul('gardirop')]));
   p.ayarlar.fiyat.ekKalemler = [{ ad: 'Tezgah', tutar: 5000 }];
   const { r } = maliyetKur(p);
-  const ara = r.ara.malzeme + r.ara.hirdavat + r.ara.hizmet + r.ara.iscilik + r.ara.diger;
+  const ara = r.ara.malzeme + r.ara.hirdavat + r.ara.hizmet + r.ara.iscilik + r.ara.montaj + r.ara.diger;
   assert.ok(Math.abs(ara - r.maliyet) < 0.01);
   assert.ok(Math.abs(r.dagitimFarki) < 0.05, `dağıtım farkı ${r.dagitimFarki}`);
   const satirToplam = r.teklifSatirlari.reduce((a, x) => a + x.tutar, 0);
@@ -574,7 +574,7 @@ test('kapak notunda menteşe delik konumları, yanlarda raf pimi notu', () => {
   const s = Hesap.modulHesapla(Hesap.yeniModul('gardirop'), ayar);
   const k = s.parcalar.find((p) => p.ad === 'Kapak (satır 2)');
   // 1914 mm kapak → 4 menteşe: 100, 671.3, 1242.7, 1814
-  assert.match(k.not, /üstten 100 \/ 671\.3 \/ 1242\.7 \/ 1814 mm/);
+  assert.match(k.not, /üstten 100 \/ 671,3 \/ 1242,7 \/ 1814 mm/);
   const u = Hesap.modulHesapla(Hesap.yeniModul('ust'), ayar);
   assert.match(u.parcalar.find((p) => p.ad === 'Yan').not, /32 mm aralıkla/);
   assert.deepEqual(Hesap.mentesheKonumlari(717, 2), [100, 617]);
@@ -677,4 +677,170 @@ test('çatal-kaşıklık çekmece içine eklenir; menteşe yönü nota ve çizim
   s = Hesap.modulHesapla(t, ayar);
   assert.match(s.parcalar.find((p) => p.ad.startsWith('Kapak')).not, /sağ kenarda/);
   assert.equal(s.geo.satirlar[0].menteseYonu, 'sag');
+});
+
+// ---- Yerinde ölçü, eğimli gövde, delik planı, montaj, artık, 3B, seçenekli teklif, kulp, birleştirme ----
+const Delik = require('../js/delik.js');
+const Montaj = require('../js/montaj.js');
+const Uc = require('../js/uc.js');
+
+const egimliKiler = (arkalik) => {
+  const m = Hesap.yeniModul('boy_kiler');
+  m.egimli = true; m.sagYukseklik = 1300;
+  if (arkalik) m.arkalik = arkalik;
+  return m;
+};
+
+test('eğimli gövde: yan yükseklikleri, eğik üst tabla, arkalık gövdeyle aynı açıda', () => {
+  for (const ark of ['kanal', 'cakma']) {
+    const s = Hesap.modulHesapla(egimliKiler(ark), ayar);
+    assert.deepEqual(s.geo.egim, { HcL: 2050, HcR: 1200, aci: 54.8 });
+    assert.equal(bul(s, 'Sol yan').boy, 2050);
+    assert.equal(bul(s, 'Sağ yan').boy, 1200);
+    const alfa = Math.atan(850 / 600);
+    assert.ok(Math.abs(bul(s, 'Üst tabla (eğimli)').boy - 564 / Math.cos(alfa)) < 0.1);
+    const ark2 = bul(s, 'Arkalık');
+    assert.equal(ark2.sekil.tur, 'egimli');
+    assert.match(ark2.not, /eğim açısı 54,8°/);
+    // Yamuk kapak: sol kenar sağdan uzun
+    const kapak = s.parcalar.find((p) => /eğimli/.test(p.ad) && p.kullanim === 'kapak');
+    const [, sol, sag] = kapak.not.match(/sol ([\d,]+), sağ ([\d,]+)/).map((x) => Number(String(x).replace(',', '.')));
+    assert.ok(sol > sag);
+  }
+});
+
+test('kulp delikleri: kapakta açılan kenar, çekmecede ortalı yatay', () => {
+  const c = Hesap.kulpBaglami({}, ayar, 0);
+  const k = Hesap.kulpDelikleri(c, 'kapak', 'yana', 297, 717, true, 100);
+  assert.equal(k.yatay, false);
+  assert.equal(k.delikler.length, 2);
+  assert.equal(k.delikler[0].x, 297 - 40); // menteşe solda → kulp sağ kenardan 40
+  assert.equal(k.delikler[1].y - k.delikler[0].y, 160);
+  const c2 = Hesap.kulpDelikleri(c, 'cekmece', 'yana', 597, 150, true, 100);
+  assert.equal(c2.yatay, true);
+  assert.equal(c2.delikler[0].x + c2.delikler[1].x, 597); // ortalı
+  assert.equal(c2.delikler[1].x - c2.delikler[0].x, 160);
+  const ozel = Hesap.kulpBaglami({ kulpYon: 'yatay' }, ayar, 0);
+  assert.equal(ozel.yon, 'yatay');
+});
+
+test('montaj hırdavatı: yan yana dolaplar birleşir, asma dolaba askı, boy dolaba devrilme önleyici', () => {
+  const p = Hesap.yeniProje();
+  p.moduller = [Hesap.yeniModul('alt'), Hesap.yeniModul('alt'), Hesap.yeniModul('ust'), Hesap.yeniModul('boy_kiler')];
+  const r = Hesap.projeHesapla(p);
+  const kod = (k) => (r.montajHirdavat.find((x) => x.kod === k) || {}).adet || 0;
+  assert.ok(r.birlesimSayisi >= 2);
+  assert.ok(kod('dolap_birlestirme') >= 4);
+  assert.equal(kod('aski_aparati'), 2);
+  assert.equal(kod('devrilme'), 2);
+  p.yerlesim.birlestir = false;
+  assert.equal(Hesap.projeHesapla(p).birlesimSayisi, 0);
+});
+
+test('yerinde ölçü: pencere çakışması, tavan ve arkalık delik notu', () => {
+  const p = Hesap.yeniProje();
+  p.moduller = [Hesap.yeniModul('alt'), Hesap.yeniModul('ust')];
+  assert.deepEqual(Hesap.projeHesapla(p).saha.uyarilar, []);
+  p.yerlesim.engeller = [
+    { tur: 'pencere', duvar: 'A', x: 0, genislik: 1000, y: 900, yukseklik: 1200 },
+    { tur: 'priz', duvar: 'A', x: 300, genislik: 80, y: 400, yukseklik: 80 },
+  ];
+  p.yerlesim.tavan = 2000;
+  const s = Hesap.projeHesapla(p).saha;
+  assert.ok(s.uyarilar.some((u) => /pencere denizliğinden/.test(u)));
+  assert.ok(s.uyarilar.some((u) => /pencere ile çakışıyor/.test(u)));
+  assert.ok(s.notlar.length >= 1);
+  // Kötü veri temizlenir
+  p.yerlesim.engeller.push({ tur: '<script>', duvar: 'Z', x: 'a' });
+  const n = Hesap.projeyiNormallestir(p);
+  assert.ok(n.yerlesim.engeller.every((e) => Hesap.ENGEL_TURLERI[e.tur] && ['A', 'B'].includes(e.duvar)));
+});
+
+test('artık stoku: önce sığan artık kullanılır, tam plaka sayısı düşer', () => {
+  const parcalar = [{ no: 1, ad: 'A', w: 600, h: 500, adet: 2, damar: false }];
+  const plaka = { uzun: 2800, kisa: 2100 };
+  const bos = Yerlesim.yerlestir(parcalar, plaka, { testere: 4, kenarPayi: 10 });
+  assert.equal(bos.tamPlaka, 1);
+  const y = Yerlesim.yerlestir(parcalar, plaka, { testere: 4, kenarPayi: 10, artiklar: [{ id: 'a1', uzun: 1300, kisa: 700, adet: 1 }, { id: 'kucuk', uzun: 300, kisa: 300, adet: 3 }] });
+  assert.equal(y.tamPlaka, 0);
+  assert.deepEqual(y.kullanilanArtiklar.map((a) => a.id), ['a1']);
+  // Giyotin boşlukları üst üste binmez, çıkan artıklar en az artikMin
+  for (const pl of y.plakalar) for (const a of pl.artiklar) assert.ok(a.kisa >= 250);
+});
+
+test('seçenekli teklif: seçenekler hırdavat ve kapak malzemesini değiştirir, fiyat sıralı', () => {
+  const p = Hesap.yeniProje();
+  p.moduller = [Hesap.yeniModul('alt_cekmece3'), Hesap.yeniModul('ust')];
+  const sayac = (pr, sn) => Yerlesim.plakaSayilari(Yerlesim.projeYerlesimi(sn.kesimListesi, pr.ayarlar, []));
+  const R = Maliyet.secenekleriHesapla(p, Maliyet.HAZIR_SECENEKLER, sayac);
+  assert.equal(R.length, 3);
+  assert.equal(R[2].proje.ayarlar.hirdavat.mentese, 'frenli');
+  assert.equal(R[2].proje.ayarlar.kullanim.kapak, 'lake18');
+  assert.equal(p.ayarlar.hirdavat.mentese, Hesap.varsayilanAyarlar().hirdavat.mentese); // asıl proje değişmez
+  assert.ok(R[0].maliyet.genelToplam < R[2].maliyet.genelToplam);
+  const ozel = Maliyet.secenekleriHesapla(p, [{ ad: 'X', kullanim: { kapak: 'yok_boyle' }, hirdavat: { ray: 'olmayan' }, karOrani: 50 }], sayac)[0];
+  assert.equal(ozel.proje.ayarlar.kullanim.kapak, p.ayarlar.kullanim.kapak); // geçersiz seçim yok sayılır
+  assert.equal(ozel.proje.ayarlar.fiyat.karOrani, 50);
+});
+
+test('delik planı: sınırlar içinde, yan ile tabla bağlantı delikleri aynı derinlikte', () => {
+  for (const id of ['alt', 'alt_cekmece3', 'ust', 'gardirop']) {
+    const m = Hesap.yeniModul(id);
+    const s = Hesap.modulHesapla(m, ayar);
+    const d = Delik.delikPlani(m, s, ayar);
+    assert.equal(d.destek, true, id);
+    for (const p of d.parcalar) for (const h of p.delikler) {
+      assert.ok(h.x >= 0 && h.x <= p.w && h.y >= 0 && h.y <= p.h, `${id} ${p.ad} ${h.ad} (${h.x},${h.y})`);
+    }
+    if (m.yapi === 'tabla_boydan') continue; // tablalar yanların üstünde; eşleşme uç deliklerle
+    const yan = d.parcalar.find((p) => /^Yan/.test(p.ad));
+    const tabla = d.parcalar.find((p) => /^Alt tabla/.test(p.ad));
+    const yanX = new Set(yan.delikler.filter((h) => /Minifix|Konfirmat|Kavela/.test(h.ad) && h.y < 30).map((h) => h.x));
+    const tablaY = tabla.delikler.filter((h) => /Minifix|Konfirmat|Kavela/.test(h.ad) && h.x < 40).map((h) => h.y);
+    assert.ok(tablaY.length > 0 && tablaY.every((y) => yanX.has(y)), `${id}: ${[...yanX]} / ${tablaY}`);
+  }
+  const lk = Hesap.yeniModul('lkose');
+  assert.equal(Delik.delikPlani(lk, Hesap.modulHesapla(lk, ayar), ayar).destek, false);
+});
+
+test('montaj kılavuzu: köşegen, eğimli gövdede iki ayrı köşegen', () => {
+  const p = Hesap.yeniProje();
+  const m = Hesap.yeniModul('alt');
+  p.moduller = [m];
+  const metin = JSON.stringify(Montaj.kilavuz(m, Hesap.modulHesapla(m, ayar), p, Hesap.projeHesapla(p)));
+  assert.match(metin, new RegExp(`≈ ${Math.round(Math.hypot(600, 770))} mm`));
+  assert.doesNotMatch(metin, /undefined|NaN/);
+  const e = egimliKiler();
+  p.moduller = [e];
+  const m2 = JSON.stringify(Montaj.kilavuz(e, Hesap.modulHesapla(e, ayar), p, Hesap.projeHesapla(p)));
+  assert.match(m2, new RegExp(`sol alt → sağ üst ≈ ${Math.round(Math.hypot(600, 1200))} mm`));
+  assert.doesNotMatch(m2, /undefined|NaN/);
+});
+
+test('3B görünüm: tüm katalog ve L proje NaN içermeden çizilir', () => {
+  for (const id of Object.keys(Hesap.PRESETLER)) {
+    const m = Hesap.yeniModul(id);
+    const s = Hesap.modulHesapla(m, ayar);
+    if (!s.geo) continue;
+    const svg = Uc.ciz(Uc.modulParcalari(s.geo, {}), { yaw: -35, pitch: 22 }, {});
+    assert.doesNotMatch(svg, /NaN|undefined/, id);
+  }
+  const p = Hesap.yeniProje();
+  p.yerlesim.tip = 'L';
+  p.moduller = [Hesap.yeniModul('lkose'), Hesap.yeniModul('alt'), Object.assign(Hesap.yeniModul('alt'), { duvar: 'B' }), egimliKiler()];
+  const r = Hesap.projeHesapla(p);
+  const svg = Uc.ciz(Uc.projeParcalari(r.yerlesim, {}), { yaw: -35, pitch: 22 }, {});
+  assert.ok(svg.startsWith('<svg'));
+  assert.doesNotMatch(svg, /NaN|undefined/);
+});
+
+test('kulp sığmazsa önce diğer yön, sonra tek delikli düğme', () => {
+  const c = Object.assign(Hesap.kulpBaglami({ kulpYon: 'yatay' }, ayar, 0), {});
+  const dar = Hesap.kulpDelikleri(c, 'kapak', 'yana', 150, 700, true, 100);
+  assert.equal(dar.yatay, false); // yatay sığmadı, dikeye döndü
+  assert.equal(dar.delikler.length, 2);
+  const kucuk = Hesap.kulpDelikleri(c, 'cekmece', 'yana', 150, 120, true, 100);
+  assert.equal(kucuk.dugme, true);
+  assert.equal(kucuk.delikler.length, 1);
+  assert.match(kucuk.not, /düğme/);
 });
