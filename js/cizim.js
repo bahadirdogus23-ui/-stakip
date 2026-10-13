@@ -560,11 +560,14 @@
     const h = p.h;
     const fs = Math.max(w, h) / 30;
     const pay = fs * 4;
-    let s = rect(0, 0, w, h, 'delik-parca');
-    for (const k of p.kanallar) s += rect(k.x1, k.y1, k.x2, k.y2, 'delik-kanal');
+    // Yamuk parçada gerçek kontur, kaba kesim kutusu kesikli
+    let s = p.kontur
+      ? rect(0, 0, w, h, 'delik-kutu') + `<polygon class="delik-parca" points="${p.kontur.map(([x, y]) => `${f(x)},${f(-y)}`).join(' ')}"/>`
+      : rect(0, 0, w, h, 'delik-parca');
+    for (const k of p.kanallar) s += rect(k.x1, k.y1, k.x2, k.y2, /oyma/.test(k.ad) ? 'delik-kanal oyma' : 'delik-kanal');
     for (const d of p.delikler) {
       const r = Math.max(d.cap / 2, fs * 0.12);
-      if (d.yuz.endsWith('uç')) {
+      if (/(uç|ucu)$/.test(d.yuz)) {
         // Uçtan delik: kenarda yarım daire işareti
         s += `<circle class="delik d-${d.tur} uc" cx="${f(d.x)}" cy="${f(-d.y)}" r="${f(r)}"/>`;
       } else s += `<circle class="delik d-${d.tur}${d.yuz === 'iç yüz' && p.eksen.includes('önden') ? ' arka' : ''}" cx="${f(d.x)}" cy="${f(-d.y)}" r="${f(r)}"/>`;

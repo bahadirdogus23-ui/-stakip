@@ -20,7 +20,10 @@ const ara = (a, b) => Math.round(a + rnd() * (b - a));
 const E = 0.6; // ölçü toleransı (mm), 0,1 yuvarlamalar için
 
 const ihlaller = new Map();
+let aktifAyar = null;
+const dokum = {};
 function ihlal(kural, modul, detay) {
+  if (process.env.DOKUM && !dokum[kural]) dokum[kural] = { modul, ayar: aktifAyar, detay };
   if (!ihlaller.has(kural)) ihlaller.set(kural, []);
   const L = ihlaller.get(kural);
   if (L.length < 3) L.push({ detay, modul: JSON.stringify(modul).slice(0, 400) });
@@ -69,6 +72,7 @@ function rastgeleModul() {
 const W0 = (g) => g.W;
 
 function denetle(m, A) {
+  aktifAyar = A;
   let s;
   try { s = H.modulHesapla(m, A); } catch (e) { ihlal('İstisna (çökme)', m, e.stack.split('\n').slice(0, 2).join(' ')); return; }
   const uyarili = s.uyarilar.length > 0;
@@ -85,9 +89,19 @@ function denetle(m, A) {
   // Delik planı, montaj kılavuzu ve 3B görünüm üretilebilmeli
   try {
     const d = D.delikPlani(m, s, A);
-    for (const p of d.parcalar || []) for (const h of p.delikler) {
-      if (!(h.x >= -E && h.x <= p.w + E && h.y >= -E && h.y <= p.h + E)) { ihlal('Delik parça dışında', m, `${p.ad} ${h.ad} ${h.x},${h.y} / ${p.w}×${p.h}`); break; }
+    for (const p of d.parcalar || []) {
+      if (p.disarida) ihlal('Delik parça dışına düşüyor', m, `${p.ad} ${p.w}×${p.h}: ${p.disarida} delik, ör. ${p.disariOrnek}`);
+      if (!(p.w > 0 && p.h > 0)) ihlal('Delik planında geçersiz parça ölçüsü', m, `${p.ad} ${p.w}×${p.h}`);
+      if (p.notlar.some((n) => /dikey parça yok/.test(n))) ihlal('Yatay parçanın ucu boşta', m, p.ad);
+      const c = p.notlar.find((n) => /çakışıyor/.test(n));
+      if (c && !s.uyarilar.length) ihlal('Uyarısız dolapta çakışan delikler', m, `${p.ad}: ${c}`);
     }
+    for (const x of d.deliksiz || []) if (x.neden === 'Delik tanımı yok.') ihlal('Delik planında tanımsız parça', m, x.ad);
+    const say = (ad) => (d.parcalar || []).reduce((a, p) => a + p.delikler.filter((h) => h.ad === ad).length * p.adet, 0);
+    const gecersizParca = s.uyarilar.some((u) => /ölçüsü geçersiz/.test(u)); // eşi plandan düşer
+    const pim = say('Minifix pimi Ø5');
+    if (!gecersizParca && (say('Pim geçişi Ø8 (uçtan)') !== pim || say('Minifix gövdesi Ø15') !== pim)) ihlal('Minifix delikleri eşleşmiyor', m, `${pim} / ${say('Pim geçişi Ø8 (uçtan)')} / ${say('Minifix gövdesi Ø15')}`);
+    if (!gecersizParca && say('Konfirmat Ø7 (boydan, havşalı)') !== say('Konfirmat kılavuz Ø5 (uçtan)')) ihlal('Konfirmat delikleri eşleşmiyor', m, '');
     const proje = H.projeyiNormallestir({ moduller: [m] });
     const k = JSON.stringify(K.kilavuz(m, s, proje, H.projeHesapla(proje)));
     if (/NaN|undefined/.test(k)) ihlal('Montaj kılavuzunda NaN/undefined', m, '');
@@ -174,7 +188,14 @@ function denetle(m, A) {
 const N = Number(process.argv[2]) || 3000;
 const A = H.varsayilanAyarlar();
 for (const k of Object.keys(H.PRESETLER)) denetle(H.yeniModul(k), A);
-for (let i = 0; i < N; i++) denetle(rastgeleModul(), A);
+const ayarCesidi = () => {
+  const a = JSON.parse(JSON.stringify(A));
+  for (const k of ['baglanti', 'araBaglanti', 'ray', 'kulp', 'mentese']) a.hirdavat[k] = sec(Object.keys(H.HIRDAVAT_SECENEKLERI[k].secenekler));
+  a.cekmeceTabani = sec(['cakma', 'kanal']);
+  a.kulpYon = sec(['dikey', 'yatay']);
+  return a;
+};
+for (let i = 0; i < N; i++) denetle(rastgeleModul(), rnd() < 0.5 ? A : ayarCesidi());
 
 // Proje düzeyi: maliyet ve yerleşim
 for (let i = 0; i < 200; i++) {
@@ -209,3 +230,4 @@ for (const [k, L] of ihlaller) {
   for (const x of L.filter(Boolean)) console.log(`   ${x.detay}\n     ${x.modul.slice(0, 260)}`);
 }
 process.exitCode = ihlaller.size ? 1 : 0;
+if (process.env.DOKUM) require('fs').writeFileSync(process.env.DOKUM, JSON.stringify(dokum, null, 1));

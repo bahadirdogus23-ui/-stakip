@@ -569,8 +569,8 @@
     const L = sonuc.kesimListesi;
     if (!L.length) return '<p class="bos">Parça yok.</p>';
     let onceki = null;
-    const kolon = yazdir ? 9 : 10;
-    let html = `<table class="liste kesim"><thead><tr>${yazdir ? '<th class="kutu-sutun">✓</th>' : ''}<th>No</th><th>Parça</th><th>Adet</th>${yazdir ? '' : '<th>Net boy</th><th>Net en</th>'}<th>Kesim boy</th><th>Kesim en</th><th>Bant</th><th>Damar</th><th>Modül</th></tr></thead><tbody>`;
+    const kolon = yazdir ? 10 : 11;
+    let html = `<table class="liste kesim"><thead><tr>${yazdir ? '<th class="kutu-sutun">✓</th>' : ''}<th>No</th><th>Parça</th><th>Adet</th>${yazdir ? '' : '<th>Net boy</th><th>Net en</th>'}<th>Kesim boy</th><th>Kesim en</th><th>Bant</th><th>Damar</th><th title="Parça başına delik sayısı (Atölye sekmesindeki delik planı)">Delik</th><th>Modül</th></tr></thead><tbody>`;
     for (const p of L) {
       const malz = malzeme(p.malzeme);
       if (p.malzeme !== onceki) {
@@ -583,7 +583,7 @@
       html += `<tr>${yazdir ? '<td class="kutu-sutun"><span class="isaret"></span></td>' : ''}<td>${p.no}</td><td>${esc(p.ad)}${p.not ? `<div class="parca-not">${esc(p.not)}</div>` : ''}</td><td class="sag kalin">${p.adet}</td>
         ${yazdir ? '' : `<td class="sag">${sayiYaz(p.boy)}</td><td class="sag">${sayiYaz(p.en)}</td>`}
         <td class="sag kalin">${sayiYaz(p.kesimBoy)}</td><td class="sag kalin">${sayiYaz(p.kesimEn)}</td>
-        <td class="bant-hucre">${Cizim.bantSimgesi(p.bant, 30)}<span>${bantYazi(p.bant)}</span></td><td>${p.damar ? 'Var' : '—'}</td><td class="kucuk">${esc(p.moduller.join(', '))}</td></tr>`;
+        <td class="bant-hucre">${Cizim.bantSimgesi(p.bant, 30)}<span>${bantYazi(p.bant)}</span></td><td>${p.damar ? 'Var' : '—'}</td><td class="sag">${esc(kesimDelikSayisi(p))}</td><td class="kucuk">${esc(p.moduller.join(', '))}</td></tr>`;
     }
     return html + '</tbody></table>';
   }
@@ -1056,10 +1056,10 @@
     return L.length ? L.map((p) => `#${p.no}`).join(', ') : '';
   };
   function delikHtml(m) {
-    const s = sonuc.modulSonuclari[m.id];
-    const d = Delik.delikPlani(m, s, proje.ayarlar);
+    const d = delikPlaniAl(m);
     if (!d.destek) return `<p class="not">${esc(d.mesaj)}</p>`;
-    return `<p class="not">${esc(d.eksenNotu)} Kırmızı: bağlantı · mavi: raf pimi · kahverengi halka: menteşe çanağı · kahverengi: menteşe plakası · yeşil: ray · siyah: kulp · beyaz kırmızı halka: uçtan delik · gri şerit: kanal.</p>`
+    const deliksiz = d.deliksiz.length ? `<div class="delik-kart deliksiz"><h4>Delik gerektirmeyen parçalar</h4><ul class="kucuk">${d.deliksiz.map((x) => `<li><b>${esc(x.ad)}</b> ${kesimNo(m, x.ad) ? `<span class="rozet">${esc(kesimNo(m, x.ad))}</span>` : ''} — ${esc(x.neden)}</li>`).join('')}</ul></div>` : '';
+    return `<p class="not">${esc(d.eksenNotu)} Kırmızı: bağlantı · mavi: raf pimi · kahverengi halka: menteşe çanağı · kahverengi: menteşe plakası · yeşil: ray · siyah: kulp · gri-kahve: vida/aksesuar yeri · beyaz kırmızı halka: uçtan/kenardan delik · gri şerit: kanal · kırmızı alan: oyma.</p>`
       + d.parcalar.map((p) => `
       <div class="delik-kart">
         <h4>${esc(p.ad)} ${kesimNo(m, p.kaynak) ? `<span class="rozet">${esc(kesimNo(m, p.kaynak))}</span>` : ''} <small>${p.w} × ${p.h} mm${p.adet > 1 ? ` · ${p.adet} adet aynı` : ''} · ${esc(p.eksen)}</small></h4>
@@ -1068,11 +1068,30 @@
           <div class="delik-liste">
             ${p.ozet.length ? `<p class="kucuk">${esc(p.ozet.join(' · '))}</p>` : ''}
             ${p.delikler.length ? `<div class="delik-tablo-kap"><table class="liste kucuk-tablo"><thead><tr><th>Delik</th><th>Yüz</th><th>x</th><th>y</th><th>Ø×der.</th></tr></thead><tbody>${p.delikler.map((x) => `<tr><td>${esc(x.ad)}</td><td>${esc(x.yuz)}</td><td class="sag">${sayiYaz(x.x)}</td><td class="sag">${sayiYaz(x.y)}</td><td class="sag">${x.cap}${x.derinlik ? '×' + sayiYaz(x.derinlik) : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}
-            ${p.kanallar.map((k) => `<p class="kucuk">${esc(k.ad)}: ön kenardan ${sayiYaz(k.x1)}–${sayiYaz(k.x2)} mm</p>`).join('')}
+            ${p.kanallar.map((k) => `<p class="kucuk">▭ ${esc(k.ad)}${k.konum ? `: ${esc(k.konum)}` : ''}</p>`).join('')}
             ${p.notlar.map((n) => `<p class="kucuk">• ${esc(n)}</p>`).join('')}
           </div>
         </div>
-      </div>`).join('');
+      </div>`).join('') + deliksiz;
+  }
+  /** Modül başına delik planı; aynı hesap sonucu için önbellekli. */
+  function delikPlaniAl(m) {
+    if (!sonuc._delik) sonuc._delik = {};
+    if (!sonuc._delik[m.id]) sonuc._delik[m.id] = Delik.delikPlani(m, sonuc.modulSonuclari[m.id], proje.ayarlar);
+    return sonuc._delik[m.id];
+  }
+  /** Kesim listesindeki bir satırın parça başına delik sayısı ("—": delik gerekmez). */
+  function kesimDelikSayisi(p) {
+    const sayilar = new Set();
+    let deliksiz = false;
+    for (const m of proje.moduller.filter((x) => p.moduller.includes(x.ad))) {
+      const d = delikPlaniAl(m);
+      if (!d.destek) continue;
+      for (const x of d.parcalar) if (x.kaynak && (p.ad === x.kaynak || p.ad.startsWith(x.kaynak))) sayilar.add(x.delikler.length);
+      if (d.deliksiz.some((x) => x.ad === p.ad)) deliksiz = true;
+    }
+    if (sayilar.size) return [...sayilar].sort((a, b) => a - b).join(' / ');
+    return deliksiz ? '—' : '';
   }
   function montajHtml(m) {
     const k = Montaj.kilavuz(m, sonuc.modulSonuclari[m.id], proje, sonuc);
@@ -1210,6 +1229,7 @@
     html += kesimYazdirHtml();
     html += `<section class="y-sayfa">${baslikHtml('Hırdavat listesi')}${hirdavatHtml()}<h2>Yerinde montaj hırdavatı</h2>${montajHirdavatHtml()}</section>`;
     html += montajYazdirHtml();
+    html += delikYazdirHtml();
     maliyetCiz();
     html += `<section class="y-sayfa">${baslikHtml('Maliyet (iç kullanım)')}${$('#maliyetOzet').innerHTML}<h2>Modül başına</h2>${$('#modulMaliyetTablo').innerHTML}<h2>Kalemler</h2>${$('#maliyetKalemleri').innerHTML}</section>`;
     html += `<section class="y-sayfa">${baslikHtml('Plaka kesim planları')}${plakaHtml(true)}</section>`;
@@ -1251,14 +1271,25 @@
       const m = malzeme(p.malzeme);
       satirlar.push([p.no, m.ad, sayi(m.kalinlik), p.ad, p.adet, sayi(p.boy), sayi(p.en), sayi(p.kesimBoy), sayi(p.kesimEn), p.bant.u, p.bant.k, p.damar ? 'Var' : 'Yok', p.moduller.join(', '), p.not || '']);
     }
-    // Excel'in hücreyi formül olarak çalıştırmaması için = + - @ ile başlayan metinler etkisizleştirilir.
+    csvIndir(`${dosyaAdi()} - kesim listesi.csv`, satirlar);
+  });
+  // Excel'in hücreyi formül olarak çalıştırmaması için = + - @ ile başlayan metinler etkisizleştirilir.
+  function csvIndir(ad, satirlar) {
     const hucre = (c) => {
-      let x = String(c);
+      let x = typeof c === 'number' ? String(c).replace('.', ',') : String(c);
       if (typeof c === 'string' && /^[=+\-@\t\r]/.test(x)) x = "'" + x;
       return `"${x.replace(/"/g, '""')}"`;
     };
     const csv = satirlar.map((r) => r.map(hucre).join(';')).join('\r\n');
-    indir(`${dosyaAdi()} - kesim listesi.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+    indir(ad, '\ufeff' + csv, 'text/csv;charset=utf-8');
+  }
+  $('#btnDelikCsv').addEventListener('click', () => {
+    const satirlar = [['Modül', 'Parça', 'Adet', 'Parça en (x)', 'Parça boy (y)', 'Delik / işlem', 'Yüz', 'x', 'y', 'Çap', 'Derinlik']];
+    for (const m of proje.moduller) {
+      const d = delikPlaniAl(m);
+      if (d.destek) satirlar.push(...Delik.csvSatirlari(m.ad, d));
+    }
+    csvIndir(`${dosyaAdi()} - delik plani.csv`, satirlar);
   });
 
   $('#btnKaydet').addEventListener('click', () => indir(`${dosyaAdi()}.json`, JSON.stringify(proje, null, 2), 'application/json'));

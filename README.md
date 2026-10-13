@@ -16,7 +16,13 @@
 - **Atölye notları:** kapaklarda menteşe çanak delik konumları (Ø35, kenardan 22,5 mm, üstten mesafeler), yan ve dikmelerde 32 mm sistem raf pimi delik notu.
 - **Yerinde ölçü formu:** tavan yüksekliği, köşe açısı, duvar sapması ve engeller (pencere, kapı, kolon, priz, su, gaz, kalorifer…). Dolap–engel ve tavan çakışmaları uyarılır; priz/su/gaz bir dolabın arkasına denk gelirse arkalıkta açılacak delik konumu verilir. Telefonda kullanılabilir.
 - **Eğimli gövde (çatı / merdiven altı):** sol ve sağ yükseklik ayrı girilir; farklı boyda yanlar, açılı kesilen üst tabla, gövdeyle aynı açıda yamuk arkalık ve yamuk kapaklar hesaplanır.
-- **Delik planı (Atölye):** her parça için bağlantı (minifix/konfirmat/kavela), raf pimi, menteşe çanağı ve plakası, ray vidası ve kulp delikleri x/y, çap ve derinlikle; ölçülü delik çizimi. Karşılıklı parçaların delikleri birbirine denk gelir. (L köşe ve panellerde henüz yok.)
+- **Delik planı (Atölye), tüm modül türlerinde:** normal ve eğimli gövde, L köşe dolap ve paneller. Her parça için x/y, çap, derinlik ve yüzle:
+  - gövde: yan, bölme dikmesi, satır içi ara dikme, alt/üst tabla, kuşak, ara tabla, sabit raf bağlantıları (minifix + kavela, konfirmat, kavela, şeffaf bağlantı); arkalık ve taban kanalları; çakma arkalık vida yerleri
+  - donanım: raf pimi (satır içinde kalır), menteşe çanağı ve plakası, yukarı kalkan/klapa menteşeleri, ray vidaları (bilyeli, gizli, metal), askı borusu flanşı, LED profil yeri ve kablo deliği, ayak/tekerlek yerleri, sürgü ray ve tekerlek yuvaları
+  - ön yüzler: kapak (düz, cam, ayna, alüminyum profil, MDF çerçeve dikme/kayıt kavelaları ve cam lambası), çekmece önü kulp ve kutuya bağlantı vidaları, sabit ön köşebent yerleri
+  - çekmece kutuları (yan, ön, arka, taban), iç çekmece dolgu panelleri (menteşe plakası için oyma), baza çerçevesi, baza çekmecesi taşıyıcıları, kör panel çıtası
+  - L köşe: kol yanları, köşede birleşen tablalar, katlanır kapak menteşeleri, arkalıklar; paneller: köşebent, gizli raf taşıyıcı yuvaları, bulaşık kapağı kulpu, baza klipsleri
+  - Karşılıklı parçaların delikleri birbirine denk gelir, çakışan raf pimi atlanır; delik gerektirmeyen parçalar gerekçesiyle listelenir. Kesim listesinde parça başına delik sayısı, tüm delikler için CSV (CNC) ve PDF çıktısı vardır.
 - **Montaj kılavuzu:** parça numaralarıyla adım adım çekmece kutusu, gövde (gönye köşegeni dahil), ayak/baza, iç donanım, ön yüzler ve yerinde montaj.
 - **Artık stoku:** önceki işlerden kalan parçalar kaydedilir; plaka yerleşimi yeni plaka açmadan önce uygun artığı kullanır, işten çıkacak yeni artıklar listelenir ve tek tuşla stoğa eklenir.
 - **3B görünüm:** tek dolap veya tüm mutfak (L dahil); fare/dokunmatikle döndürme, hazır açılar, kapaksız iç görünüm.

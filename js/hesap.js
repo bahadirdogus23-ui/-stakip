@@ -1055,6 +1055,7 @@
     const ray = HIRDAVAT_SECENEKLERI.ray.secenekler[HS.ray];
     const kd = say(A.arkalikKanalDerinligi, 8);
     let metalUyarisi = false;
+    const kutular = []; // delik planı için çekmece kutusu ölçüleri
     /**
      * Çekmece kutusu parçalarını ekler (normal, iç ve baza çekmecesi ortak).
      * acW: rayların takıldığı açıklık, otoH: otomatik kutu yüksekliği, maksH: sığabilecek en yüksek kutu,
@@ -1079,6 +1080,11 @@
         uyarilar.push(`${etiket}: çekmece kutusu yüksekliği ${kutuH} mm, çok düşük (en az 50 mm).`);
         return null;
       }
+      const icGenislik = HS.ray === 'metal' ? acW - ray.arkaFark : acW - 2 * ray.yanBosluk - 2 * tc;
+      if (icGenislik < 60) {
+        uyarilar.push(`${etiket}: açıklık (${r1(acW)} mm) çekmece kutusu için çok dar.`);
+        return null;
+      }
       if (HS.ray === 'metal') {
         // Metal yanlı sistem: yanlar hazır gelir, yalnızca taban ve arkalık kesilir.
         const arkaH = kutuH >= 180 ? 167 : kutuH >= 110 ? 100 : 68;
@@ -1087,6 +1093,7 @@
         hEkle('cekmece_metal', `Metal yanlı çekmece seti ${L} mm (arka yük. ${arkaH})`, adet, 'takım');
         if (!metalUyarisi) uyarilar.push('Metal yanlı çekmece ölçüleri genel değerlerdir; kullandığınız markanın kataloğuyla kontrol edin.');
         metalUyarisi = true;
+        kutular.push({ etiket, metal: true, L, tabanBoy: L - ray.boyFark, tabanEn: acW - ray.tabanFark, arkaW: acW - ray.arkaFark, arkaH, adet });
         return { L, kutuW: acW - 10, kutuH: arkaH, pay: 5 };
       }
       const kutuW = acW - 2 * ray.yanBosluk;
@@ -1101,6 +1108,7 @@
       }
       hEkle('ray_' + HS.ray, `${ray.ad} ${L} mm`, adet, 'takım');
       if (HS.kulp === 'basac') hEkle('basac_ray', 'Ray için bas-aç adaptörü', adet);
+      kutular.push({ etiket, metal: false, L: kutuL, kutuW, kutuH, tc, kd, ta, taban: A.cekmeceTabani, ray: HS.ray, adet });
       return { L: kutuL, kutuW, kutuH, pay: ray.yanBosluk };
     }
     function cekmeceIciEkle(tur, adet, icGenislik) {
@@ -1183,7 +1191,7 @@
         let x = t;
         for (let k = 0; k < ns - 1; k++) {
           x += genislikler[k];
-          ekle(`Bölme dikmesi (boydan) ${k + 1}`, 'govde', HcX(x + t / 2) - t - t / Math.cos(egim.alfa), icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir` });
+          ekle(`Bölme dikmesi (boydan) ${k + 1}`, 'govde', Math.max(HcX(x), HcX(x + t)) - t - t / Math.cos(egim.alfa), icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir (ölçü uzun kenar)` });
           x += t;
         }
       } else ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
@@ -1268,7 +1276,7 @@
 
           if (dikme > 0) {
             if (egim && i === 0) {
-              satirDikmeX.forEach((dx, k) => ekle(`Ara dikme (${ek(i + 1)}) ${k + 1}`, 'govde', icH + HcX(dx + t / 2) - Hc, icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir` }));
+              satirDikmeX.forEach((dx, k) => ekle(`Ara dikme (${ek(i + 1)}) ${k + 1}`, 'govde', Math.max(HcX(dx), HcX(dx + t)) - t / Math.cos(egim.alfa) - icAlt, icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir (ölçü uzun kenar)` }));
             } else ekle(`Ara dikme (${ek(i + 1)})`, 'govde', icH, icDerinlik, dikme, { u: 1, k: 0 });
             araBirlesim += 2 * dikme;
           }
@@ -1304,7 +1312,7 @@
                 ekle(ad, 'kapak', sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
                   sekil: { tur: 'egimli', alan: sg.alan, cevre: sg.cevre, egri: 0, duz: sg.duz },
                   bantUzunluk: sg.cevre,
-                  not: notBirlestir(`Yamuk: sol ${r1(hL)}, sağ ${r1(hR)} mm; ${sg.bilgi.join(', ')}`, s.tip === 'kapak' && acilim === 'yana' ? mentesheNotu(Math.min(hL, hR), mentesheAdedi(Math.max(hL, hR))) : null, o.kulp && o.kulp.not),
+                  not: notBirlestir(`Yamuk: sol ${r1(hL)}, sağ ${r1(hR)} mm; ${sg.bilgi.join(', ')}`, s.tip === 'kapak' && acilim === 'yana' ? mentesheNotu(o.menteseSol ? hL : hR, mentesheAdedi(o.menteseSol ? hL : hR)) + ' (menteşe kenarının üstünden)' : null, o.kulp && o.kulp.not),
                 });
               });
             }
@@ -1359,10 +1367,11 @@
                 for (const b of bolumler) {
                   for (let j = 0; j < n; j++) {
                     const y1 = icAlt + 2 + j * (hF + bosluk);
-                    geo.icCekmeceler.push({ x1: b.x1 + dolgu + 2, x2: b.x2 - dolgu - 2, y1, y2: y1 + hF - bosluk, L: k.L, kutuH: k.kutuH });
+                    geo.icCekmeceler.push({ x1: b.x1 + dolgu + 2, x2: b.x2 - dolgu - 2, y1, y2: y1 + hF - bosluk, L: k.L, kutuH: k.kutuH, kutuW: k.kutuW, kutuY1: y1 + 5 });
                   }
                 }
                 rafAlt = icAlt + bolge;
+                geo.icDolguH = bolge;
               }
             }
           }
@@ -1416,7 +1425,11 @@
               kulpEkle(T, HS.kulp, n, fw);
             } else {
               // Kutu sığmadı: ön yüz yine kapanmalı, sabit (açılmayan) panel olarak monte edilir
-              ekle(`Sabit ön – çekmece sığmadı (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 }, { not: 'Çekmece kutusu sığmadı; ön yüz sabit monte edilir (kulp ve ray yok)' });
+              // Eğimli üst satırda yamuk ön zaten eklendi; ikinci kez eklenmez
+              if (egim && i === 0) {
+                for (const p of T.parcalar) if (p.ad.startsWith(`Çekmece önü (${ek(i + 1)}) – eğimli`)) p.ad = p.ad.replace('Çekmece önü', 'Sabit ön – çekmece sığmadı');
+              }
+              if (!(egim && i === 0)) ekle(`Sabit ön – çekmece sığmadı (${ek(i + 1)})`, 'kapak', on.h, fw, n, { u: 2, k: 2 }, { not: 'Çekmece kutusu sığmadı; ön yüz sabit monte edilir (kulp ve ray yok)' });
               hEkle('kosebent', 'Bağlantı köşebendi', 2 * n);
               geo.sahteOn = true;
             }
@@ -1483,8 +1496,14 @@
       const tablaBoydan = modul.yapi === 'tabla_boydan';
       const yanH = (h) => (tablaBoydan ? h - t - t / cos : h);
       const yanNot = `Üst kenarı kalınlık boyunca ${aci}° eğimli kesilir`;
-      ekle('Sol yan', 'govde', yanH(egim.HcL), Ds, 1, { u: 1, k: 0 }, { not: yanNot });
-      ekle('Sağ yan', 'govde', yanH(egim.HcR), Ds, 1, { u: 1, k: 0 }, { not: yanNot });
+      // Kalınlık boyunca açılı kesimde kaba ölçü uzun kenardır (yüksek tarafta dış, alçak tarafta iç kenar)
+      const yanEkle = (ad, xDis, xIc) => {
+        const dis = yanH(HcX(xDis));
+        const ic = yanH(HcX(xIc));
+        ekle(ad, 'govde', Math.max(dis, ic), Ds, 1, { u: 1, k: 0 }, { not: `${yanNot}: dış kenar ${r1(dis)}, iç kenar ${r1(ic)} mm` });
+      };
+      yanEkle('Sol yan', 0, t);
+      yanEkle('Sağ yan', W, W - t);
       const ustBoy = (tablaBoydan ? W : iw) / cos;
       ekle('Üst tabla (eğimli)', 'govde', ustBoy, Ds, 1, { u: 1, k: tablaBoydan ? 2 : 0 }, { not: `Eğim ${aci}°: iki ucu dikey (${aci}° açılı) kesilir; boy eğik yüzeyde ölçülür` });
       const arkaAd = modul.arkalik === 'kanal' ? 'Arkalık (kanallı)' : 'Arkalık (çakma)';
@@ -1526,6 +1545,7 @@
         sinirlar: tumSinirlar,
         surgu: geoSurgu,
         bazaCekmece: geoBazaCekmece,
+        kutular,
       },
     };
   }
