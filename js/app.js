@@ -222,6 +222,119 @@
     tumunuCiz(true);
   });
 
+  // ---------------- Ölçüden tasarım öner ----------------
+  let tasarimTur = 'gardirop';
+  const tasarimOlculeri = {}; // tür → son girilen ölçüler
+  let tasarimOnerileri = [];
+  function tasarimFormCiz() {
+    $('#tasarimTurler').innerHTML = Object.entries(Tasarim.TURLER).map(([k, t]) => `<button type="button" role="radio" aria-checked="${k === tasarimTur}" data-tur="${k}" title="${esc(t.aciklama)}">${esc(t.ad)}</button>`).join('');
+    const o = tasarimOlculeri[tasarimTur] || {};
+    $('#tasarimAlanlar').innerHTML = Tasarim.TURLER[tasarimTur].alanlar.map((a) => `<label>${esc(a.etiket)} (mm)<input type="number" data-talan="${a.ad}" min="${a.min}" max="${a.max}" step="10" value="${o[a.ad] != null ? o[a.ad] : a.vars}"></label>`).join('');
+  }
+  function tasarimOlcuOku() {
+    const o = {};
+    document.querySelectorAll('#tasarimAlanlar [data-talan]').forEach((el) => { o[el.dataset.talan] = el.value === '' ? null : Number(el.value); });
+    tasarimOlculeri[tasarimTur] = o;
+    return o;
+  }
+  function tasarimUret() {
+    const o = tasarimOlcuOku();
+    const T = Tasarim.TURLER[tasarimTur];
+    const sinir = Tasarim.sinirla(tasarimTur, o);
+    const duzeltilen = T.alanlar.filter((a) => o[a.ad] !== sinir[a.ad]);
+    for (const a of duzeltilen) { const el = document.querySelector(`#tasarimAlanlar [data-talan="${a.ad}"]`); if (el) el.value = sinir[a.ad]; }
+    $('#tasarimDurum').textContent = 'Hesaplanıyor…';
+    // Arayüz güncellensin diye hesap bir sonraki karede
+    setTimeout(() => {
+      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3);
+      const not = duzeltilen.length ? `Sınır dışı ölçü düzeltildi: ${duzeltilen.map((a) => `${a.etiket} ${sinir[a.ad]}`).join(', ')}. ` : '';
+      $('#tasarimDurum').textContent = not + (tasarimOnerileri.length
+        ? `${tasarimOnerileri.length} öneri. Beğenmediyseniz "Öneri üret"e tekrar basın.`
+        : 'Bu ölçülerle kurala uygun tasarım bulunamadı; ölçüleri değiştirin.');
+      tasarimSonucCiz();
+    }, 20);
+  }
+  function tasarimSonucCiz() {
+    $('#tasarimSonuc').innerHTML = tasarimOnerileri.map((t, i) => {
+      let fiyat = '';
+      try {
+        const gr = Yerlesim.projeYerlesimi(t.sonuc.kesimListesi, t.proje.ayarlar, null);
+        const r = Maliyet.maliyetHesapla(t.proje, t.sonuc, Yerlesim.plakaSayilari(gr));
+        fiyat = `≈ ${para(r.genelToplam)} (KDV dahil, fiyat ayarlarınıza göre)`;
+      } catch (e) { fiyat = ''; }
+      const govdeSay = t.moduller.filter((m) => !(m.tip === 'panel' && m.panelTuru === 'bosluk')).length;
+      const yer = t.sonuc.yerlesim;
+      return `<article class="t-kart">
+        <h3>${esc(t.ad)} <small>Öneri ${i + 1} · ${govdeSay} modül</small></h3>
+        <div class="t-resim">${Uc.ciz(Uc.projeParcalari(yer, { kapaksiz: $('#tasarimIc').checked }), { yaw: -28, pitch: 14 }, {})}</div>
+        <details class="t-gorunus"><summary>Ön görünüş</summary>${Cizim.duvarGorunus(yer, 'A')}${yer.tip === 'L' ? Cizim.duvarGorunus(yer, 'B') : ''}</details>
+        <ul>${t.ozet.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+        <p class="kucuk">${esc(fiyat)} · ${t.sonuc.kesimListesi.reduce((a, p) => a + p.adet, 0)} parça</p>
+        <div class="t-dugmeler">
+          <button data-tekle="${i}">Projeye ekle</button>
+          <button data-tyeni="${i}" class="ikincil">Yeni proje olarak aç</button>
+        </div>
+      </article>`;
+    }).join('');
+  }
+  function tasarimUygula(i, yeni) {
+    const t = tasarimOnerileri[i];
+    if (!t) return;
+    const moduller = JSON.parse(JSON.stringify(t.moduller));
+    if (yeni) {
+      if (proje.moduller.length && !confirm('Mevcut modüller kaldırılıp bu tasarım yeni proje olarak açılsın mı? (Malzeme, hırdavat ve fiyat ayarları korunur.)')) return;
+      proje.moduller = [];
+      proje.yerlesim = Object.assign(proje.yerlesim, { tip: t.yerlesim.tip, duvarA: t.yerlesim.duvarA, duvarB: t.yerlesim.duvarB || 0, engeller: [], tavan: t.olcu.tavan || proje.yerlesim.tavan || 0 });
+      proje.ad = `${t.ad} ${t.yerlesim.duvarA}${t.yerlesim.duvarB ? '+' + t.yerlesim.duvarB : ''}`;
+      $('#projeAd').value = proje.ad;
+    } else {
+      if (t.yerlesim.tip === 'L' && proje.moduller.length) { alert('L mutfak önerisi köşeden başladığı için yalnızca yeni proje olarak açılabilir.'); return; }
+      // Mevcut modüllerin bittiği yerden başlayarak, öneri içindeki konumlar korunur
+      const son = proje.moduller.length ? Math.max(0, ...sonuc.yerlesim.yerler.filter((y) => y.duvar !== 'B').map((y) => y.bas + (y.duvar === 'kose' ? y.W : y.W))) : 0;
+      if (son > 0) {
+        const bas = new Map(t.sonuc.yerlesim.yerler.map((y) => [y.modul.id, y.bas]));
+        for (const m of moduller) if (bas.has(m.id)) m.konum = Math.round(bas.get(m.id) + son);
+      }
+    }
+    let ilk = null;
+    for (const m of moduller) {
+      m.id = Hesap.yeniModul('alt').id;
+      m.ad = benzersizAd(m.ad);
+      proje.moduller.push(m);
+      if (!ilk && !(m.tip === 'panel' && m.panelTuru === 'bosluk')) ilk = m.id;
+    }
+    seciliId = ilk || seciliId;
+    $('#tasarimPencere').close();
+    tumunuCiz(true);
+    document.querySelector('[data-sekme="uc"]').click();
+    bildir(`"${esc(t.ad)}" ${yeni ? 'yeni proje olarak açıldı' : 'projeye eklendi'}: ${moduller.length} modül.`, true);
+  }
+  $('#tasarimIc').addEventListener('change', tasarimSonucCiz);
+  $('#btnTasarim').addEventListener('click', () => {
+    if (!tasarimOnerileri.length) $('#tasarimIc').checked = !!Tasarim.IC_ONIZLEME[tasarimTur];
+    tasarimFormCiz();
+    $('#tasarimPencere').showModal();
+    if (!tasarimOnerileri.length) tasarimUret();
+  });
+  $('#tasarimKapat').addEventListener('click', () => $('#tasarimPencere').close());
+  $('#tasarimTurler').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tur]');
+    if (!b) return;
+    tasarimOlcuOku();
+    tasarimTur = b.dataset.tur;
+    $('#tasarimIc').checked = !!Tasarim.IC_ONIZLEME[tasarimTur];
+    tasarimFormCiz();
+    tasarimUret();
+  });
+  $('#btnTasarimUret').addEventListener('click', tasarimUret);
+  $('#tasarimAlanlar').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tasarimUret(); } });
+  $('#tasarimSonuc').addEventListener('click', (e) => {
+    const ek = e.target.dataset.tekle;
+    const yn = e.target.dataset.tyeni;
+    if (ek != null) tasarimUygula(Number(ek), false);
+    else if (yn != null) tasarimUygula(Number(yn), true);
+  });
+
   // ---------------- Modül formu ----------------
   const secim = (ad, deger, secenekler, ek) =>
     `<select data-alan="${ad}" ${ek || ''}>${secenekler.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(deger) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
@@ -306,7 +419,8 @@
     const lk = m.tip === 'lkose';
     const pn = m.tip === 'panel';
     const duvarSecimi = L && !lk ? `<label>Duvar${secim('duvar', m.duvar, [['A', 'A duvarı'], ['B', 'B duvarı']])}</label>` : '';
-    const montaj = `<label title="Zeminden modülün altına mesafe. ${Hesap.ASILI_SINIR} mm üstü asılı (üst sıra) sayılır.">Montaj yük. (mm)${sayiGir('montajYuksekligi', m.montajYuksekligi, 'min="0"')}</label>`;
+    const montaj = `<label title="Zeminden modülün altına mesafe. ${Hesap.ASILI_SINIR} mm üstü asılı (üst sıra) sayılır.">Montaj yük. (mm)${sayiGir('montajYuksekligi', m.montajYuksekligi, 'min="0"')}</label>`
+      + (lk ? '' : `<label title="Duvar başından (L yerleşimde köşeden) modülün sol kenarına mesafe. Boş bırakılırsa modül sıradaki yere dizilir.">Duvarda konum (mm)${sayiGir('konum', m.konum, 'min="0" placeholder="sıradan"')}</label>`);
 
     if (pn) {
       kap.innerHTML = `
@@ -1433,7 +1547,7 @@
     if (e.target.dataset && e.target.dataset.bildirim === 'geri') { $('#btnGeriAl').click(); document.getElementById('bildirim').classList.remove('acik'); }
   });
   // Tüm form değişikliklerinden sonra (özel işleyiciler çalıştıktan sonra) doğrula
-  document.addEventListener('change', (e) => { if (e.target.matches('input, select, textarea') && !e.target.closest('#katalog, #dosyaAc')) dogrula(); });
+  document.addEventListener('change', (e) => { if (e.target.matches('input, select, textarea') && !e.target.closest('#katalog, #dosyaAc, #tasarimPencere')) dogrula(); });
 
   function tumunuCiz(formDa) {
     sonuc = Hesap.projeHesapla(proje);

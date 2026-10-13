@@ -296,6 +296,7 @@
 
   function panelParcalari(g, onZ) {
     const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
+    if (g.tur === 'bosluk') return [];
     if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
     if (g.tur === 'raf' || g.tur === 'tabla') return [kutu(0, g.boy, 0, g.t, 0, g.en, tur)];
     if (g.tur === 'baza') return [kutu(0, g.boy, 0, g.en, 0, g.t, tur)];

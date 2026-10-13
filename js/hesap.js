@@ -49,6 +49,7 @@
     tabla: { ad: 'Tabla', aciklama: 'Masa, tezgah veya çalışma tablası' },
     baza: { ad: 'Baza bandı', aciklama: 'Dolapların altındaki süpürgelik; yerleşimde yer kaplamaz' },
     serbest: { ad: 'Serbest panel', aciklama: 'Herhangi bir düz parça' },
+    bosluk: { ad: 'Boşluk', aciklama: 'Buzdolabı, bulaşık makinesi ya da diz boşluğu için yer tutar; parça çıkmaz' },
   };
 
   /** Panel şekilleri. param: şekle özgü ölçü (etiket), kose: köşe sayısı kullanılır mı. */
@@ -390,6 +391,7 @@
     bulasik_panel: P('Panel', 'Bulaşık Makinesi Kapağı', 'Ankastre makine için', 'bulasik', 715, 597, { montajYuksekligi: 100 }),
     duvar_rafi: P('Panel', 'Duvar Rafı', 'Gizli taşıyıcılı', 'raf', 800, 250, { panelMalzeme: 'govde', bantU: 1, bantK: 2, montajYuksekligi: 1500 }),
     tabla: P('Panel', 'Masa / Çalışma Tablası', 'Düz tabla', 'tabla', 1200, 600, { panelMalzeme: 'govde', montajYuksekligi: 730 }),
+    bosluk: P('Panel', 'Boşluk (cihaz / diz)', 'Buzdolabı, bulaşık makinesi, diz boşluğu', 'bosluk', 850, 600, { bantU: 0, bantK: 0 }),
     baza_bandi: P('Panel', 'Baza (Süpürgelik) Bandı', 'Dolap altı süpürgelik', 'baza', 2400, 100, { bantU: 1, bantK: 0 }),
   };
   const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel'];
@@ -503,6 +505,8 @@
       yukseklik: sayiAl(x.yukseklik, 720, 0, 5000),
       derinlik: sayiAl(x.derinlik, 560, 0, 3000),
       montajYuksekligi: sayiAl(x.montajYuksekligi, 0, 0, 5000),
+      // Duvardaki sabit konum (köşeden/duvar başından mm); boşsa sıradan dizilir
+      konum: sayiAl(x.konum, null, 0, 50000),
       duvar: secenekAl(x.duvar, ['A', 'B'], 'A'),
       yapi: secenekAl(x.yapi, ['yanlar_boydan', 'tabla_boydan'], 'yanlar_boydan'),
       ust: secenekAl(x.ust, ['tam', 'kusak'], 'tam'),
@@ -1690,6 +1694,13 @@
     const T = toplayici(M);
     const { ekle, hEkle, uyarilar } = T;
     const tur = modul.panelTuru;
+    if (tur === 'bosluk') {
+      // Yalnızca yer tutar: parça, hırdavat ve maliyet yok; yerleşimde derinliği yoktur (üstüne dolap gelebilir)
+      const boy = say(modul.boy, 0);
+      const en = say(modul.en, 0);
+      if (boy < 20 || en < 20) T.uyarilar.push('Boşluk ölçüleri çok küçük.');
+      return { parcalar: [], hirdavat: [], uyarilar: T.uyarilar, malzemeler: M, hirdavatSecimi: HS, geo: { panel: true, tur, bos: true, boy, en, t: 0, W: en, D: 0, H: boy, bant: { u: 0, k: 0 }, kullanim: 'kapak', sekil: null } };
+    }
     const kul = modul.panelMalzeme === 'govde' ? 'govde' : 'kapak';
     const t = say(M[kul].kalinlik, 18);
     const boy = say(modul.boy, 0);
@@ -1793,7 +1804,7 @@
     const hacimler = [];
     const cakisan = (k) => hacimler.find((o) => k.x1 < o.x2 - 0.5 && k.x2 > o.x1 + 0.5 && k.z1 < o.z2 - 0.5 && k.z2 > o.z1 + 0.5 && k.y1 < o.y2 - 1 && k.y2 > o.y1 + 1);
     // Ön paneller (dolgu, bulaşık kapağı, serbest) gövdelerin ön düzleminde durur
-    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza'].includes(g.tur);
+    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk'].includes(g.tur);
     const govdeD = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === 'zemin').map((m) => sonuclar[m.id].geo.D)) || 560;
     // Düz yerleşimdeki L köşe dolap B kolu kadar odaya taşar
     const derinlik = (g) => (onPanel(g) ? govdeD + g.t : g.lkose ? g.W2 : g.D);
@@ -1834,6 +1845,8 @@
       }
       const yerlestir = (m, duvar, bas) => {
         const g = sonuclar[m.id].geo;
+        const sabit = m.konum != null && m.tip !== 'lkose';
+        if (sabit) bas = m.konum;
         const mt = montajOf(m);
         const D = derinlik(g);
         const hacim = (b) => (duvar === 'A' ? { x1: b, x2: b + g.W, z1: 0, z2: D } : { x1: 0, x2: D, z1: b, z2: b + g.W });
@@ -1845,14 +1858,17 @@
         }
         hacimler.push(Object.assign(hacim(b), { y1: mt, y2: mt + g.H }));
         yerler.push({ modul: m, kaynak: kaynak(m), duvar, sira, bas: b, W: g.W, D: g.D, montaj: mt, geo: g });
-        return b + g.W;
+        // Sabit konumlu modül sırayı geri almaz: sonraki modüller en ileri noktadan devam eder
+        return sabit ? Math.max(imlec, b + g.W) : b + g.W;
       };
+      let imlec = 0;
       let x = kose ? sonuclar[kose.id].geo.W : 0;
-      for (const m of duvarA) x = yerlestir(m, 'A', x);
+      for (const m of duvarA) { imlec = x; x = yerlestir(m, 'A', x); }
       const sonA = x;
       let y = kose ? sonuclar[kose.id].geo.W2 : 0;
       let baslangicB = null;
       for (const m of duvarB) {
+        imlec = y;
         y = yerlestir(m, 'B', y);
         if (baslangicB == null) baslangicB = yerler[yerler.length - 1].bas;
       }

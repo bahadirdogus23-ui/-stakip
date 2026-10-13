@@ -353,7 +353,7 @@ test('katalog: tüm hazır modüller uyarısız hesaplanır', () => {
     const s = Hesap.modulHesapla(Hesap.yeniModul(k), ayar);
     assert.ok(s.geo, `${k} çizilemedi`);
     assert.deepEqual(s.uyarilar, [], `${k}: ${s.uyarilar.join(' | ')}`);
-    assert.ok(s.parcalar.length > 0, `${k} parça üretmedi`);
+    if (k !== 'bosluk') assert.ok(s.parcalar.length > 0, `${k} parça üretmedi`);
   }
   assert.ok(Object.keys(Hesap.PRESETLER).length >= 45);
 });
@@ -1031,4 +1031,62 @@ test('yerleşim: asma dolap boy dolabın üstüne, boy dolap köşe üst dolabı
   assert.ok(boy.bas >= 600, 'boy dolap köşe üst dolabından sonra başlar');
   // Boy dolap ile yanındaki asma dolap birleştirilir
   assert.ok(r.birlesimSayisi >= 1);
+});
+
+// ---- Ölçüden tasarım, duvarda konum, boşluk modülü ----
+const Tasarim = require('../js/tasarim.js');
+
+test('ölçüden tasarım: her tür, rastgele ölçülerde uyarısız, çakışmasız ve duvarı dolduran öneri üretir', () => {
+  let tohum = 11;
+  const rnd = () => ((tohum = (tohum * 1103515245 + 12345) % 2147483648) / 2147483648);
+  for (const tur of Object.keys(Tasarim.TURLER)) {
+    for (let i = 0; i < 12; i++) {
+      const o = {};
+      for (const a of Tasarim.TURLER[tur].alanlar) o[a.ad] = Math.round(a.min + rnd() * (a.max - a.min));
+      if (tur === 'mutfak' && i % 2) o.duvarB = 0;
+      const r = Tasarim.uret(tur, o, ayar, i * 101 + 1);
+      assert.ok(r, `${tur} ${JSON.stringify(o)}: öneri yok`);
+      for (const m of r.proje.moduller) assert.deepEqual(r.sonuc.modulSonuclari[m.id].uyarilar, [], `${tur}: ${m.ad}`);
+      assert.deepEqual(UK.projeCakismalari(r.sonuc.yerlesim, { kapaksiz: true }).map((c) => `${c.a.modul}∩${c.b.modul}`), [], tur);
+      const W = o.duvarA || o.genislik;
+      const zemin = r.sonuc.yerlesim.yerler.filter((y) => y.sira === 'zemin' && y.duvar !== 'B');
+      const son = Math.max(...zemin.map((y) => y.bas + y.W));
+      assert.ok(son <= W + 0.5, `${tur}: ${son} > ${W}`);
+      if (tur !== 'banyo') assert.ok(W - son <= 5, `${tur}: duvar dolmadı ${son}/${W}`);
+    }
+  }
+});
+
+test('ölçüden tasarım: aynı tohum aynı tasarım, farklı öneriler birbirinden farklı', () => {
+  const o = { genislik: 2400, yukseklik: 2600, derinlik: 600 };
+  const a = Tasarim.uret('gardirop', o, ayar, 42);
+  const b = Tasarim.uret('gardirop', o, ayar, 42);
+  const iz = (t) => JSON.stringify(t.moduller.map((m) => [m.genislik, m.onTipi, m.sutunlar]));
+  assert.equal(iz(a), iz(b));
+  const L = Tasarim.oneriler('mutfak', { duvarA: 3600, duvarB: 0, tavan: 2600 }, ayar, 3, 7);
+  assert.equal(L.length, 3);
+  assert.equal(new Set(L.map(iz)).size, 3);
+  // Sınır dışı ölçü düzeltilir
+  assert.equal(Tasarim.sinirla('gardirop', { genislik: 99999, yukseklik: 'x' }).genislik, 6000);
+});
+
+test('duvarda konum: sabit konumlu modül oraya yerleşir, sıra geri gitmez', () => {
+  const p = Hesap.yeniProje();
+  p.moduller = [Object.assign(Hesap.yeniModul('alt'), { genislik: 600 }), Object.assign(Hesap.yeniModul('ust'), { konum: 1000 }), Hesap.yeniModul('ust'), Object.assign(Hesap.yeniModul('alt'), { konum: 300 })];
+  const r = Hesap.projeHesapla(Hesap.projeyiNormallestir(p));
+  const ust = r.yerlesim.yerler.filter((y) => y.sira === 'duvar').map((y) => y.bas);
+  const alt = r.yerlesim.yerler.filter((y) => y.sira === 'zemin').map((y) => y.bas);
+  assert.deepEqual(ust, [1000, 1600]); // sabit, sonra sabitten devam
+  assert.deepEqual(alt, [0, 600]); // 300 dolu: çakışmayan ilk yere kayar
+});
+
+test('boşluk modülü: parça ve maliyet yok, duvarda yer tutar', () => {
+  const p = Hesap.yeniProje();
+  p.moduller = [Hesap.yeniModul('alt'), Object.assign(Hesap.yeniModul('bosluk'), { en: 650 }), Hesap.yeniModul('alt')];
+  const n = Hesap.projeyiNormallestir(p);
+  const r = Hesap.projeHesapla(n);
+  assert.equal(r.yerlesim.yerler[2].bas, 1250);
+  assert.ok(!r.kesimListesi.some((x) => x.moduller.some((ad) => /Boşluk/.test(ad))));
+  const mly = Maliyet.maliyetHesapla(n, r, {});
+  assert.ok(!mly.teklifSatirlari.some((x) => /Boşluk/.test(x.ad)));
 });

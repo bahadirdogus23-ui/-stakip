@@ -97,7 +97,7 @@
     // Dolap işçiliği yalnızca gövdeli modüllere; tek parça paneller ayrı (düşük) birim fiyatla
     const adetOf = (m) => Math.max(1, Math.floor(sayi(m.adet) || 1));
     const modulAdedi = proje.moduller.filter((m) => m.tip !== 'panel').reduce((a, m) => a + adetOf(m), 0);
-    const panelAdedi = proje.moduller.filter((m) => m.tip === 'panel').reduce((a, m) => a + adetOf(m), 0);
+    const panelAdedi = proje.moduller.filter((m) => m.tip === 'panel' && m.panelTuru !== 'bosluk').reduce((a, m) => a + adetOf(m), 0);
     if (modulAdedi && sayi(F.atolyeIscilikModul) > 0) kalemler.iscilik.push({ ad: 'Atölye işçiliği', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.atolyeIscilikModul), tutar: kurus(modulAdedi * sayi(F.atolyeIscilikModul)) });
     if (modulAdedi && sayi(F.montajModul) > 0) kalemler.iscilik.push({ ad: 'Montaj (yerinde kurulum)', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.montajModul), tutar: kurus(modulAdedi * sayi(F.montajModul)) });
     if (panelAdedi && sayi(F.panelIscilik) > 0) kalemler.iscilik.push({ ad: 'Panel işçiliği ve montajı', miktar: panelAdedi, birim: 'panel', birimFiyat: sayi(F.panelIscilik), tutar: kurus(panelAdedi * sayi(F.panelIscilik)) });
@@ -120,7 +120,7 @@
     // ---------- Modül başına maliyet dağılımı ----------
     // Malzeme/ebatlama net alan payına, bant metre payına göre; hırdavat ve işçilik modülün kendisinden.
     const modulMaliyetleri = [];
-    for (const m of proje.moduller) {
+    for (const m of proje.moduller.filter((x) => !(x.tip === 'panel' && x.panelTuru === 'bosluk'))) {
       const s = sonuc.modulSonuclari[m.id];
       if (!s) continue;
       const adet = Math.max(1, Math.floor(sayi(m.adet) || 1));

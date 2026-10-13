@@ -786,7 +786,7 @@
     const yatayPanel = tur === 'raf' || tur === 'tabla' || tur === 'baza';
     const w = yatayPanel ? g.boy : g.en;
     const h = yatayPanel ? g.en : g.boy;
-    if (tur === 'serbest') return;
+    if (tur === 'serbest' || tur === 'bosluk') return;
     const p = P.yeni(adBas, adBas, w, h, yatayPanel ? 'x: sol uçtan · y: ön kenardan / alttan' : 'x: ön kenardan · y: alttan (iç yüz)');
     const kosebent = (x, y, yuz) => { for (const d of [-12, 12]) delik(p, 'vida', x, y + d, 3, 12, 'Köşebent vidası Ø3 (12 mm, boydan delmeyin)', yuz); };
     // Kenardan pay kadar içeride iki nokta; parça kısaysa ortada tek nokta

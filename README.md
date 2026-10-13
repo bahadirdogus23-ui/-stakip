@@ -5,6 +5,12 @@
 ## Neler yapar?
 
 - **Dolap kataloğu (51 hazır modül, resimli):** mutfak alt (çekmeceli, iç çekmeceli, baza çekmeceli, evye, ankastre fırın, şişelik, kör köşe, L köşe, ada), mutfak üst (camlı vitrin, kaldırmalı kapak, aspiratör üstü, buzdolabı üstü, açık raf, L köşe), mutfak boy (fırın + mikrodalga, kiler, kahve köşesi, buzdolabı kabini), yatak odası (2/3/4 kapaklı ve sürgülü/aynalı gardırop, şifonyer, komodin, makyaj ünitesi), banyo (lavabo altı, boy dolap, aynalı dolap), salon (TV ünitesi, vitrin, büfe, kitaplık), antre (ayakkabılık, vestiyer), ofis (dosya dolabı, keson) ve paneller (yan kapama, dolgu, bulaşık makinesi kapağı, duvar rafı, tabla, baza bandı).
+- **Ölçüden tasarım öner:** ne yapılacağını (gardırop, mutfak, makyaj masası, çalışma masası, dresuar, TV ünitesi, kitaplık, ayakkabılık, banyo) ve ölçüleri girin; program kurala uygun, birbirinden farklı üç öneri üretir (3B önizleme, ön görünüş, kısa açıklama, yaklaşık fiyat). Her öneri hesap motoruyla doğrulanır: uyarı veren, duvarı aşan ya da plakaya sığmayan öneri gösterilmez. Beğenilen öneri projeye eklenir ya da yeni proje olarak açılır, sonra her ayrıntısı düzenlenebilir.
+  - Gardırop: menteşeli (1–3 kapaklı modüller) ya da sürgülü; patara, askı, raf, iç ve dış çekmece bölmeleri.
+  - Mutfak: düz ya da L; evye, bulaşık makinesi, fırın/ocak, serbest ya da ankastre buzdolabı, boy fırın, alt dolaplarla hizalı üst dolaplar, aspiratör ve buzdolabı üstü dolap.
+  - Masalar: çekmece ünitesi/keson, diz boşluğu, tabla, gerekirse yan panel ayak; aynalı dolap ya da duvar rafı.
+- **Boşluk modülü:** buzdolabı, bulaşık makinesi ya da diz boşluğu için duvarda yer tutar; parça ve maliyet üretmez.
+- **Duvarda konum:** bir modül duvar başından istenen mesafeye sabitlenebilir (ör. aynalı dolabı masanın ortasına); boş bırakılırsa sıradan dizilir.
 - **Elle tasarım:** her dolap dikey bölmelere ayrılır (boydan dikme), her bölmenin içi yukarıdan aşağı satırlarla düzenlenir: kapak, çekmece, açık raf, cihaz nişi. Satır başına raf (ahşap/cam), satır içi dikme, askı borusu ve LED. Çizim canlı güncellenir.
 - **Çekmece seçenekleri:** kutu yüksekliği ve ray boyu elle seçilebilir (sığmazsa sınırlanır ve uyarılır), çekmece içi (çatal-kaşıklık, bölücü), taban alttan çakma veya kanala geçme. Ray sığmayan çekmece yerine "sabit ön" çıkar.
 - **Gizli çekmeceler:** kapak arkasında iç çekmece (menteşeyi aşan dolgu panelleriyle) ve süpürgelikte bas-aç baza çekmecesi.

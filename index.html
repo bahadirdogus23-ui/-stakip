@@ -32,6 +32,7 @@
           <ul id="modulListesi" class="modul-listesi"></ul>
           <div class="ekle-satir">
             <button id="btnKatalog" class="genis-buton">+ Dolap kataloğundan ekle</button>
+            <button id="btnTasarim" class="genis-buton ikincil" title="Ölçüleri girin, program kurala uygun tasarım önerileri üretsin">✦ Ölçüden tasarım öner</button>
           </div>
         </section>
 
@@ -195,6 +196,20 @@
     <div id="katalogIcerik"></div>
   </dialog>
 
+  <dialog id="tasarimPencere" aria-label="Ölçüden tasarım öner">
+    <header class="k-baslik"><h2>Ölçüden tasarım öner</h2><span class="not">Ne yapılacağını ve ölçüleri seçin; program kurala uygun, birbirinden farklı öneriler üretir. Beğendiğinizi projeye ekleyip istediğiniz gibi düzenleyebilirsiniz.</span><button id="tasarimKapat" class="ikincil" aria-label="Kapat">✕</button></header>
+    <div class="t-govde">
+      <div id="tasarimTurler" class="t-turler" role="radiogroup" aria-label="Mobilya türü"></div>
+      <div class="t-form">
+        <div id="tasarimAlanlar" class="t-alanlar"></div>
+        <button id="btnTasarimUret">Öneri üret</button>
+        <label class="onay"><input type="checkbox" id="tasarimIc"> Kapakları gizle (iç düzen)</label>
+        <span id="tasarimDurum" class="not"></span>
+      </div>
+      <div id="tasarimSonuc" class="t-sonuclar"></div>
+    </div>
+  </dialog>
+
   <dialog id="yardim" aria-label="Nasıl kullanılır">
     <header class="k-baslik"><h2>Nasıl kullanılır?</h2><button id="yardimKapat" class="ikincil" aria-label="Kapat">✕</button></header>
     <div class="yardim-icerik">
@@ -215,6 +230,7 @@
   <div id="yazdirAlan" aria-hidden="true"></div>
 
   <script src="js/hesap.js"></script>
+  <script src="js/tasarim.js"></script>
   <script src="js/maliyet.js"></script>
   <script src="js/yerlesim.js"></script>
   <script src="js/cizim.js"></script>

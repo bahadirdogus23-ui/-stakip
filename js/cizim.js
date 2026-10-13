@@ -47,6 +47,7 @@
 
   /** Panel modülün görünüşü (orijin sol-alt): duvara bakınca görünen yüz. */
   function panelGovde(geo) {
+    if (geo.bos) return rect(0, 0, geo.W, geo.H, 'bosluk');
     const cls = geo.kullanim === 'govde' ? 'govde' : 'kapak';
     let s = geo.sekil && geo.tur !== 'raf' && geo.tur !== 'tabla' && geo.tur !== 'yan_kapama' ? sekilYolu(geo.sekil, cls) : rect(0, 0, geo.W, geo.H, cls);
     if (geo.tur === 'bulasik') {
@@ -299,6 +300,14 @@
 
   /** Panel modülün parça görünüşü: bantlı kenarlar kalın. */
   function panelOnGorunus(modul, geo) {
+    if (geo.bos) {
+      const w = geo.W;
+      const h = geo.H;
+      const fs = Math.max(w, h) / 22;
+      const pay = fs * 4;
+      const s = rect(0, 0, w, h, 'bosluk') + yazi(w / 2, h / 2, 'Boşluk', fs, 'baslik') + olcuYatay(0, w, -fs * 2, fs) + olcuDikey(0, h, -fs * 2, fs) + yazi(w / 2, h + fs * 1.4, modul.ad, fs, 'baslik');
+      return `<svg class="cizim" viewBox="${f(-pay)} ${f(-h - fs * 3)} ${f(w + 2 * pay)} ${f(h + fs * 3 + pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    }
     if (geo.sekil) {
       const g = geo.sekil;
       const w = g.kutuW;
