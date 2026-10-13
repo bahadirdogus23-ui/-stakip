@@ -232,6 +232,12 @@
   function tasarimFormCiz() {
     $('#tasarimTurler').innerHTML = Object.entries(Tasarim.TURLER).map(([k, t]) => `<button type="button" role="radio" aria-checked="${k === tasarimTur}" data-tur="${k}" title="${esc(t.aciklama)}">${esc(t.ad)}</button>`).join('');
     const o = tasarimOlculeri[tasarimTur] || {};
+    const stilSec = $('#tasarimStil');
+    if (!stilSec.options.length) {
+      stilSec.innerHTML = '<option value="rastgele">Rastgele (her öneri farklı stil)</option>'
+        + Object.entries(Tasarim.STILLER).map(([k, s]) => `<option value="${k}">${esc(s.ad)}</option>`).join('')
+        + '<option value="proje">Proje malzemeleri (renk/kulp değişmez)</option>';
+    }
     $('#tasarimAlanlar').innerHTML = Tasarim.TURLER[tasarimTur].alanlar.map((a) => `<label>${esc(a.etiket)} (mm)<input type="number" data-talan="${a.ad}" min="${a.min}" max="${a.max}" step="10" value="${o[a.ad] != null ? o[a.ad] : a.vars}"></label>`).join('');
   }
   function tasarimOlcuOku() {
@@ -249,7 +255,7 @@
     $('#tasarimDurum').textContent = 'Hesaplanıyor…';
     // Arayüz güncellensin diye hesap bir sonraki karede
     setTimeout(() => {
-      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3);
+      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3, null, { stil: $('#tasarimStil').value });
       const not = duzeltilen.length ? `Sınır dışı ölçü düzeltildi: ${duzeltilen.map((a) => `${a.etiket} ${sinir[a.ad]}`).join(', ')}. ` : '';
       $('#tasarimDurum').textContent = not + (tasarimOnerileri.length
         ? `${tasarimOnerileri.length} öneri. Beğenmediyseniz "Öneri üret"e tekrar basın.`
@@ -269,6 +275,7 @@
       const yer = t.sonuc.yerlesim;
       return `<article class="t-kart">
         <h3>${esc(t.ad)} <small>Öneri ${i + 1} · ${govdeSay} modül</small></h3>
+        ${t.palet ? `<div class="t-palet" title="${esc(t.stilAd)}"><b>${esc(t.stilAd)}</b>${[t.palet.govde, t.palet.kapak, t.palet.aksan].filter(Boolean).map((id) => { const m = Hesap.malzemeBul(t.proje.ayarlar, id); return m ? `<span class="t-renk" style="background:${esc(m.renk)}" title="${esc(m.ad)}"></span>` : ''; }).join('')}</div>` : ''}
         <div class="t-resim">${Uc.ciz(Uc.projeParcalari(yer, { kapaksiz: $('#tasarimIc').checked, renkFn: (m) => Hesap.modulRenkleri(m, t.proje.ayarlar) }), { yaw: -28, pitch: 14 }, {})}</div>
         <details class="t-gorunus"><summary>Ön görünüş</summary>${Cizim.duvarGorunus(yer, 'A')}${yer.tip === 'L' ? Cizim.duvarGorunus(yer, 'B') : ''}</details>
         <ul>${t.ozet.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
@@ -284,14 +291,19 @@
     const t = tasarimOnerileri[i];
     if (!t) return;
     const moduller = JSON.parse(JSON.stringify(t.moduller));
+    if (!yeni && t.yerlesim.tip === 'L' && proje.moduller.length) { alert('L mutfak önerisi köşeden başladığı için yalnızca yeni proje olarak açılabilir.'); return; }
+    if (yeni && proje.moduller.length && !confirm('Mevcut modüller kaldırılıp bu tasarım yeni proje olarak açılsın mı? (Malzeme, hırdavat ve fiyat ayarları korunur.)')) return;
+    // Stilin kullandığı, projede olmayan renkler malzeme listesine eklenir
+    const ekler = (t.ekMalzemeler || []).filter((m) => !proje.ayarlar.malzemeler.some((x) => x.id === m.id));
+    if (ekler.length) {
+      proje.ayarlar.malzemeler.push(...JSON.parse(JSON.stringify(ekler)));
+    }
     if (yeni) {
-      if (proje.moduller.length && !confirm('Mevcut modüller kaldırılıp bu tasarım yeni proje olarak açılsın mı? (Malzeme, hırdavat ve fiyat ayarları korunur.)')) return;
       proje.moduller = [];
       proje.yerlesim = Object.assign(proje.yerlesim, { tip: t.yerlesim.tip, duvarA: t.yerlesim.duvarA, duvarB: t.yerlesim.duvarB || 0, engeller: [], tavan: t.olcu.tavan || proje.yerlesim.tavan || 0 });
       proje.ad = `${t.ad} ${t.yerlesim.duvarA}${t.yerlesim.duvarB ? '+' + t.yerlesim.duvarB : ''}`;
       $('#projeAd').value = proje.ad;
     } else {
-      if (t.yerlesim.tip === 'L' && proje.moduller.length) { alert('L mutfak önerisi köşeden başladığı için yalnızca yeni proje olarak açılabilir.'); return; }
       // Mevcut modüllerin bittiği yerden başlayarak, öneri içindeki konumlar korunur
       const son = proje.moduller.length ? Math.max(0, ...sonuc.yerlesim.yerler.filter((y) => y.duvar !== 'B').map((y) => y.bas + (y.duvar === 'kose' ? y.W : y.W))) : 0;
       if (son > 0) {
@@ -310,7 +322,7 @@
     $('#tasarimPencere').close();
     tumunuCiz(true);
     document.querySelector('[data-sekme="uc"]').click();
-    bildir(`"${esc(t.ad)}" ${yeni ? 'yeni proje olarak açıldı' : 'projeye eklendi'}: ${moduller.length} modül.`, true);
+    bildir(`"${esc(t.ad)}" ${yeni ? 'yeni proje olarak açıldı' : 'projeye eklendi'}: ${moduller.length} modül.${ekler.length ? ` Malzemelere eklendi: ${esc(ekler.map((m) => m.ad).join(', '))}.` : ''}`, true);
   }
   $('#tasarimIc').addEventListener('change', tasarimSonucCiz);
   $('#btnTasarim').addEventListener('click', () => {

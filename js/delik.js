@@ -630,7 +630,10 @@
     const eksen = 'x: dış kenardan · y: alttan (önden bakış)';
     const dik = (ad) => {
       const p = P.yeni(`${ad} (${ek})${yan}`, dikmeKaynak, e, h, eksen);
-      for (const y of [...kavY, ...kavY.map((k) => h - e + k)]) delik(p, 'baglanti', e, y, 8, 25, 'Kavela Ø8 (iç kenardan)', 'iç kenar uç');
+      // Çerçeveye göre çok kısa kapakta (hesap uyarı verir) parça dışına düşen kavela atlanır
+      const ys = h >= 2 * e ? [...kavY, ...kavY.map((k) => h - e + k)] : [h / 2];
+      for (const y of ys) delik(p, 'baglanti', e, y, 8, 25, 'Kavela Ø8 (iç kenardan)', 'iç kenar uç');
+      if (h < 2 * e) not(p, 'Kapak çerçeve eninin iki katından kısa: çerçeveli cam kapak yapılamaz, kapak türünü değiştirin.');
       kanal(p, e - lp, 0, e, h, `Cam lambası ${tr(lp)} mm (arka yüz)`, `dış kenardan ${tr(e - lp)}–${tr(e)} mm`);
       return p;
     };

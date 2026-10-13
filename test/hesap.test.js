@@ -1070,6 +1070,43 @@ test('ölçüden tasarım: aynı tohum aynı tasarım, farklı öneriler birbiri
   assert.equal(Tasarim.sinirla('gardirop', { genislik: 99999, yukseklik: 'x' }).genislik, 6000);
 });
 
+test('ölçüden tasarım: stil paleti modüllere uygulanır, eksik malzemeler eklenir', () => {
+  // Yeni renkleri içermeyen eski proje ayarı
+  const eski = Hesap.varsayilanAyarlar();
+  eski.malzemeler = eski.malzemeler.filter((m) => !['sl18a', 'sl18m', 'sl18k', 'lake18y', 'lake18l'].includes(m.id));
+  for (const stil of Object.keys(Tasarim.STILLER)) {
+    const r = Tasarim.uret('mutfak', { duvarA: 3600, duvarB: 2400, tavan: 2600 }, eski, 5, { stil });
+    assert.ok(r, stil);
+    assert.equal(r.stil, stil);
+    const govdeli = r.proje.moduller.filter((m) => m.tip !== 'panel');
+    assert.ok(govdeli.every((m) => m.malzeme.govde === r.palet.govde), `${stil}: gövde`);
+    // Gola profil yalnız yerdeki dolaplarda
+    assert.ok(govdeli.every((m) => m.hirdavat.kulp !== 'gola' || !(m.montajYuksekligi > 0)), `${stil}: gola`);
+    const idler = new Set(eski.malzemeler.map((m) => m.id).concat(r.ekMalzemeler.map((m) => m.id)));
+    for (const m of r.proje.moduller) for (const v of Object.values(m.malzeme)) assert.ok(idler.has(v), `${stil}: ${v} eksik`);
+  }
+  // 'proje': malzeme ve kulp değişmez
+  const p = Tasarim.uret('gardirop', { genislik: 2400, yukseklik: 2600, derinlik: 600 }, ayar, 3, { stil: 'proje' });
+  assert.ok(p.proje.moduller.every((m) => !Object.keys(m.malzeme).length && !m.hirdavat.kulp));
+  assert.deepEqual(p.ekMalzemeler, []);
+});
+
+test('ölçüden tasarım: yatak odası duvarı ve kademeli raflar', () => {
+  for (let i = 0; i < 10; i++) {
+    const r = Tasarim.uret('yatak', { genislik: 2400 + i * 450, yatak: 1600, tavan: 2600 }, ayar, i + 1);
+    assert.ok(r, `yatak ${i}`);
+    const bos = r.proje.moduller.find((m) => m.ad === 'Yatak boşluğu');
+    assert.ok(bos && bos.en >= 1640, 'yatak boşluğu');
+  }
+  // Çok sayıda gardırop/kitaplık önerisinde kademeli (elle yükseklikli) raf çıkar
+  let kademe = 0;
+  for (let i = 0; i < 20; i++) {
+    const r = Tasarim.uret('kitaplik', { genislik: 2400, yukseklik: 2200, derinlik: 330 }, ayar, i * 13 + 1);
+    kademe += r.proje.moduller.some((m) => m.sutunlar.some((c) => c.satirlar.some((s) => s.rafYukseklikleri.length)));
+  }
+  assert.ok(kademe >= 5, `kademeli raf ${kademe}`);
+});
+
 test('duvarda konum: sabit konumlu modül oraya yerleşir, sıra geri gitmez', () => {
   const p = Hesap.yeniProje();
   p.moduller = [Object.assign(Hesap.yeniModul('alt'), { genislik: 600 }), Object.assign(Hesap.yeniModul('ust'), { konum: 1000 }), Hesap.yeniModul('ust'), Object.assign(Hesap.yeniModul('alt'), { konum: 300 })];
