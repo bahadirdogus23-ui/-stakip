@@ -1146,7 +1146,7 @@
           ekle('Baza çekmecesi önü', 'kapak', onH, W - 2 * db, 1, { u: 2, k: 2 }, { not: 'Süpürgelik hizasında; bas-aç ile açılır' });
           // Taşıyıcılar yanların altında, çekmece önünün arkasından baza arkasına (ya da gövde arkasına) kadar;
           // panel bazada baza yanlarının yerini alır
-          ekle('Baza çekmecesi taşıyıcı', 'govde', Ds - gc - tk - 2 - (baza.tip === 'panel' ? t : 0), hb - 5, 2, { u: 0, k: 0 }, { not: 'Raylar iç yüze; yanların altına kavela + köşebentle' });
+          ekle('Baza çekmecesi taşıyıcı', 'govde', Ds - gc - tk - 2 - (baza.tip === 'panel' ? t : 0), hb, 2, { u: 0, k: 0 }, { not: 'Zemine basar ve dolabın önünü taşır; raylar iç yüze; yanların altına kavela + köşebentle' });
           if (HS.kulp !== 'basac') {
             hEkle('basac', 'Bas-aç mekanizması', 1);
             hEkle('basac_ray', 'Ray için bas-aç adaptörü', 1);
@@ -1805,9 +1805,10 @@
     const cakisan = (k) => hacimler.find((o) => k.x1 < o.x2 - 0.5 && k.x2 > o.x1 + 0.5 && k.z1 < o.z2 - 0.5 && k.z2 > o.z1 + 0.5 && k.y1 < o.y2 - 1 && k.y2 > o.y1 + 1);
     // Ön paneller (dolgu, bulaşık kapağı, serbest) gövdelerin ön düzleminde durur
     const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk'].includes(g.tur);
-    const govdeD = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === 'zemin').map((m) => sonuclar[m.id].geo.D)) || 560;
+    const govdeD = {};
+    for (const sr of ['zemin', 'duvar']) govdeD[sr] = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === sr).map((m) => sonuclar[m.id].geo.D)) || (sr === 'zemin' ? 560 : 320);
     // Düz yerleşimdeki L köşe dolap B kolu kadar odaya taşar
-    const derinlik = (g) => (onPanel(g) ? govdeD + g.t : g.lkose ? g.W2 : g.D);
+    const derinlik = (g, sira) => (onPanel(g) ? govdeD[sira] + g.t : g.lkose ? g.W2 : g.D);
 
     // Köşe dolaplar önce (her iki sıra): diğer modüller bunların hacmine göre kayar
     const koseler = {};
@@ -1848,7 +1849,7 @@
         const sabit = m.konum != null && m.tip !== 'lkose';
         if (sabit) bas = m.konum;
         const mt = montajOf(m);
-        const D = derinlik(g);
+        const D = derinlik(g, sira);
         const hacim = (b) => (duvar === 'A' ? { x1: b, x2: b + g.W, z1: 0, z2: D } : { x1: 0, x2: D, z1: b, z2: b + g.W });
         let b = bas;
         for (let i = 0; i < 200; i++) {
@@ -1876,7 +1877,12 @@
       const ad = sira === 'zemin' ? 'Zemin dolapları' : 'Üst dolaplar';
       if (Y.duvarA > 0 && sonA > Y.duvarA) uyarilar.push(`Yerleşim: ${ad} A duvarını ${r1(sonA - Y.duvarA)} mm aşıyor.`);
       if (L && Y.duvarB > 0 && y > Y.duvarB) uyarilar.push(`Yerleşim: ${ad} B duvarını ${r1(y - Y.duvarB)} mm aşıyor.`);
-      if (doluluk[sira].koseBosluguB > 0) uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok; B duvarı ${r1(baslangicB)} mm köşe boşluğuyla başlıyor (kör köşe dolap veya dolgu düşünün).`);
+      if (doluluk[sira].koseBosluguB > 0) {
+        // Köşe boşluğu: A duvarındaki bu sıranın derinliği; ilk B modülü daha ileride ise başka bir modül itmiştir
+        const aDerin = Math.max(0, ...duvarA.map((m) => derinlik(sonuclar[m.id].geo, sira)));
+        if (baslangicB > aDerin + 5) uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok (köşe boşluğu ${r1(aDerin)} mm); B duvarındaki ilk modül, yolundaki modüller nedeniyle ${r1(baslangicB)} mm'den başlıyor.`);
+        else uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok; B duvarı ${r1(baslangicB)} mm köşe boşluğuyla başlıyor (kör köşe dolap veya dolgu düşünün).`);
+      }
     }
     const engelAdlari = {};
     for (const [k, v] of Object.entries(ENGEL_TURLERI)) engelAdlari[k] = v.ad;

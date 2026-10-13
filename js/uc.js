@@ -103,7 +103,7 @@
       const zOn2 = D - gc;
       const zOn1 = zOn2 - tk;
       const tasL = Ds - gc - tk - 2 - (geo.baza.tip === 'panel' ? t : 0);
-      for (const [a, b] of [[0, t], [W - t, W]]) P.push(kutu(a, b, 5, hb, zOn1 - 2 - tasL, zOn1 - 2, 'govde'));
+      for (const [a, b] of [[0, t], [W - t, W]]) P.push(kutu(a, b, 0, hb, zOn1 - 2 - tasL, zOn1 - 2, 'govde'));
       if (!kapaksiz) P.push(kutu(bc.x1, bc.x2, bc.y1, bc.y2, zOn1, zOn2, 'kapak'));
       const k = (geo.kutular || []).find((x) => x.etiket === 'baza çekmecesi');
       if (kapaksiz && k && !k.metal) P.push(kutu(W / 2 - k.kutuW / 2, W / 2 + k.kutuW / 2, 10, 10 + k.kutuH, zOn1 - k.L, zOn1, 'ic'));
@@ -335,6 +335,35 @@
    * eksenlerinden birinde ayrıklarsa, bakış yönüne göre arkadaki önce çizilir. Ayrılamayan
    * çiftlerde (eğik parçalar) ağırlık merkezi derinliği kullanılır. Döngü kalırsa en uzaktaki seçilir.
    */
+  /** Noktaların dışbükey zarfı (Andrew monoton zincir), saat yönünün tersine. */
+  function zarf(P) {
+    const N = P.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    if (N.length < 3) return N;
+    const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const alt = [];
+    for (const p of N) { while (alt.length >= 2 && cr(alt[alt.length - 2], alt[alt.length - 1], p) <= 0) alt.pop(); alt.push(p); }
+    const ust = [];
+    for (let i = N.length - 1; i >= 0; i--) { const p = N[i]; while (ust.length >= 2 && cr(ust[ust.length - 2], ust[ust.length - 1], p) <= 0) ust.pop(); ust.push(p); }
+    return alt.slice(0, -1).concat(ust.slice(0, -1));
+  }
+  /** İki dışbükey çokgen ekranda gerçekten örtüşüyor mu (ayırma ekseni testi; değmek örtüşme sayılmaz). */
+  function cokgenOrtusur(A, B) {
+    for (const P of [A, B]) {
+      for (let i = 0; i < P.length; i++) {
+        const p = P[i];
+        const q = P[(i + 1) % P.length];
+        const n = [q[1] - p[1], p[0] - q[0]];
+        const l = Math.hypot(n[0], n[1]);
+        if (l < 1e-9) continue;
+        let a1 = Infinity, a2 = -Infinity, b1 = Infinity, b2 = -Infinity;
+        for (const v of A) { const d = (v[0] * n[0] + v[1] * n[1]) / l; a1 = Math.min(a1, d); a2 = Math.max(a2, d); }
+        for (const v of B) { const d = (v[0] * n[0] + v[1] * n[1]) / l; b1 = Math.min(b1, d); b2 = Math.max(b2, d); }
+        if (a2 <= b1 + 0.3 || b2 <= a1 + 0.3) return false;
+      }
+    }
+    return true;
+  }
+
   function siraBul(ogeler, bakis) {
     const n = ogeler.length;
     const once = Array.from({ length: n }, () => []); // i → i'den sonra çizilmesi gerekenler
@@ -345,6 +374,7 @@
       for (let j = i + 1; j < n; j++) {
         const b = ogeler[j];
         if (a.ex2 <= b.ex1 || b.ex2 <= a.ex1 || a.ey2 <= b.ey1 || b.ey2 <= a.ey1) continue; // ekranda örtüşmez
+        if (a.zarf && b.zarf && !cokgenOrtusur(a.zarf, b.zarf)) continue; // kutuları değil, gerçek şekilleri
         let karar = 0; // -1: a önce, 1: b önce
         let enIyi = 0;
         for (let k = 0; k < 3; k++) {
@@ -429,7 +459,7 @@
         const parlak = 0.62 + 0.38 * Math.max(0, n[0] * isik[0] + n[1] * isik[1] + n[2] * isik[2]);
         yuzler.push({ pts, renk: `rgb(${Math.round(r * parlak)},${Math.round(g * parlak)},${Math.round(bb * parlak)})` });
       }
-      ogeler.push({ derinlik, yuzler, saydam: p.saydam, b, ex1, ex2, ey1, ey2 });
+      ogeler.push({ derinlik, yuzler, saydam: p.saydam, b, ex1, ex2, ey1, ey2, zarf: zarf(v.map((q) => [q[0], q[1]])) });
     }
     if (!ogeler.length) return '<p class="bos">Gösterilecek parça yok.</p>';
     const f = (x) => Math.round(x * 10) / 10;
@@ -451,5 +481,5 @@
     return `<svg class="uc-svg" viewBox="${f(cx - vw / 2)} ${f(cyy - vh / 2)} ${f(vw)} ${f(vh)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { modulParcalari, projeParcalari, ciz, kutu, siraBul, RENK };
+  return { modulParcalari, projeParcalari, ciz, kutu, siraBul, zarf, cokgenOrtusur, RENK };
 });

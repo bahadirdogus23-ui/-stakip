@@ -1854,7 +1854,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
           ekle('Baza çekmecesi önü', 'kapak', onH, W - 2 * db, 1, { u: 2, k: 2 }, { not: 'Süpürgelik hizasında; bas-aç ile açılır' });
           // Taşıyıcılar yanların altında, çekmece önünün arkasından baza arkasına (ya da gövde arkasına) kadar;
           // panel bazada baza yanlarının yerini alır
-          ekle('Baza çekmecesi taşıyıcı', 'govde', Ds - gc - tk - 2 - (baza.tip === 'panel' ? t : 0), hb - 5, 2, { u: 0, k: 0 }, { not: 'Raylar iç yüze; yanların altına kavela + köşebentle' });
+          ekle('Baza çekmecesi taşıyıcı', 'govde', Ds - gc - tk - 2 - (baza.tip === 'panel' ? t : 0), hb, 2, { u: 0, k: 0 }, { not: 'Zemine basar ve dolabın önünü taşır; raylar iç yüze; yanların altına kavela + köşebentle' });
           if (HS.kulp !== 'basac') {
             hEkle('basac', 'Bas-aç mekanizması', 1);
             hEkle('basac_ray', 'Ray için bas-aç adaptörü', 1);
@@ -2513,9 +2513,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     const cakisan = (k) => hacimler.find((o) => k.x1 < o.x2 - 0.5 && k.x2 > o.x1 + 0.5 && k.z1 < o.z2 - 0.5 && k.z2 > o.z1 + 0.5 && k.y1 < o.y2 - 1 && k.y2 > o.y1 + 1);
     // Ön paneller (dolgu, bulaşık kapağı, serbest) gövdelerin ön düzleminde durur
     const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk'].includes(g.tur);
-    const govdeD = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === 'zemin').map((m) => sonuclar[m.id].geo.D)) || 560;
+    const govdeD = {};
+    for (const sr of ['zemin', 'duvar']) govdeD[sr] = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === sr).map((m) => sonuclar[m.id].geo.D)) || (sr === 'zemin' ? 560 : 320);
     // Düz yerleşimdeki L köşe dolap B kolu kadar odaya taşar
-    const derinlik = (g) => (onPanel(g) ? govdeD + g.t : g.lkose ? g.W2 : g.D);
+    const derinlik = (g, sira) => (onPanel(g) ? govdeD[sira] + g.t : g.lkose ? g.W2 : g.D);
 
     // Köşe dolaplar önce (her iki sıra): diğer modüller bunların hacmine göre kayar
     const koseler = {};
@@ -2556,7 +2557,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         const sabit = m.konum != null && m.tip !== 'lkose';
         if (sabit) bas = m.konum;
         const mt = montajOf(m);
-        const D = derinlik(g);
+        const D = derinlik(g, sira);
         const hacim = (b) => (duvar === 'A' ? { x1: b, x2: b + g.W, z1: 0, z2: D } : { x1: 0, x2: D, z1: b, z2: b + g.W });
         let b = bas;
         for (let i = 0; i < 200; i++) {
@@ -2584,7 +2585,12 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       const ad = sira === 'zemin' ? 'Zemin dolapları' : 'Üst dolaplar';
       if (Y.duvarA > 0 && sonA > Y.duvarA) uyarilar.push(`Yerleşim: ${ad} A duvarını ${r1(sonA - Y.duvarA)} mm aşıyor.`);
       if (L && Y.duvarB > 0 && y > Y.duvarB) uyarilar.push(`Yerleşim: ${ad} B duvarını ${r1(y - Y.duvarB)} mm aşıyor.`);
-      if (doluluk[sira].koseBosluguB > 0) uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok; B duvarı ${r1(baslangicB)} mm köşe boşluğuyla başlıyor (kör köşe dolap veya dolgu düşünün).`);
+      if (doluluk[sira].koseBosluguB > 0) {
+        // Köşe boşluğu: A duvarındaki bu sıranın derinliği; ilk B modülü daha ileride ise başka bir modül itmiştir
+        const aDerin = Math.max(0, ...duvarA.map((m) => derinlik(sonuclar[m.id].geo, sira)));
+        if (baslangicB > aDerin + 5) uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok (köşe boşluğu ${r1(aDerin)} mm); B duvarındaki ilk modül, yolundaki modüller nedeniyle ${r1(baslangicB)} mm'den başlıyor.`);
+        else uyarilar.push(`Yerleşim: ${ad} köşesinde L köşe dolap yok; B duvarı ${r1(baslangicB)} mm köşe boşluğuyla başlıyor (kör köşe dolap veya dolgu düşünün).`);
+      }
     }
     const engelAdlari = {};
     for (const [k, v] of Object.entries(ENGEL_TURLERI)) engelAdlari[k] = v.ad;
@@ -4877,7 +4883,10 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
           const z0 = Math.max(v.z0, h.z0);
           const z1 = Math.min(v.z0 + v.w, h.z1);
           const camYuz = v.yuzSag || v.yuzSol;
-          yuzUcBagla(v.tur, derinlikKonumlari(z0, z1), z1,
+          // Çekmeceli satırdaki dikmenin alt ucunda minifix gövdesi ray hattına denk gelir: kavela + tutkal
+          const rayHatti = ucta === 'alt' && v.satir && v.satir.cekmeceler.length && v.tur === 'minifix';
+          if (rayHatti) not(v.p, 'Alt uç ray hattına yakın: minifix yerine kavela + tutkal ile bağlanır.');
+          yuzUcBagla(rayHatti ? 'kavela' : v.tur, derinlikKonumlari(z0, z1), z1,
             (z) => ({ p: h.p, x: h.yerel(Xc), y: z - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' }),
             (z) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? 0 : v.p.h, yuz: ucta === 'alt' ? 'alt uç' : 'üst uç' }),
             (z, m) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? m : v.p.h - m, yuz: camYuz }));
@@ -5011,7 +5020,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
           if (yana) for (const my of menteseY) delik(p, 'mentese', o.menteseSol ? 22.5 : w - 22.5, my, 35, 12.5, 'Menteşe çanağı Ø35 (iç yüz)', 'iç yüz');
           if (kapak || sat.cekmeceler.length) kulpUygula(p, o.kulp, kulpTur);
           else not(p, 'Sabit ön: gövdeye köşebentle bağlanır (kulp yok).');
-          not(p, `Yamuk: sol ${tr(hL)}, sağ ${tr(hR)} mm; menteşeler ${o.menteseSol ? 'sol' : 'sağ'} kenarda, alttan ölçülür.`);
+          not(p, `Yamuk: sol ${tr(hL)}, sağ ${tr(hR)} mm${yana ? `; menteşeler ${o.menteseSol ? 'sol' : 'sağ'} kenarda, alttan ölçülür` : ''}.`);
           if (!kapak) cekmeceOnBagla(p, o, sat, kutu);
           return;
         }
@@ -5099,9 +5108,11 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     } else if (g.arkalik === 'cakma') {
       const p0 = say(A.arkalikCakmaPay, 2);
       const ad = egim ? 'Arkalık (çakma) – yamuk' : 'Arkalık (çakma)';
-      const yukseklik = (egim ? Math.max(HcL, HcR) : Hc) - 2 * p0;
-      const ark = P.yeni(ad, ad, W - 2 * p0, yukseklik, 'x: soldan · y: alttan (önden bakış)', {
-        kontur: egim ? [[0, 0], [W - 2 * p0, 0], [W - 2 * p0, HcR - 2 * p0], [0, HcL - 2 * p0]] : null,
+      // Kesim listesiyle aynı: kenar boyları arkalığın kendi sol/sağ kenarındaki gövde yüksekliğinden
+      const hSol = (egim ? HcX(p0) : Hc) - 2 * p0;
+      const hSag = (egim ? HcX(W - p0) : Hc) - 2 * p0;
+      const ark = P.yeni(ad, ad, W - 2 * p0, Math.max(hSol, hSag), 'x: soldan · y: alttan (önden bakış)', {
+        kontur: egim ? [[0, 0], [W - 2 * p0, 0], [W - 2 * p0, hSag], [0, hSol]] : null,
       });
       const isaret = (x, y) => delik(ark, 'vida', x - p0, y - p0, 2, 0, 'Arkalık vidası / çivi yeri', 'arka yüz');
       const ustY = (X) => (egim ? HcX(X) - t / cos / 2 : Hc - t / 2);
@@ -5151,7 +5162,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     if (g.bazaCekmece) {
       const tasP = sonuc.parcalar.find((x) => x.ad === 'Baza çekmecesi taşıyıcı');
       const tasL = tasP ? tasP.boy : Ds - gc - 20;
-      const tas = P.yeni('Baza çekmecesi taşıyıcı', 'Baza çekmecesi taşıyıcı', tasL, hb - 5, 'x: ön uçtan · y: alttan', { adet: 2 });
+      const tas = P.yeni('Baza çekmecesi taşıyıcı', 'Baza çekmecesi taşıyıcı', tasL, tasP ? tasP.en : hb, 'x: ön uçtan · y: alttan', { adet: 2 });
       const k = kutuBul('baza çekmecesi');
       const L = k ? k.L : tasL - 40;
       for (const z of [ICERI, Math.max(ICERI + 64, L - 32)]) delik(tas, 'ray', z, 10 + 22, 4, 10, 'Ray vidası Ø4 (kutu tabanı alttan 10 mm, ray ekseni +22)', 'iç yüz');
@@ -5797,7 +5808,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       const zOn2 = D - gc;
       const zOn1 = zOn2 - tk;
       const tasL = Ds - gc - tk - 2 - (geo.baza.tip === 'panel' ? t : 0);
-      for (const [a, b] of [[0, t], [W - t, W]]) P.push(kutu(a, b, 5, hb, zOn1 - 2 - tasL, zOn1 - 2, 'govde'));
+      for (const [a, b] of [[0, t], [W - t, W]]) P.push(kutu(a, b, 0, hb, zOn1 - 2 - tasL, zOn1 - 2, 'govde'));
       if (!kapaksiz) P.push(kutu(bc.x1, bc.x2, bc.y1, bc.y2, zOn1, zOn2, 'kapak'));
       const k = (geo.kutular || []).find((x) => x.etiket === 'baza çekmecesi');
       if (kapaksiz && k && !k.metal) P.push(kutu(W / 2 - k.kutuW / 2, W / 2 + k.kutuW / 2, 10, 10 + k.kutuH, zOn1 - k.L, zOn1, 'ic'));
@@ -6029,6 +6040,35 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
    * eksenlerinden birinde ayrıklarsa, bakış yönüne göre arkadaki önce çizilir. Ayrılamayan
    * çiftlerde (eğik parçalar) ağırlık merkezi derinliği kullanılır. Döngü kalırsa en uzaktaki seçilir.
    */
+  /** Noktaların dışbükey zarfı (Andrew monoton zincir), saat yönünün tersine. */
+  function zarf(P) {
+    const N = P.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    if (N.length < 3) return N;
+    const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const alt = [];
+    for (const p of N) { while (alt.length >= 2 && cr(alt[alt.length - 2], alt[alt.length - 1], p) <= 0) alt.pop(); alt.push(p); }
+    const ust = [];
+    for (let i = N.length - 1; i >= 0; i--) { const p = N[i]; while (ust.length >= 2 && cr(ust[ust.length - 2], ust[ust.length - 1], p) <= 0) ust.pop(); ust.push(p); }
+    return alt.slice(0, -1).concat(ust.slice(0, -1));
+  }
+  /** İki dışbükey çokgen ekranda gerçekten örtüşüyor mu (ayırma ekseni testi; değmek örtüşme sayılmaz). */
+  function cokgenOrtusur(A, B) {
+    for (const P of [A, B]) {
+      for (let i = 0; i < P.length; i++) {
+        const p = P[i];
+        const q = P[(i + 1) % P.length];
+        const n = [q[1] - p[1], p[0] - q[0]];
+        const l = Math.hypot(n[0], n[1]);
+        if (l < 1e-9) continue;
+        let a1 = Infinity, a2 = -Infinity, b1 = Infinity, b2 = -Infinity;
+        for (const v of A) { const d = (v[0] * n[0] + v[1] * n[1]) / l; a1 = Math.min(a1, d); a2 = Math.max(a2, d); }
+        for (const v of B) { const d = (v[0] * n[0] + v[1] * n[1]) / l; b1 = Math.min(b1, d); b2 = Math.max(b2, d); }
+        if (a2 <= b1 + 0.3 || b2 <= a1 + 0.3) return false;
+      }
+    }
+    return true;
+  }
+
   function siraBul(ogeler, bakis) {
     const n = ogeler.length;
     const once = Array.from({ length: n }, () => []); // i → i'den sonra çizilmesi gerekenler
@@ -6039,6 +6079,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       for (let j = i + 1; j < n; j++) {
         const b = ogeler[j];
         if (a.ex2 <= b.ex1 || b.ex2 <= a.ex1 || a.ey2 <= b.ey1 || b.ey2 <= a.ey1) continue; // ekranda örtüşmez
+        if (a.zarf && b.zarf && !cokgenOrtusur(a.zarf, b.zarf)) continue; // kutuları değil, gerçek şekilleri
         let karar = 0; // -1: a önce, 1: b önce
         let enIyi = 0;
         for (let k = 0; k < 3; k++) {
@@ -6123,7 +6164,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
         const parlak = 0.62 + 0.38 * Math.max(0, n[0] * isik[0] + n[1] * isik[1] + n[2] * isik[2]);
         yuzler.push({ pts, renk: `rgb(${Math.round(r * parlak)},${Math.round(g * parlak)},${Math.round(bb * parlak)})` });
       }
-      ogeler.push({ derinlik, yuzler, saydam: p.saydam, b, ex1, ex2, ey1, ey2 });
+      ogeler.push({ derinlik, yuzler, saydam: p.saydam, b, ex1, ex2, ey1, ey2, zarf: zarf(v.map((q) => [q[0], q[1]])) });
     }
     if (!ogeler.length) return '<p class="bos">Gösterilecek parça yok.</p>';
     const f = (x) => Math.round(x * 10) / 10;
@@ -6145,7 +6186,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     return `<svg class="uc-svg" viewBox="${f(cx - vw / 2)} ${f(cyy - vh / 2)} ${f(vw)} ${f(vh)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { modulParcalari, projeParcalari, ciz, kutu, siraBul, RENK };
+  return { modulParcalari, projeParcalari, ciz, kutu, siraBul, zarf, cokgenOrtusur, RENK };
 });
 
 </script>
@@ -6210,12 +6251,15 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   let sonKayitZamani = 0;
   let canliKayit = false; // yazarken yapılan art arda kayıtlar tek adımda birleşir; düğme işlemleri birleşmez
   let oncekiCanli = false;
+  let canliAnahtar = ''; // hangi alana yazıldığı: farklı alanlar ayrı geri alma adımıdır
+  let oncekiAnahtar = '';
   function gecmiseEkle(json) {
     const simdi = Date.now();
     if (gecmis.length && gecmis[gecmis.length - 1] === json) return;
-    if (gecmis.length > 1 && canliKayit && oncekiCanli && simdi - sonKayitZamani < 2000) gecmis[gecmis.length - 1] = json;
+    if (gecmis.length > 1 && canliKayit && oncekiCanli && canliAnahtar === oncekiAnahtar && simdi - sonKayitZamani < 2000) gecmis[gecmis.length - 1] = json;
     else gecmis.push(json);
     oncekiCanli = canliKayit;
+    oncekiAnahtar = canliAnahtar;
     canliKayit = false;
     if (gecmis.length > 80) gecmis.shift();
     sonKayitZamani = simdi;
@@ -6317,7 +6361,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     } else if (islem === 'kopya') {
       const k = JSON.parse(JSON.stringify(m));
       k.id = Hesap.yeniModul('alt').id;
-      k.ad = benzersizAd(m.ad.replace(/ \d+$/, ''));
+      k.ad = benzersizAd(m.ad);
       proje.moduller.splice(i + 1, 0, k);
       seciliId = k.id;
     } else if (islem === 'yukari') {
@@ -6706,6 +6750,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       else if (alan === 'adet') m.adet = Math.max(1, deger || 1);
       else m[alan] = deger;
       canliKayit = true;
+      canliAnahtar = `${seciliId}|${alan}|${kart ? `${kart.dataset.sutun}.${kart.dataset.satir}` : ''}|${bolme ? bolme.dataset.sutun : ''}`;
       tumunuCiz(false);
     }, 250);
   });
@@ -7644,7 +7689,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   // Geçersiz değerleri anında düzelt: proje doğrulayıcısından geçirilir, farklı çıkan alanlar bildirilir
   const ALAN_AD = { genislik: 'Genişlik', genislik2: 'B kolu', yukseklik: 'Yükseklik', derinlik: 'Derinlik', adet: 'Adet', montajYuksekligi: 'Montaj yüksekliği',
     sagYukseklik: 'Sağ yükseklik', kalinlik: 'Kalınlık', plakaUzun: 'Plaka uzun kenar', plakaKisa: 'Plaka kısa kenar', testereKalinligi: 'Testere payı',
-    plakaKenarPayi: 'Plaka kenar payı', duvarA: 'A duvarı', duvarB: 'B duvarı', raf: 'Raf sayısı', dikme: 'Ara dikme', boy: 'Boy', en: 'En', korPanel: 'Kör panel', tavan: 'Tavan' };
+    plakaKenarPayi: 'Plaka kenar payı', icCekmeceH: 'İç çekmece yüksekliği', kutuYukseklik: 'Kutu yüksekliği', konum: 'Duvarda konum', duvarA: 'A duvarı', duvarB: 'B duvarı', raf: 'Raf sayısı', dikme: 'Ara dikme', boy: 'Boy', en: 'En', korPanel: 'Kör panel', tavan: 'Tavan' };
   function dogrula() {
     const n = Hesap.projeyiNormallestir(JSON.parse(JSON.stringify(proje)));
     const farklar = [];
@@ -7652,7 +7697,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
       if (farklar.length > 5) return;
       if (a && b && typeof a === 'object' && typeof b === 'object') {
         for (const k of Object.keys(b)) gez(a[k], b[k], yol.concat(k));
-      } else if (a !== b && !(a == null && b == null) && typeof b !== 'object') farklar.push({ yol, eski: a, yeni: b });
+      } else if (a !== b && !(a == null && b == null) && (b === null || typeof b !== 'object')) farklar.push({ yol, eski: a, yeni: b });
     };
     gez(proje, n, []);
     // Ölçü alanında sıfır/eksi: önceki geçerli değer geri yüklenir
@@ -7668,7 +7713,8 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     tara(n.moduller, ['moduller']);
     tara(n.ayarlar.malzemeler, ['ayarlar', 'malzemeler']);
     for (const f of farklar) {
-      if (!OLCU.includes(f.yol[f.yol.length - 1]) || f.yeni > 0) continue;
+      const gecersiz = f.eski == null || f.eski === '' || (typeof f.eski === 'number' && f.eski <= 0);
+      if (!OLCU.includes(f.yol[f.yol.length - 1]) || !gecersiz) continue;
       const eski = yolAl(onceki, f.yol);
       if (typeof eski === 'number' && eski > 0) {
         const ust = yolAl(n, f.yol.slice(0, -1));
@@ -7681,7 +7727,9 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
     if (!farklar.length) return;
     proje = n;
     if (!proje.moduller.some((m) => m.id === seciliId)) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
-    const yazi = farklar.slice(0, 3).map((f) => `${ALAN_AD[f.yol[f.yol.length - 1]] || f.yol[f.yol.length - 1]} ${f.eski === '' || f.eski == null ? '(boş)' : esc(String(f.eski))} → ${esc(String(f.yeni))}`);
+    const yazi = farklar.slice(0, 3).map((f) => `${ALAN_AD[f.yol[f.yol.length - 1]] || f.yol[f.yol.length - 1]} ${f.eski === '' || f.eski == null ? '(boş)' : esc(String(f.eski))} → ${f.yeni == null ? 'otomatik' : esc(String(f.yeni))}`);
+    // 2) Geçersiz ara durum geri alma geçmişinde kalmaz: düzeltilmiş durum onun yerine geçer
+    if (gecmis.length > 1) gecmis.pop();
     ayarFormCiz();
     tumunuCiz(true);
     bildir(`Geçersiz değer düzeltildi: ${yazi.join(', ')}`);

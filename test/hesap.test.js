@@ -1090,3 +1090,40 @@ test('boşluk modülü: parça ve maliyet yok, duvarda yer tutar', () => {
   const mly = Maliyet.maliyetHesapla(n, r, {});
   assert.ok(!mly.teklifSatirlari.some((x) => /Boşluk/.test(x.ad)));
 });
+
+// ---- Hata analizi (3): çizim sırası, ön panel derinliği, baza taşıyıcı, eğimli arkalık ----
+const ressamHatalari = require('../tools/ressam-kontrol.js');
+const Delik2 = require('../js/delik.js');
+
+test('3B çizim sırası: öndeki parça arkadakinin altında kalmaz (ışın izleme)', () => {
+  const sahneler = [];
+  const t = Tasarim.uret('mutfak', { duvarA: 4200, duvarB: 3000, tavan: 2600 }, ayar, 2);
+  sahneler.push(Uc.projeParcalari(t.sonuc.yerlesim, {}));
+  for (const id of ['alt', 'ada', 'bufe', 'gardirop3', 'kahve']) sahneler.push(Uc.modulParcalari(Hesap.modulHesapla(Hesap.yeniModul(id), ayar).geo, {}));
+  for (const P of sahneler) {
+    for (const g of [{ yaw: -35, pitch: 22 }, { yaw: -60, pitch: 45 }, { yaw: 30, pitch: 15 }, { yaw: 150, pitch: 20 }]) {
+      const h = ressamHatalari(P, g, 12);
+      assert.equal(h.reduce((a, x) => a + x.n, 0), 0, `${JSON.stringify(g)}: ${h[0] && `${h[0].ust.tur} üstte, ${h[0].gercek.tur} önde`}`);
+    }
+  }
+});
+
+test('ön panel derinliği kendi sırasındaki gövdelerden; köşe boşluğu mesajı doğru', () => {
+  const p = Hesap.yeniProje();
+  p.yerlesim.tip = 'L';
+  p.moduller = [Hesap.yeniModul('alt'), Object.assign(Hesap.yeniModul('alt'), { duvar: 'B' }), Hesap.yeniModul('dolgu'), Hesap.yeniModul('ust'), Object.assign(Hesap.yeniModul('ust'), { duvar: 'B' })];
+  const r = Hesap.projeHesapla(Hesap.projeyiNormallestir(p));
+  const ustB = r.yerlesim.yerler.find((y) => y.sira === 'duvar' && y.duvar === 'B');
+  assert.ok(ustB.bas < 400, `üst B ${ustB.bas}`);
+});
+
+test('baza çekmecesi taşıyıcıları zemine basar; eğimli çakma arkalık delik planı kesim listesiyle aynı', () => {
+  const s = Hesap.modulHesapla(Hesap.yeniModul('alt_baza'), ayar);
+  assert.equal(s.parcalar.find((p) => p.ad === 'Baza çekmecesi taşıyıcı').en, 120);
+  const m = Object.assign(Hesap.yeniModul('kitaplik'), { egimli: true, sagYukseklik: 1400 });
+  const sk = Hesap.modulHesapla(m, ayar);
+  const kesim = sk.parcalar.find((p) => p.ad === 'Arkalık (çakma) – yamuk');
+  const plan = Delik2.delikPlani(m, sk, ayar).parcalar.find((p) => p.ad === 'Arkalık (çakma) – yamuk');
+  assert.ok(Math.abs(Math.max(plan.w, plan.h) - Math.max(kesim.boy, kesim.en)) < 0.2);
+  assert.ok(Math.abs(Math.min(plan.w, plan.h) - Math.min(kesim.boy, kesim.en)) < 0.2);
+});

@@ -297,7 +297,10 @@
           const z0 = Math.max(v.z0, h.z0);
           const z1 = Math.min(v.z0 + v.w, h.z1);
           const camYuz = v.yuzSag || v.yuzSol;
-          yuzUcBagla(v.tur, derinlikKonumlari(z0, z1), z1,
+          // Çekmeceli satırdaki dikmenin alt ucunda minifix gövdesi ray hattına denk gelir: kavela + tutkal
+          const rayHatti = ucta === 'alt' && v.satir && v.satir.cekmeceler.length && v.tur === 'minifix';
+          if (rayHatti) not(v.p, 'Alt uç ray hattına yakın: minifix yerine kavela + tutkal ile bağlanır.');
+          yuzUcBagla(rayHatti ? 'kavela' : v.tur, derinlikKonumlari(z0, z1), z1,
             (z) => ({ p: h.p, x: h.yerel(Xc), y: z - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' }),
             (z) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? 0 : v.p.h, yuz: ucta === 'alt' ? 'alt uç' : 'üst uç' }),
             (z, m) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? m : v.p.h - m, yuz: camYuz }));
@@ -431,7 +434,7 @@
           if (yana) for (const my of menteseY) delik(p, 'mentese', o.menteseSol ? 22.5 : w - 22.5, my, 35, 12.5, 'Menteşe çanağı Ø35 (iç yüz)', 'iç yüz');
           if (kapak || sat.cekmeceler.length) kulpUygula(p, o.kulp, kulpTur);
           else not(p, 'Sabit ön: gövdeye köşebentle bağlanır (kulp yok).');
-          not(p, `Yamuk: sol ${tr(hL)}, sağ ${tr(hR)} mm; menteşeler ${o.menteseSol ? 'sol' : 'sağ'} kenarda, alttan ölçülür.`);
+          not(p, `Yamuk: sol ${tr(hL)}, sağ ${tr(hR)} mm${yana ? `; menteşeler ${o.menteseSol ? 'sol' : 'sağ'} kenarda, alttan ölçülür` : ''}.`);
           if (!kapak) cekmeceOnBagla(p, o, sat, kutu);
           return;
         }
@@ -519,9 +522,11 @@
     } else if (g.arkalik === 'cakma') {
       const p0 = say(A.arkalikCakmaPay, 2);
       const ad = egim ? 'Arkalık (çakma) – yamuk' : 'Arkalık (çakma)';
-      const yukseklik = (egim ? Math.max(HcL, HcR) : Hc) - 2 * p0;
-      const ark = P.yeni(ad, ad, W - 2 * p0, yukseklik, 'x: soldan · y: alttan (önden bakış)', {
-        kontur: egim ? [[0, 0], [W - 2 * p0, 0], [W - 2 * p0, HcR - 2 * p0], [0, HcL - 2 * p0]] : null,
+      // Kesim listesiyle aynı: kenar boyları arkalığın kendi sol/sağ kenarındaki gövde yüksekliğinden
+      const hSol = (egim ? HcX(p0) : Hc) - 2 * p0;
+      const hSag = (egim ? HcX(W - p0) : Hc) - 2 * p0;
+      const ark = P.yeni(ad, ad, W - 2 * p0, Math.max(hSol, hSag), 'x: soldan · y: alttan (önden bakış)', {
+        kontur: egim ? [[0, 0], [W - 2 * p0, 0], [W - 2 * p0, hSag], [0, hSol]] : null,
       });
       const isaret = (x, y) => delik(ark, 'vida', x - p0, y - p0, 2, 0, 'Arkalık vidası / çivi yeri', 'arka yüz');
       const ustY = (X) => (egim ? HcX(X) - t / cos / 2 : Hc - t / 2);
@@ -571,7 +576,7 @@
     if (g.bazaCekmece) {
       const tasP = sonuc.parcalar.find((x) => x.ad === 'Baza çekmecesi taşıyıcı');
       const tasL = tasP ? tasP.boy : Ds - gc - 20;
-      const tas = P.yeni('Baza çekmecesi taşıyıcı', 'Baza çekmecesi taşıyıcı', tasL, hb - 5, 'x: ön uçtan · y: alttan', { adet: 2 });
+      const tas = P.yeni('Baza çekmecesi taşıyıcı', 'Baza çekmecesi taşıyıcı', tasL, tasP ? tasP.en : hb, 'x: ön uçtan · y: alttan', { adet: 2 });
       const k = kutuBul('baza çekmecesi');
       const L = k ? k.L : tasL - 40;
       for (const z of [ICERI, Math.max(ICERI + 64, L - 32)]) delik(tas, 'ray', z, 10 + 22, 4, 10, 'Ray vidası Ø4 (kutu tabanı alttan 10 mm, ray ekseni +22)', 'iç yüz');

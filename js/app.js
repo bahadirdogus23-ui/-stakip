@@ -58,12 +58,15 @@
   let sonKayitZamani = 0;
   let canliKayit = false; // yazarken yapılan art arda kayıtlar tek adımda birleşir; düğme işlemleri birleşmez
   let oncekiCanli = false;
+  let canliAnahtar = ''; // hangi alana yazıldığı: farklı alanlar ayrı geri alma adımıdır
+  let oncekiAnahtar = '';
   function gecmiseEkle(json) {
     const simdi = Date.now();
     if (gecmis.length && gecmis[gecmis.length - 1] === json) return;
-    if (gecmis.length > 1 && canliKayit && oncekiCanli && simdi - sonKayitZamani < 2000) gecmis[gecmis.length - 1] = json;
+    if (gecmis.length > 1 && canliKayit && oncekiCanli && canliAnahtar === oncekiAnahtar && simdi - sonKayitZamani < 2000) gecmis[gecmis.length - 1] = json;
     else gecmis.push(json);
     oncekiCanli = canliKayit;
+    oncekiAnahtar = canliAnahtar;
     canliKayit = false;
     if (gecmis.length > 80) gecmis.shift();
     sonKayitZamani = simdi;
@@ -165,7 +168,7 @@
     } else if (islem === 'kopya') {
       const k = JSON.parse(JSON.stringify(m));
       k.id = Hesap.yeniModul('alt').id;
-      k.ad = benzersizAd(m.ad.replace(/ \d+$/, ''));
+      k.ad = benzersizAd(m.ad);
       proje.moduller.splice(i + 1, 0, k);
       seciliId = k.id;
     } else if (islem === 'yukari') {
@@ -554,6 +557,7 @@
       else if (alan === 'adet') m.adet = Math.max(1, deger || 1);
       else m[alan] = deger;
       canliKayit = true;
+      canliAnahtar = `${seciliId}|${alan}|${kart ? `${kart.dataset.sutun}.${kart.dataset.satir}` : ''}|${bolme ? bolme.dataset.sutun : ''}`;
       tumunuCiz(false);
     }, 250);
   });
@@ -1492,7 +1496,7 @@
   // Geçersiz değerleri anında düzelt: proje doğrulayıcısından geçirilir, farklı çıkan alanlar bildirilir
   const ALAN_AD = { genislik: 'Genişlik', genislik2: 'B kolu', yukseklik: 'Yükseklik', derinlik: 'Derinlik', adet: 'Adet', montajYuksekligi: 'Montaj yüksekliği',
     sagYukseklik: 'Sağ yükseklik', kalinlik: 'Kalınlık', plakaUzun: 'Plaka uzun kenar', plakaKisa: 'Plaka kısa kenar', testereKalinligi: 'Testere payı',
-    plakaKenarPayi: 'Plaka kenar payı', duvarA: 'A duvarı', duvarB: 'B duvarı', raf: 'Raf sayısı', dikme: 'Ara dikme', boy: 'Boy', en: 'En', korPanel: 'Kör panel', tavan: 'Tavan' };
+    plakaKenarPayi: 'Plaka kenar payı', icCekmeceH: 'İç çekmece yüksekliği', kutuYukseklik: 'Kutu yüksekliği', konum: 'Duvarda konum', duvarA: 'A duvarı', duvarB: 'B duvarı', raf: 'Raf sayısı', dikme: 'Ara dikme', boy: 'Boy', en: 'En', korPanel: 'Kör panel', tavan: 'Tavan' };
   function dogrula() {
     const n = Hesap.projeyiNormallestir(JSON.parse(JSON.stringify(proje)));
     const farklar = [];
@@ -1500,7 +1504,7 @@
       if (farklar.length > 5) return;
       if (a && b && typeof a === 'object' && typeof b === 'object') {
         for (const k of Object.keys(b)) gez(a[k], b[k], yol.concat(k));
-      } else if (a !== b && !(a == null && b == null) && typeof b !== 'object') farklar.push({ yol, eski: a, yeni: b });
+      } else if (a !== b && !(a == null && b == null) && (b === null || typeof b !== 'object')) farklar.push({ yol, eski: a, yeni: b });
     };
     gez(proje, n, []);
     // Ölçü alanında sıfır/eksi: önceki geçerli değer geri yüklenir
@@ -1516,7 +1520,8 @@
     tara(n.moduller, ['moduller']);
     tara(n.ayarlar.malzemeler, ['ayarlar', 'malzemeler']);
     for (const f of farklar) {
-      if (!OLCU.includes(f.yol[f.yol.length - 1]) || f.yeni > 0) continue;
+      const gecersiz = f.eski == null || f.eski === '' || (typeof f.eski === 'number' && f.eski <= 0);
+      if (!OLCU.includes(f.yol[f.yol.length - 1]) || !gecersiz) continue;
       const eski = yolAl(onceki, f.yol);
       if (typeof eski === 'number' && eski > 0) {
         const ust = yolAl(n, f.yol.slice(0, -1));
@@ -1529,7 +1534,9 @@
     if (!farklar.length) return;
     proje = n;
     if (!proje.moduller.some((m) => m.id === seciliId)) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
-    const yazi = farklar.slice(0, 3).map((f) => `${ALAN_AD[f.yol[f.yol.length - 1]] || f.yol[f.yol.length - 1]} ${f.eski === '' || f.eski == null ? '(boş)' : esc(String(f.eski))} → ${esc(String(f.yeni))}`);
+    const yazi = farklar.slice(0, 3).map((f) => `${ALAN_AD[f.yol[f.yol.length - 1]] || f.yol[f.yol.length - 1]} ${f.eski === '' || f.eski == null ? '(boş)' : esc(String(f.eski))} → ${f.yeni == null ? 'otomatik' : esc(String(f.yeni))}`);
+    // 2) Geçersiz ara durum geri alma geçmişinde kalmaz: düzeltilmiş durum onun yerine geçer
+    if (gecmis.length > 1) gecmis.pop();
     ayarFormCiz();
     tumunuCiz(true);
     bildir(`Geçersiz değer düzeltildi: ${yazi.join(', ')}`);
