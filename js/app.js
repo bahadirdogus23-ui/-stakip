@@ -269,7 +269,7 @@
       const yer = t.sonuc.yerlesim;
       return `<article class="t-kart">
         <h3>${esc(t.ad)} <small>Öneri ${i + 1} · ${govdeSay} modül</small></h3>
-        <div class="t-resim">${Uc.ciz(Uc.projeParcalari(yer, { kapaksiz: $('#tasarimIc').checked }), { yaw: -28, pitch: 14 }, {})}</div>
+        <div class="t-resim">${Uc.ciz(Uc.projeParcalari(yer, { kapaksiz: $('#tasarimIc').checked, renkFn: (m) => Hesap.modulRenkleri(m, t.proje.ayarlar) }), { yaw: -28, pitch: 14 }, {})}</div>
         <details class="t-gorunus"><summary>Ön görünüş</summary>${Cizim.duvarGorunus(yer, 'A')}${yer.tip === 'L' ? Cizim.duvarGorunus(yer, 'B') : ''}</details>
         <ul>${t.ozet.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
         <p class="kucuk">${esc(fiyat)} · ${t.sonuc.kesimListesi.reduce((a, p) => a + p.adet, 0)} parça</p>
@@ -370,7 +370,7 @@
           ${secim('tip', s.tip, tipler)}
           <label title="Ön yüz yüksekliği; boş = kalanı paylaş">Yük.${sayiGir('yukseklik', s.yukseklik, 'min="0" placeholder="oto"')}</label>
           ${s.tip !== 'nis' && s.tip !== 'acik' ? `<label title="Yan yana kapak / çekmece adedi">Adet${sayiGir('adet', s.adet, 'min="1" max="8"')}</label>` : ''}
-          ${rafli ? `<label title="Her bölmedeki raf sayısı">Raf${sayiGir('raf', s.raf, 'min="0" max="20"')}</label>` : ''}
+          ${rafli ? `<label title="${s.rafYukseklikleri.length ? 'Raf yükseklikleri girildiği için sayı onlardan gelir' : 'Her bölmedeki raf sayısı (eşit aralıklı)'}">Raf${sayiGir('raf', s.rafYukseklikleri.length ? s.rafYukseklikleri.length : s.raf, `min="0" max="20"${s.rafYukseklikleri.length ? ' disabled' : ''}`)}</label>` : ''}
           <span class="sk-arac"><button data-islem="satirYukari" title="Yukarı">↑</button><button data-islem="satirAsagi" title="Aşağı">↓</button><button data-islem="satirSil" title="Sil">✕</button></span>
         </div>
         ${s.tip === 'cekmece' ? `<div class="sk-alt">
@@ -386,9 +386,12 @@
           ${kapak ? `<label title="Kapak arkasında gizli çekmece sayısı (satırın altına)">İç çekmece${sayiGir('icCekmece', s.icCekmece, 'min="0" max="4"')}</label>` : ''}
           ${kapak && s.icCekmece > 0 ? `<label title="Her iç çekmece önünün yüksekliği">İç ç. yük.${sayiGir('icCekmeceH', s.icCekmeceH, 'min="60" placeholder="140"')}</label>
             <label>Çekmece içi${secim('cekmeceIc', s.cekmeceIc, Object.entries(Hesap.CEKMECE_ICLERI))}</label>` : ''}
-          ${rafli && s.raf > 0 ? `<label>Raf tipi${secim('rafTipi', s.rafTipi, [['ahsap', 'Ahşap'], ['cam', 'Cam']])}</label>` : ''}
+          ${rafli ? `<label class="genis2" title="Her rafın, satırın iç tabanından rafın üst yüzüne yüksekliği (mm), virgülle. Boş bırakılırsa raflar eşit aralıkla dizilir. İç görünüşte ölçüler yazılır.">Raf yükseklikleri (alttan)<input data-alan="rafYukseklikleri" type="text" inputmode="decimal" value="${esc(s.rafYukseklikleri.join(', '))}" placeholder="eşit aralık · ör. 320, 650"></label>` : ''}
+          ${rafli && (s.raf > 0 || s.rafYukseklikleri.length) ? `<label>Raf tipi${secim('rafTipi', s.rafTipi, [['ahsap', 'Ahşap'], ['cam', 'Cam']])}</label>` : ''}
+          ${rafli && (s.raf > 0 || s.rafYukseklikleri.length) && !s.rafSabit ? `<label title="Rafın önden geri çekmesi (mm); boş = ayarlardaki değer">Raf geri${sayiGir('rafGeri', s.rafGeri, `min="0" placeholder="${esc(proje.ayarlar.rafOnGeriCekme)}"`)}</label>` : ''}
           ${rafli && s.raf > 0 && s.rafTipi !== 'cam' ? `<label title="Sabit raf ara bağlantıyla (ör. şeffaf T) vidalanır">Montaj${secim('rafSabit', String(!!s.rafSabit), [['false', 'Hareketli (pim)'], ['true', 'Sabit']])}</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="aski" type="checkbox" ${s.aski ? 'checked' : ''}> Askı</label>` : ''}
+          ${rafli && s.aski ? `<label title="Askı borusu ekseninin satırın iç tavanından mesafesi (mm)">Askı üstten${sayiGir('askiUstten', s.askiUstten, 'min="30" placeholder="60"')}</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="led" type="checkbox" ${s.led ? 'checked' : ''}> LED</label>` : ''}
         </div>` : ''}
       </div>`;
@@ -518,6 +521,7 @@
     if (['surguAdet', 'bantU', 'bantK', 'koseSayisi'].includes(alan)) deger = Number(deger);
     if (alan === 'rayBoyu') deger = deger === '' ? null : Number(deger);
     if (alan === 'rafSabit') deger = deger === 'true';
+    if (alan === 'rafYukseklikleri') deger = Hesap.rafListesi(el.value);
     if (kart) {
       const s = m.sutunlar[Number(kart.dataset.sutun)].satirlar[Number(kart.dataset.satir)];
       s[alan] = deger;
@@ -866,8 +870,9 @@
       <h3>Malzeme kütüphanesi</h3>
       <div class="tablo-kap">
       <table class="liste ayar-tablo">
-        <thead><tr><th>Malzeme adı</th><th>Tür</th><th>Kalınlık</th><th>Plaka uzun</th><th>Plaka kısa</th><th title="0 = bantsız (örn. boyalı lake kenar)">Bant</th><th>Damar</th><th></th></tr></thead>
+        <thead><tr><th title="3B ve önizlemedeki rengi">Renk</th><th>Malzeme adı</th><th>Tür</th><th>Kalınlık</th><th>Plaka uzun</th><th>Plaka kısa</th><th title="0 = bantsız (örn. boyalı lake kenar)">Bant</th><th>Damar</th><th></th></tr></thead>
         <tbody>${A.malzemeler.map((m) => `<tr data-malz="${esc(m.id)}">
+            <td><input data-alan="renk" type="color" value="${esc(m.renk || '#f2efe8')}" aria-label="${esc(m.ad)} rengi" class="renk-sec"></td>
             <td><input data-alan="ad" value="${esc(m.ad)}"></td>
             <td>${secim('tur', m.tur || 'Diğer', Hesap.MALZEME_TURLERI.map((t) => [t, t]))}</td>
             <td><input data-alan="kalinlik" type="number" step="0.5" min="1" value="${m.kalinlik}"></td>
@@ -1253,10 +1258,10 @@
   function ucCiz() {
     const kapaksiz = $('#ucKapaksiz').checked;
     let P;
-    if ($('#ucKapsam').value === 'proje') P = Uc.projeParcalari(sonuc.yerlesim, { kapaksiz });
+    if ($('#ucKapsam').value === 'proje') P = Uc.projeParcalari(sonuc.yerlesim, { kapaksiz, renkFn: (x) => Hesap.modulRenkleri(x, proje.ayarlar) });
     else {
       const m = seciliModul();
-      P = m && sonuc.modulSonuclari[m.id] ? Uc.modulParcalari(sonuc.modulSonuclari[m.id].geo, { kapaksiz }) : [];
+      P = m && sonuc.modulSonuclari[m.id] ? Uc.modulParcalari(sonuc.modulSonuclari[m.id].geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) }) : [];
     }
     $('#ucAlan').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
   }
@@ -1388,7 +1393,7 @@
     html += '</section>';
     const yer = sonuc.yerlesim;
     html += `<section class="y-sayfa">${baslikHtml('Yerleşim')}<h2>Kuşbakışı plan</h2>${Cizim.planCizimi(yer)}<h2>A duvarı</h2>${Cizim.duvarGorunus(yer, 'A')}${yer.tip === 'L' ? `<h2>B duvarı</h2>${Cizim.duvarGorunus(yer, 'B')}` : ''}</section>`;
-    html += `<section class="y-sayfa">${baslikHtml('3D görünüm')}<div class="y-uc">${Uc.ciz(Uc.projeParcalari(yer, {}), { yaw: -35, pitch: 22 }, {})}</div></section>`;
+    html += `<section class="y-sayfa">${baslikHtml('3D görünüm')}<div class="y-uc">${Uc.ciz(Uc.projeParcalari(yer, { renkFn: (x) => Hesap.modulRenkleri(x, proje.ayarlar) }), { yaw: -35, pitch: 22 }, {})}</div></section>`;
     html += kesimYazdirHtml();
     html += `<section class="y-sayfa">${baslikHtml('Hırdavat listesi')}${hirdavatHtml()}<h2>Yerinde montaj hırdavatı</h2>${montajHirdavatHtml()}</section>`;
     html += montajYazdirHtml();

@@ -66,6 +66,7 @@
         g.tur === 'bulasik' ? 'Kapağı bulaşık makinesinin kendi montaj şablonuna göre makine kapağına vidalayın; kapak üst kenarı komşu kapaklarla hizalı olmalı.' : null,
         g.tur === 'tabla' ? 'Tablayı alttan köşebentlerle taşıyıcılara bağlayın; derzlerin terazide olduğunu kontrol edin.' : null,
         g.tur === 'baza' ? 'Baza bandını ayakların klipslerine takın; köşelerde gönye kesin.' : null,
+        g.tur === 'duvar' ? 'Z askı profilinin bir yarısını duvara teraziyle, diğerini panelin arkasına vidalayın; paneli askıya oturtun. Priz ve kablo çıkışlarını önceden işaretleyip delin.' : null,
       ]);
       return bolumler;
     }

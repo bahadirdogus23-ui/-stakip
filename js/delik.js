@@ -353,7 +353,7 @@
         }
         // Askı borusu flanşları
         if (sat.aski) {
-          const y = sat.icUst - 62;
+          const y = sat.icUst - (sat.askiUstten || 60);
           const z = (icOn + icSon) / 2;
           for (const f of yuzler) for (const [dz, dy] of [[0, 12], [-10.4, -6], [10.4, -6]]) yuzDelik(f, 'vida', y + dy, z + dz, 3, 10, 'Askı flanşı vidası Ø3');
         }
@@ -833,6 +833,7 @@
     [/^(Raf|Cam raf)\b/, 'Raf pimlerine oturur; delik gerekmez.'],
     [/– (cam|ayna|profil camı|çerçeve camı)$|^Sürgü kapak – (cam|ayna)$/, 'Cam/ayna: camcıda kesilir; gerekiyorsa delik camcıda açılır.'],
     [/^Serbest panel/, 'Serbest panel: delik tanımı yok; gerekiyorsa elle işaretleyin.'],
+    [/^Duvar kaplama paneli/, 'Duvara Z askı profiliyle (arkadan vidalı) ya da montaj yapıştırıcısıyla; ön yüzde delik yok.'],
   ];
 
   /**

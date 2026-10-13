@@ -59,7 +59,17 @@
    * Bir modülün yerel parçaları. Yerel: x 0..W (önden bakınca soldan sağa), y zeminden,
    * z 0 = arka (duvar), z = D gövde ön yüzü; tam bini kapaklar z > D.
    */
+  /** Parça türünden malzeme rengine (verilmişse). */
+  const TUR_RENK = { govde: 'govde', panel: 'govde', baza: 'govde', kapak: 'kapak', cekmece: 'kapak', ic: 'cekmece', arkalik: 'arkalik' };
+  function renklendir(P, renk) {
+    if (!renk) return P;
+    for (const p of P) { const k = TUR_RENK[p.tur]; if (k && renk[k]) p.renk = renk[k]; }
+    return P;
+  }
   function modulParcalari(geo, secenek) {
+    return renklendir(modulParcalariHam(geo, secenek), secenek && secenek.renk);
+  }
+  function modulParcalariHam(geo, secenek) {
     const kapaksiz = !!(secenek && secenek.kapaksiz);
     const P = [];
     if (!geo) return P;
@@ -172,11 +182,11 @@
           else {
             const cam = s.rafTipi === 'cam';
             const yb = geo.rafYan != null ? geo.rafYan : 1;
-            const rg = geo.rafGeri != null ? geo.rafGeri : 20;
+            const rg = s.rafGeri != null ? s.rafGeri : geo.rafGeri != null ? geo.rafGeri : 20;
             P.push(kutu(b.x1 + yb, b.x2 - yb, hb + ry - (cam ? 3 : t / 2), hb + ry + (cam ? 3 : t / 2), zIcArka, zIcOn - rg, cam ? 'cam' : 'panel', cam ? { saydam: 0.45 } : null));
           }
         }
-        if (s.aski) P.push(kutu(b.x1, b.x2, hb + s.icUst - 70, hb + s.icUst - 55, (zIcArka + zIcOn) / 2 - 8, (zIcArka + zIcOn) / 2 + 8, 'kulp'));
+        if (s.aski) P.push(kutu(b.x1, b.x2, hb + s.icUst - (s.askiUstten || 60) - 8, hb + s.icUst - (s.askiUstten || 60) + 8, (zIcArka + zIcOn) / 2 - 8, (zIcArka + zIcOn) / 2 + 8, 'kulp'));
         if (s.led) P.push(kutu(b.x1 + 10, b.x2 - 10, hb + s.icUst - 6, hb + s.icUst - 1, zIcOn - 40, zIcOn - 20, 'led'));
         if (dolguH && (s.icCekmeceler || []).some((c) => c.x1 >= b.x1 - 1 && c.x2 <= b.x2 + 1)) {
           P.push(kutu(b.x1, b.x1 + t, hb + s.icAlt, hb + s.icAlt + dolguH, zIcArka, zIcOn, 'panel'));
@@ -297,6 +307,7 @@
   function panelParcalari(g, onZ) {
     const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
     if (g.tur === 'bosluk') return [];
+    if (g.tur === 'duvar') return [kutu(0, g.W, 0, g.H, 0, g.t, tur)];
     if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
     if (g.tur === 'raf' || g.tur === 'tabla') return [kutu(0, g.boy, 0, g.t, 0, g.en, tur)];
     if (g.tur === 'baza') return [kutu(0, g.boy, 0, g.en, 0, g.t, tur)];
@@ -314,8 +325,8 @@
         // Ön panel: aynı duvar ve sıradaki en yakın gövdenin ön yüzüne hizalanır
         const komsu = yer.yerler.filter((x) => x !== y && x.geo && !x.geo.panel && x.sira === y.sira && (x.duvar === y.duvar || x.duvar === 'kose'))
           .sort((a, b) => Math.abs(a.bas - y.bas) - Math.abs(b.bas - y.bas))[0];
-        yerel = panelParcalari(y.geo, komsu ? komsu.geo.D : null);
-      } else yerel = modulParcalari(y.geo, secenek);
+        yerel = renklendir(panelParcalari(y.geo, komsu ? komsu.geo.D : null), secenek && secenek.renkFn ? secenek.renkFn(y.modul) : null);
+      } else yerel = modulParcalari(y.geo, Object.assign({}, secenek, { renk: secenek && secenek.renkFn ? secenek.renkFn(y.kaynak || y.modul) : null }));
       const donustur = (p) => {
         if (y.duvar === 'kose' || y.duvar === 'A' || yer.tip !== 'L') return [y.duvar === 'kose' ? p[0] : y.bas + p[0], y.montaj + p[1], p[2]];
         // B duvarı: modül +X yönüne bakar; yerel sol (x=0) köşeden uzakta
@@ -441,7 +452,7 @@
       minX = Math.min(minX, ex1); maxX = Math.max(maxX, ex2); minY = Math.min(minY, ey1); maxY = Math.max(maxY, ey2);
       const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
       const derinlik = v.reduce((a, q) => a + q[2], 0) / 8;
-      const [r, g, bb] = hexRgb(RENK[p.tur] || RENK.govde);
+      const [r, g, bb] = hexRgb(p.renk || RENK[p.tur] || RENK.govde);
       const yuzler = [];
       const merkez = v.reduce((a, q) => a.map((c, k) => c + q[k] / 8), [0, 0, 0]);
       for (const idx of YUZLER) {

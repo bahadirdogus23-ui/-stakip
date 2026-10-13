@@ -102,8 +102,13 @@
       for (const dx of sat.dikmeX) s += rect(dx, yb + sat.icAlt, dx + t, yb + sat.icUst, 'panel');
       for (const b of sat.bolumler) {
         for (const ry of sat.raflar) s += rect(b.x1 + 1, yb + ry - (sat.rafTipi === 'cam' ? 4 : t / 2), b.x2 - 1, yb + ry + (sat.rafTipi === 'cam' ? 4 : t / 2), sat.rafTipi === 'cam' ? 'cam-raf' : 'raf');
+        // Raf yükseklikleri: satırın iç tabanından rafın üst yüzüne (yalnız ilk bölmede yazılır)
+        if (ic && b === sat.bolumler[0]) {
+          const fsR = Math.max(18, Math.min(30, (b.x2 - b.x1) / 9));
+          for (const ry of sat.raflar) s += yazi(b.x1 + fsR * 2.2, yb + ry + (sat.rafTipi === 'cam' ? 4 : t / 2) + fsR * 0.35, String(Math.round(ry + (sat.rafTipi === 'cam' ? 4 : t / 2) - sat.icAlt)), fsR, 'raf-olcu');
+        }
         if (sat.aski) {
-          const ay = yb + sat.icUst - 60;
+          const ay = yb + sat.icUst - (sat.askiUstten || 60);
           s += cizgi(b.x1, ay, b.x2, ay, 'aski');
           s += `<circle class="aski-ucu" cx="${f(b.x1 + 4)}" cy="${f(-ay)}" r="6"/><circle class="aski-ucu" cx="${f(b.x2 - 4)}" cy="${f(-ay)}" r="6"/>`;
         }
@@ -416,7 +421,7 @@
     for (const sat of bolme.satirlar) {
       for (const ry of sat.raflar) s += rect(icOn + 20, hb + ry - (sat.rafTipi === 'cam' ? 4 : t / 2), icOn + geo.icDerinlik, hb + ry + (sat.rafTipi === 'cam' ? 4 : t / 2), sat.rafTipi === 'cam' ? 'cam-raf' : 'raf');
       for (const c of sat.cekmeceler) s += rect(icOn + 2, hb + c.y1, icOn + 2 + c.L, hb + c.y2, 'cekmece-kutu');
-      if (sat.aski) s += `<circle class="aski-ucu" cx="${f(icOn + geo.icDerinlik / 2)}" cy="${f(-(hb + sat.icUst - 60))}" r="14"/>`;
+      if (sat.aski) s += `<circle class="aski-ucu" cx="${f(icOn + geo.icDerinlik / 2)}" cy="${f(-(hb + sat.icUst - (sat.askiUstten || 60)))}" r="14"/>`;
     }
     if (geo.arkalik === 'kanal') s += rect(Ds - 10 - ta, hb + t - 7, Ds - 10, hb + Hc - t + 7, 'arkalik');
     else if (geo.arkalik === 'cakma') s += rect(Ds, hb + 2, Ds + ta, hb + Hc - 2, 'arkalik');

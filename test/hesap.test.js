@@ -268,7 +268,7 @@ test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
   assert.equal(m.baza.tip, 'yok');
   assert.deepEqual(m.sutunlar[0].satirlar[0], {
     tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false,
-    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null,
+    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null,
   });
   assert.deepEqual(m.malzeme, {});
   assert.equal(p.yerlesim.tip, 'duz');
@@ -1126,4 +1126,24 @@ test('baza çekmecesi taşıyıcıları zemine basar; eğimli çakma arkalık de
   const plan = Delik2.delikPlani(m, sk, ayar).parcalar.find((p) => p.ad === 'Arkalık (çakma) – yamuk');
   assert.ok(Math.abs(Math.max(plan.w, plan.h) - Math.max(kesim.boy, kesim.en)) < 0.2);
   assert.ok(Math.abs(Math.min(plan.w, plan.h) - Math.min(kesim.boy, kesim.en)) < 0.2);
+});
+
+test('raf yükseklikleri elle girilir: iç tabandan rafın üst yüzüne; sığmayan atlanır; askı ve raf derinliği ayarlanır', () => {
+  const m = Hesap.yeniModul('kitaplik');
+  m.sutunlar[0].satirlar[0].rafYukseklikleri = '350, 700; 1100 99999';
+  m.sutunlar[0].satirlar[0].rafGeri = 50;
+  const n = Hesap.projeyiNormallestir({ moduller: [m] }).moduller[0];
+  assert.deepEqual(n.sutunlar[0].satirlar[0].rafYukseklikleri, [350, 700, 1100, 99999].filter((x) => x <= 5000));
+  const s = Hesap.modulHesapla(n, ayar);
+  const sat = s.geo.satirlar[0];
+  assert.deepEqual(sat.raflar.map((y) => Math.round(y + 9 - sat.icAlt)), [350, 700, 1100]);
+  const raf = s.parcalar.find((p) => p.ad === 'Raf (satır 1)');
+  assert.equal(raf.adet, 3 * 2); // 2 bölüm (ara dikme)
+  assert.equal(raf.en, s.geo.icDerinlik - 50);
+  const fazla = Hesap.projeyiNormallestir({ moduller: [Object.assign(Hesap.yeniModul('kitaplik'), { sutunlar: [{ satirlar: [{ tip: 'acik', rafYukseklikleri: [300, 5000] }] }] })] }).moduller[0];
+  assert.ok(Hesap.modulHesapla(fazla, ayar).uyarilar.some((u) => /sığmıyor/.test(u)));
+  const g = Hesap.yeniModul('gardirop');
+  g.sutunlar[0].satirlar[1].askiUstten = 120;
+  const sg = Hesap.modulHesapla(Hesap.projeyiNormallestir({ moduller: [g] }).moduller[0], ayar);
+  assert.equal(sg.geo.satirlar[1].askiUstten, 120);
 });
