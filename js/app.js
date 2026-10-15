@@ -952,17 +952,24 @@
   });
 
   // ---------------- Fiyat & maliyet ----------------
+  /** Küçük "?" bilgi kutusu: tıklayınca/üstüne gelince açıklama açılır. */
+  const bilgi = (metin) => `<details class="bilgi" onclick="event.stopPropagation()"><summary aria-label="Bilgi">?</summary><div>${esc(metin)}</div></details>`;
+  // [anahtar, etiket, açıklama, yalnız bu işçilik esasında]
   const FIYAT_ALANLARI = [
-    ['ebatlamaPlaka', 'Ebatlama (TL/plaka)'],
-    ['bantCekmeM', 'Bant çekme (TL/m)'],
-    ['atolyeIscilikModul', 'Atölye işçiliği (TL/modül)'],
-    ['montajModul', 'Montaj (TL/modül)'],
-    ['panelIscilik', 'Panel işçiliği (TL/panel)'],
-    ['nakliye', 'Nakliye (TL/proje)'],
-    ['bantFire', 'Bant firesi (%)'],
-    ['alanFire', 'Alan firesi (%)'],
-    ['karOrani', 'Kâr oranı (%)'],
-    ['kdvOrani', 'KDV (%)'],
+    ['ebatlamaPlaka', 'Ebatlama (TL/plaka)', 'Plakanın ölçüye kesilmesi (ebatlama) için kesimhaneye ödenen plaka başı ücret. Kullanılan plaka sayısıyla çarpılır.'],
+    ['bantCekmeM', 'Bant çekme (TL/m)', 'Kenar bandının makinede çekilmesi için metre başı işçilik. Bant malzemesinin fiyatı ayrıca malzeme tablosunda girilir.'],
+    ['atolyeIscilikM2', 'Atölye işçiliği (TL/m²)', 'Dolabın ön yüz alanının (genişlik × yükseklik) metrekaresi başına atölye işçiliği: delik, birleştirme, kapak takma. Örn. 1 m × 2,4 m gardırop = 2,4 m².', 'm2'],
+    ['montajM2', 'Montaj (TL/m²)', 'Yerinde kurulumun ön yüz alanı metrekaresi başı ücreti.', 'm2'],
+    ['panelIscilikM2', 'Panel işçiliği (TL/m²)', 'Yan kapama, duvar paneli, lambri, raf gibi tek parça panellerin m² başı işçilik + montajı.', 'm2'],
+    ['atolyeIscilikModul', 'Atölye işçiliği (TL/modül)', 'Her gövdeli dolap için sabit atölye işçiliği (ölçüden bağımsız).', 'modul'],
+    ['montajModul', 'Montaj (TL/modül)', 'Her gövdeli dolap için sabit kurulum ücreti.', 'modul'],
+    ['panelIscilik', 'Panel işçiliği (TL/panel)', 'Her tek parça panel için sabit işçilik + montaj.', 'modul'],
+    ['sekilliKesimM', 'Şekilli kesim (TL/m)', 'Eğri, eğik ya da kavisli kenarların CNC/şablonla kesimi için kenar metresi başı ücret.'],
+    ['nakliye', 'Nakliye (TL/proje)', 'Projenin tek seferlik taşıma ücreti; teklife kâr eklenerek yansır.'],
+    ['bantFire', 'Bant firesi (%)', 'Bant uçlarında kesilip atılan pay. Bant metrajı bu oranda artırılır.'],
+    ['alanFire', 'Alan firesi (%)', 'Plaka maliyeti "net alan + fire" seçiliyse net parça alanına eklenen kayıp payı.'],
+    ['karOrani', 'Kâr oranı (%)', 'Toplam maliyete (malzeme, hırdavat, işçilik, nakliye) eklenen kâr. Teklifteki satış fiyatları bununla hesaplanır.'],
+    ['kdvOrani', 'KDV (%)', 'Satış fiyatına eklenen katma değer vergisi oranı.'],
   ];
 
   function fiyatFormCiz() {
@@ -972,8 +979,9 @@
     const kodlar = Object.keys(Hesap.HIRDAVAT_KALEMLERI).sort((a, b) => (kullanilan.has(b) ? 1 : 0) - (kullanilan.has(a) ? 1 : 0));
     $('#fiyatForm').innerHTML = `
       <div class="form-izgara">
-        <label>Plaka maliyeti${secim('plakaHesabi', F.plakaHesabi, [['tam', 'Kullanılan tam plaka'], ['alan', 'Net alan + fire']], 'data-fiyat')}</label>
-        ${FIYAT_ALANLARI.map(([k, t]) => `<label>${t}<input data-fiyat="${k}" type="number" min="0" step="any" value="${esc(F[k])}"></label>`).join('')}
+        <label><span>Plaka maliyeti ${bilgi('Kullanılan tam plaka: yerleşimde açılan plakaların tamamı ücretlendirilir (artık sizde kalır). Net alan + fire: yalnız parça alanı ve fire yüzdesi ücretlendirilir.')}</span>${secim('plakaHesabi', F.plakaHesabi, [['tam', 'Kullanılan tam plaka'], ['alan', 'Net alan + fire']], 'data-fiyat')}</label>
+        <label><span>İşçilik esası ${bilgi('Metrekare: işçilik dolabın ön yüz alanı (kapladığı duvar alanı) üzerinden hesaplanır; büyük dolap daha çok tutar. Modül: her dolaba aynı sabit ücret.')}</span>${secim('iscilikEsasi', F.iscilikEsasi, [['m2', 'Metrekare (ön yüz alanı)'], ['modul', 'Modül başına']], 'data-fiyat')}</label>
+        ${FIYAT_ALANLARI.filter((x) => !x[3] || x[3] === F.iscilikEsasi).map(([k, t, b]) => `<label><span>${t} ${bilgi(b)}</span><input data-fiyat="${k}" type="number" min="0" step="any" value="${esc(F[k])}"></label>`).join('')}
       </div>
       <h4>Plaka malzemeleri</h4>
       <div class="tablo-kap"><table class="liste ayar-tablo fiyat-tablo">
@@ -1008,6 +1016,7 @@
     else if (el.dataset.hfiyat) A.fiyat.hirdavat[el.dataset.hfiyat] = sayiDeger();
     else if (ek) A.fiyat.ekKalemler[Number(ek.dataset.ek)][el.dataset.ekalan] = el.dataset.ekalan === 'tutar' ? sayiDeger() : el.value;
     else if (el.dataset.alan === 'plakaHesabi') A.fiyat.plakaHesabi = el.value;
+    else if (el.dataset.alan === 'iscilikEsasi') { A.fiyat.iscilikEsasi = el.value; fiyatFormCiz(); }
     else if (el.dataset.fiyat) A.fiyat[el.dataset.fiyat] = sayiDeger();
     else return;
     tumunuCiz(false);
@@ -1051,17 +1060,18 @@
     $('#maliyetOzet').innerHTML = `
       ${r.eksikFiyat.length ? `<p class="hata">Fiyatı girilmemiş kalemler: ${esc(r.eksikFiyat.join(', '))}</p>` : ''}
       <div class="m-kartlar">
-        ${kart('Toplam maliyet', r.maliyet, `${r.modulAdedi} dolap${r.panelAdedi ? ` + ${r.panelAdedi} panel` : ''}`)}
+        ${kart('Toplam maliyet', r.maliyet, `${r.modulAdedi} dolap${r.panelAdedi ? ` + ${r.panelAdedi} panel` : ''} · ${sayiYaz(r.alanM2.toplam, 2)} m²`)}
         ${kart('Kâr', r.kar, `%${sayiYaz(r.karOrani)}`)}
         ${kart('Satış (KDV hariç)', r.satisKdvHaric)}
         ${kart('KDV', r.kdv, `%${sayiYaz(r.kdvOrani)}`)}
         ${kart('Genel toplam', r.genelToplam, 'KDV dahil', true)}
       </div>
+      <p class="m-alan">Kapatılan alan: <b>${sayiYaz(r.alanM2.toplam, 2)} m²</b> (dolap ön yüzleri ${sayiYaz(r.alanM2.dolap, 2)} m²${r.alanM2.panel ? `, paneller ${sayiYaz(r.alanM2.panel, 2)} m²` : ''})${r.alanM2.toplam > 0 ? ` · m² satış fiyatı ≈ ${para(r.satisKdvHaric / r.alanM2.toplam)} (KDV hariç)` : ''} ${bilgi('Dolapların genişlik × yükseklik ön yüz alanı ile duvar paneli, lambri vb. panellerin alanı toplamıdır. Müşteriye "kaç m² dolap" sorusunun cevabı.')}</p>
       <div class="m-dagilim">${[['Plaka & bant', r.ara.malzeme], ['Hırdavat', r.ara.hirdavat], ['Ebatlama & bant çekme', r.ara.hizmet], ['İşçilik', r.ara.iscilik], ['Nakliye & ek', r.ara.diger]]
         .map(([t, v]) => `<div><span>${t}</span><b>${para(v)}</b><i style="width:${r.maliyet > 0 ? (100 * v) / r.maliyet : 0}%"></i></div>`).join('')}</div>`;
 
-    $('#modulMaliyetTablo').innerHTML = r.modulMaliyetleri.length ? `<table class="liste"><thead><tr><th>Modül</th><th>Adet</th><th>Malzeme</th><th>Hırdavat</th><th>İşçilik</th><th>Birim maliyet</th><th>Birim satış</th><th>Toplam satış</th></tr></thead><tbody>
-      ${r.modulMaliyetleri.map((x, i) => `<tr><td>${esc(x.ad)}</td><td class="sag">${x.adet}</td><td class="sag">${para(x.malzeme)}</td><td class="sag">${para(x.hirdavat)}</td><td class="sag">${para(x.iscilik)}</td><td class="sag">${para(x.birim)}</td><td class="sag">${para(r.teklifSatirlari[i].birimFiyat)}</td><td class="sag kalin">${para(r.teklifSatirlari[i].tutar)}</td></tr>`).join('')}
+    $('#modulMaliyetTablo').innerHTML = r.modulMaliyetleri.length ? `<table class="liste"><thead><tr><th>Modül</th><th>Adet</th><th title="Ön yüz alanı (tek adet)">m²</th><th>Malzeme</th><th>Hırdavat</th><th>İşçilik</th><th>Birim maliyet</th><th>Birim satış</th><th>Toplam satış</th></tr></thead><tbody>
+      ${r.modulMaliyetleri.map((x, i) => `<tr><td>${esc(x.ad)}</td><td class="sag">${x.adet}</td><td class="sag">${sayiYaz(x.alanM2, 2)}</td><td class="sag">${para(x.malzeme)}</td><td class="sag">${para(x.hirdavat)}</td><td class="sag">${para(x.iscilik)}</td><td class="sag">${para(x.birim)}</td><td class="sag">${para(r.teklifSatirlari[i].birimFiyat)}</td><td class="sag kalin">${para(r.teklifSatirlari[i].tutar)}</td></tr>`).join('')}
       </tbody></table>` : '<p class="bos">Modül yok.</p>';
 
     const K = r.kalemler;
@@ -1079,7 +1089,7 @@
     h += grup('Ebatlama ve bant çekme', r.ara.hizmet);
     for (const x of K.hizmet) h += `<tr><td>${esc(x.ad)}</td><td class="sag">${sayiYaz(x.miktar, 1)} ${x.birim}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`;
     h += grup('İşçilik', r.ara.iscilik);
-    for (const x of K.iscilik) h += `<tr><td>${esc(x.ad)}</td><td class="sag">${x.miktar} ${x.birim}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`;
+    for (const x of K.iscilik) h += `<tr><td>${esc(x.ad)}</td><td class="sag">${sayiYaz(x.miktar, 2)} ${x.birim}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`;
     if (K.diger.length) {
       h += grup('Nakliye ve ek kalemler', r.ara.diger);
       for (const x of K.diger) h += `<tr><td>${esc(x.ad)}</td><td></td><td></td><td class="sag">${para(x.tutar)}</td></tr>`;
@@ -1103,12 +1113,13 @@
       </header>
       <div class="t-musteri"><span>Sayın</span><b>${esc(T.musteri || '—')}</b>${T.telefon ? `<span>${esc(T.telefon)}</span>` : ''}${T.adres ? `<span>${esc(T.adres)}</span>` : ''}</div>
       <p>Proje: <b>${esc(proje.ad || '')}</b></p>
-      <table class="liste t-tablo"><thead><tr><th>#</th><th>Ürün</th><th>Ölçü (G×Y×D mm)</th><th>Adet</th><th>Birim fiyat</th><th>Tutar</th></tr></thead><tbody>
-        ${r.teklifSatirlari.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.ad)}</td><td>${esc(x.aciklama)}</td><td class="sag">${x.adet}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`).join('')}
+      <table class="liste t-tablo"><thead><tr><th>#</th><th>Ürün</th><th>Ölçü (G×Y×D mm)</th><th>m²</th><th>Adet</th><th>Birim fiyat</th><th>Tutar</th></tr></thead><tbody>
+        ${r.teklifSatirlari.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.ad)}</td><td>${esc(x.aciklama)}</td><td class="sag">${x.alanM2 ? sayiYaz(x.alanM2 * x.adet, 2) : ''}</td><td class="sag">${x.adet}</td><td class="sag">${para(x.birimFiyat)}</td><td class="sag">${para(x.tutar)}</td></tr>`).join('')}
       </tbody><tfoot>
-        <tr><td colspan="5">Ara toplam (KDV hariç)</td><td class="sag">${para(r.satisKdvHaric)}</td></tr>
-        <tr><td colspan="5">KDV %${sayiYaz(r.kdvOrani)}</td><td class="sag">${para(r.kdv)}</td></tr>
-        <tr class="t-genel"><td colspan="5">GENEL TOPLAM</td><td class="sag">${para(r.genelToplam)}</td></tr>
+        <tr><td colspan="3">Toplam kapatılan alan</td><td class="sag">${sayiYaz(r.alanM2.toplam, 2)} m²</td><td colspan="3"></td></tr>
+        <tr><td colspan="6">Ara toplam (KDV hariç)</td><td class="sag">${para(r.satisKdvHaric)}</td></tr>
+        <tr><td colspan="6">KDV %${sayiYaz(r.kdvOrani)}</td><td class="sag">${para(r.kdv)}</td></tr>
+        <tr class="t-genel"><td colspan="6">GENEL TOPLAM</td><td class="sag">${para(r.genelToplam)}</td></tr>
       </tfoot></table>
       <div class="t-kosul">
         <p><b>Malzeme:</b> ${esc([...new Set(sonuc.kesimListesi.map((p) => (malzeme(p.malzeme) || {}).ad).filter(Boolean))].join(', '))}</p>

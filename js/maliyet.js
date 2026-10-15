@@ -94,13 +94,34 @@
     }
 
     // ---------- İşçilik ----------
-    // Dolap işçiliği yalnızca gövdeli modüllere; tek parça paneller ayrı (düşük) birim fiyatla
+    // Esas m² ise: dolapta ön yüz (kapladığı duvar) alanı, panelde panel alanı üzerinden.
+    // Esas modül ise: gövdeli modül ve panel başına sabit tutar.
     const adetOf = (m) => Math.max(1, Math.floor(sayi(m.adet) || 1));
-    const modulAdedi = proje.moduller.filter((m) => m.tip !== 'panel').reduce((a, m) => a + adetOf(m), 0);
-    const panelAdedi = proje.moduller.filter((m) => m.tip === 'panel' && m.panelTuru !== 'bosluk').reduce((a, m) => a + adetOf(m), 0);
-    if (modulAdedi && sayi(F.atolyeIscilikModul) > 0) kalemler.iscilik.push({ ad: 'Atölye işçiliği', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.atolyeIscilikModul), tutar: kurus(modulAdedi * sayi(F.atolyeIscilikModul)) });
-    if (modulAdedi && sayi(F.montajModul) > 0) kalemler.iscilik.push({ ad: 'Montaj (yerinde kurulum)', miktar: modulAdedi, birim: 'modül', birimFiyat: sayi(F.montajModul), tutar: kurus(modulAdedi * sayi(F.montajModul)) });
-    if (panelAdedi && sayi(F.panelIscilik) > 0) kalemler.iscilik.push({ ad: 'Panel işçiliği ve montajı', miktar: panelAdedi, birim: 'panel', birimFiyat: sayi(F.panelIscilik), tutar: kurus(panelAdedi * sayi(F.panelIscilik)) });
+    const govdeliler = proje.moduller.filter((m) => m.tip !== 'panel');
+    const paneller = proje.moduller.filter((m) => m.tip === 'panel' && m.panelTuru !== 'bosluk');
+    const modulAdedi = govdeliler.reduce((a, m) => a + adetOf(m), 0);
+    const panelAdedi = paneller.reduce((a, m) => a + adetOf(m), 0);
+    const alanTop = (L) => L.reduce((a, m) => a + Hesap.modulAlanM2(m) * adetOf(m), 0);
+    const govdeAlan = alanTop(govdeliler);
+    const panelAlan = alanTop(paneller);
+    const yuv2 = (x) => Math.round(x * 100) / 100;
+    const m2Esas = F.iscilikEsasi !== 'modul';
+    const iscilikKalemi = (ad, miktar, birim, fiyat) => { if (miktar > 0 && sayi(fiyat) > 0) kalemler.iscilik.push({ ad, miktar, birim, birimFiyat: sayi(fiyat), tutar: kurus(miktar * sayi(fiyat)) }); };
+    if (m2Esas) {
+      iscilikKalemi('Atölye işçiliği', govdeAlan, 'm²', F.atolyeIscilikM2);
+      iscilikKalemi('Montaj (yerinde kurulum)', govdeAlan, 'm²', F.montajM2);
+      iscilikKalemi('Panel işçiliği ve montajı', panelAlan, 'm²', F.panelIscilikM2);
+    } else {
+      iscilikKalemi('Atölye işçiliği', modulAdedi, 'modül', F.atolyeIscilikModul);
+      iscilikKalemi('Montaj (yerinde kurulum)', modulAdedi, 'modül', F.montajModul);
+      iscilikKalemi('Panel işçiliği ve montajı', panelAdedi, 'panel', F.panelIscilik);
+    }
+    // Modül başına işçilik (dağılım ve teklif satırları için)
+    const modulIscilik = (m) => {
+      const alan = Hesap.modulAlanM2(m);
+      if (m.tip === 'panel') return m2Esas ? alan * sayi(F.panelIscilikM2) : sayi(F.panelIscilik);
+      return m2Esas ? alan * (sayi(F.atolyeIscilikM2) + sayi(F.montajM2)) : sayi(F.atolyeIscilikModul) + sayi(F.montajModul);
+    };
 
     // ---------- Proje geneli: nakliye ve ek kalemler ----------
     if (sayi(F.nakliye) > 0) kalemler.diger.push({ ad: 'Nakliye', tutar: kurus(F.nakliye) });
@@ -134,9 +155,9 @@
       }
       let hird = 0;
       for (const h of s.hirdavat) hird += h.fiyatMiktari * hirdavatFiyati(A, h.kod);
-      const isc = m.tip === 'panel' ? sayi(F.panelIscilik) : sayi(F.atolyeIscilikModul) + sayi(F.montajModul);
+      const isc = modulIscilik(m);
       const birim = kurus(malz + hird + isc);
-      modulMaliyetleri.push({ id: m.id, ad: m.ad, adet, malzeme: kurus(malz), hirdavat: kurus(hird), iscilik: kurus(isc), birim, toplam: kurus(birim * adet) });
+      modulMaliyetleri.push({ id: m.id, ad: m.ad, adet, alanM2: Math.round(Hesap.modulAlanM2(m) * 100) / 100, malzeme: kurus(malz), hirdavat: kurus(hird), iscilik: kurus(isc), birim, toplam: kurus(birim * adet) });
     }
 
     // ---------- Satış, kâr, KDV ve teklif satırları ----------
@@ -149,7 +170,7 @@
         : m.tip === 'panel' ? `${m.boy}×${m.en}` + (m.sekil && m.sekil !== 'dikdortgen' ? ' (şekilli)' : '')
         : `${m.genislik}×${m.yukseklik}×${m.derinlik}`;
       const birimFiyat = kurus(x.birim * karCarpan);
-      return { ad: m.ad, aciklama: olcu, adet: x.adet, birimFiyat, tutar: kurus(birimFiyat * x.adet) };
+      return { ad: m.ad, aciklama: olcu, alanM2: x.alanM2, adet: x.adet, birimFiyat, tutar: kurus(birimFiyat * x.adet) };
     });
     if (ara.montaj > 0) {
       const birimFiyat = kurus(ara.montaj * karCarpan);
@@ -179,6 +200,8 @@
       eksikFiyat: [...new Set(eksikFiyat)],
       modulAdedi,
       panelAdedi,
+      // Kapatılan alan: dolapların ön yüzü + panellerin alanı (m²)
+      alanM2: { dolap: yuv2(govdeAlan), panel: yuv2(panelAlan), toplam: yuv2(govdeAlan + panelAlan) },
     };
   }
 

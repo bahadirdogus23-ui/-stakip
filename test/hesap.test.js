@@ -295,6 +295,7 @@ test('maliyet: toplamlar tutarlı, modül dağılımı maliyete eşit', () => {
   const u = Hesap.yeniModul('ust'); u.adet = 2;
   const p = Hesap.projeyiNormallestir(proje([Hesap.yeniModul('alt'), u, Hesap.yeniModul('gardirop')]));
   p.ayarlar.fiyat.ekKalemler = [{ ad: 'Tezgah', tutar: 5000 }];
+  p.ayarlar.fiyat.iscilikEsasi = 'modul';
   const { r } = maliyetKur(p);
   const ara = r.ara.malzeme + r.ara.hirdavat + r.ara.hizmet + r.ara.iscilik + r.ara.montaj + r.ara.diger;
   assert.ok(Math.abs(ara - r.maliyet) < 0.01);
@@ -1249,4 +1250,18 @@ test('ayak + önde baza, satır altında ara tabla yok, ray boşluğu ve arkalı
   // Baza parçalarında zemine değen kenar bantlı
   const g = Hesap.modulHesapla(Hesap.yeniModul('gardirop'), ayar);
   assert.equal(g.parcalar.find((x) => x.ad === 'Baza yanı').bant.u, 1);
+});
+
+test('maliyet: işçilik m² esaslı (ön yüz alanı), kapatılan alan raporlanır', () => {
+  const g = Hesap.yeniModul('gardirop'); // 1000 × 2400
+  const pn = Object.assign(Hesap.yeniModul('duvar_paneli'), { en: 1000, boy: 1000 });
+  const p = Hesap.projeyiNormallestir(proje([g, pn, Hesap.yeniModul('bosluk')]));
+  const { r } = maliyetKur(p);
+  assert.equal(r.alanM2.dolap, 2.4);
+  assert.equal(r.alanM2.panel, 1);
+  assert.equal(r.alanM2.toplam, 3.4);
+  const atolye = r.kalemler.iscilik.find((k) => k.ad === 'Atölye işçiliği');
+  assert.equal(atolye.birim, 'm²');
+  assert.equal(atolye.tutar, 2.4 * 1200);
+  assert.ok(Math.abs(r.dagitimFarki) < 0.05);
 });

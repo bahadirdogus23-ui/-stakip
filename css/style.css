@@ -410,6 +410,13 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 
 #yazdirAlan { display: none; }
 
+/* Bilgi kutusu (?) */
+.bilgi { display: inline-block; position: relative; vertical-align: middle; }
+.bilgi > summary { list-style: none; cursor: help; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--soluk); color: var(--soluk); font-size: 11px; line-height: 14px; text-align: center; font-weight: 700; }
+.bilgi > summary::-webkit-details-marker { display: none; }
+.bilgi[open] > summary { background: var(--vurgu, #9a5a1f); color: #fff; border-color: transparent; }
+.bilgi > div { position: absolute; z-index: 30; left: -8px; top: 22px; width: 260px; max-width: 70vw; background: #fffdf8; color: #333; border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 400; line-height: 1.4; box-shadow: 0 6px 18px rgba(0,0,0,.12); white-space: normal; }
+.m-alan { margin: 8px 0; font-size: 14px; }
 @media print {
   @page { size: A4; margin: 12mm; }
   @page etiket { size: A4; margin: 0; }
@@ -440,7 +447,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   .y-modul.y-montaj .y-on { float: left; width: 62%; margin: 0 6mm 4mm 0; }
   .y-modul svg, .y-on, .y-yan { break-inside: avoid; }
   .y-baslik, #yazdirAlan h2, #yazdirAlan h3 { break-after: avoid; }
-  #bildirim, dialog { display: none !important; }
+  #bildirim, dialog, .bilgi { display: none !important; }
   .cizim { max-height: 115mm; }
   .cizim.plan { max-height: 150mm; }
   .plaka-kart { border: 1px solid #999; }

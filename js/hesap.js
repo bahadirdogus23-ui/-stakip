@@ -280,6 +280,10 @@
       bantFire: 10,             // %
       ebatlamaPlaka: 150,       // plaka başı kesim (ebatlama) ücreti
       bantCekmeM: 12,           // metre başı bant çekme ücreti
+      iscilikEsasi: 'm2',       // 'm2': ön yüz (kapladığı) alanın m²'si başına | 'modul': modül başına
+      atolyeIscilikM2: 1200,    // m² başı atölye işçiliği (dolabın ön yüz alanı)
+      montajM2: 500,            // m² başı yerinde montaj
+      panelIscilikM2: 300,      // m² başı panel işçiliği + montajı (yan kapama, lambri, raf…)
       atolyeIscilikModul: 1500, // modül başı atölye işçiliği
       montajModul: 750,         // modül başı yerinde montaj
       panelIscilik: 200,        // panel başı (yan kapama, dolgu, raf vb.) işçilik + montaj
@@ -630,6 +634,7 @@
     const F = {};
     for (const k of Object.keys(v.fiyat)) if (typeof v.fiyat[k] === 'number') F[k] = sayiAl(gf[k], v.fiyat[k], 0, k.endsWith('Orani') || k.endsWith('Fire') ? 1000 : undefined);
     F.plakaHesabi = secenekAl(gf.plakaHesabi, ['tam', 'alan'], 'tam');
+    F.iscilikEsasi = secenekAl(gf.iscilikEsasi, ['m2', 'modul'], 'm2');
     F.hirdavat = {};
     for (const k of Object.keys(HIRDAVAT_KALEMLERI)) {
       const f = sayiAl(gf.hirdavat && gf.hirdavat[k], null, 0);
@@ -2117,6 +2122,20 @@
   }
 
   /** Tüm projeyi hesaplar: birleşik kesim listesi, hırdavat, malzeme özetleri, yerleşim. */
+  /**
+   * Modülün kapladığı ön yüz (duvar) alanı, m², tek adet: dolapta genişlik × yükseklik (L köşede iki kol),
+   * panelde boy × en; boşluk ve yatay paneller (tabla, raf) için yatay yüzey.
+   */
+  function modulAlanM2(m) {
+    if (!m) return 0;
+    if (m.tip === 'panel') {
+      if (m.panelTuru === 'bosluk') return 0;
+      return (say(m.boy, 0) * say(m.en, 0)) / 1e6;
+    }
+    if (m.tip === 'lkose') return ((say(m.genislik, 0) + say(m.genislik2, 0) - say(m.derinlik, 0)) * say(m.yukseklik, 0)) / 1e6;
+    return (say(m.genislik, 0) * say(m.yukseklik, 0)) / 1e6;
+  }
+
   function projeHesapla(proje) {
     const A = proje.ayarlar;
     const tumParcalar = [];
@@ -2236,6 +2255,7 @@
     SURGU_TURLERI,
     PANEL_TURLERI,
     HIRDAVAT_SECENEKLERI,
+    modulAlanM2,
     HIRDAVAT_KALEMLERI,
     PRESETLER,
     KATALOG_GRUPLARI,
