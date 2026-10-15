@@ -8,6 +8,7 @@ function dogrula(parcalar, gorus, adim) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
   const don = ([x, y, z]) => { const x1 = cy * x + sy * z; const z1 = -sy * x + cy * z; return [x1, cp * y - sp * z1, sp * y + cp * z1]; };
   const bakis = [don([1, 0, 0])[2], don([0, 1, 0])[2], don([0, 0, 1])[2]];
+  parcalar = parcalar.filter((p) => !p.ayrinti && !p.gizli);
   const og = parcalar.map((p) => {
     const v = (p.sk ? p.sk.v : p.k).map(don);
     const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);

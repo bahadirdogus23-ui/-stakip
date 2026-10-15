@@ -16,7 +16,7 @@
     govde: '#efe6d6', ic: '#e4d9c4', panel: '#d6c3a3', kapak: '#e7cfa8', cekmece: '#dcc19a',
     cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', ayak: '#555555', kulp: '#6f6658', led: '#ffd27a', baza: '#c9bba3', nesne: '#cccccc',
   };
-  const LED_MAX = 32;
+  const LED_MAX = 64;
 
   const hexRgb = (h) => {
     const x = /^#[0-9a-f]{3}$/i.test(h) ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h;
@@ -58,19 +58,53 @@
 
   // ---------- Gölgelendiriciler ----------
   const VS = `#version 300 es
-in vec3 aPos; in vec3 aNor; in vec4 aRenk;
+in vec3 aPos; in vec3 aNor; in vec4 aRenk; in vec4 aDoku;
 uniform mat4 uVP; uniform mat4 uIsikVP;
-out vec3 vPos; out vec3 vNor; out vec4 vRenk; out vec4 vIsik;
-void main() { vPos = aPos; vNor = aNor; vRenk = aRenk; vIsik = uIsikVP * vec4(aPos, 1.0); gl_Position = uVP * vec4(aPos, 1.0); }`;
+out vec3 vPos; out vec3 vNor; out vec4 vRenk; out vec4 vIsik; out vec4 vDoku;
+void main() { vPos = aPos; vNor = aNor; vRenk = aRenk; vDoku = aDoku; vIsik = uIsikVP * vec4(aPos, 1.0); gl_Position = uVP * vec4(aPos, 1.0); }`;
   const FS = `#version 300 es
 precision highp float;
 precision highp sampler2DShadow;
-in vec3 vPos; in vec3 vNor; in vec4 vRenk; in vec4 vIsik;
+in vec3 vPos; in vec3 vNor; in vec4 vRenk; in vec4 vIsik; in vec4 vDoku;
 uniform sampler2DShadow uGolge; uniform float uGolgeVar; uniform vec2 uGolgeAdim;
 uniform vec3 uIsikYon; uniform vec3 uGoz; uniform float uOrto; uniform vec3 uBakis;
 uniform int uLedN; uniform vec3 uLedA[${LED_MAX}]; uniform vec3 uLedB[${LED_MAX}];
 uniform vec4 uVurgu; uniform float uAlfaCarpan;
 out vec4 renk;
+// Değer gürültüsü (doku için)
+float hash(vec3 p) { p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.13)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float gurultu(vec3 x) {
+  vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x), mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+float fbm(vec3 p) { float s = 0.0; float a = 0.5; for (int i = 0; i < 4; i++) { s += a * gurultu(p); p *= 2.03; a *= 0.5; } return s; }
+vec3 dokuUygula(vec3 c, vec3 n) {
+  if (vDoku.w > 1.5) {
+    // Mermer: kıvrımlı koyu damarlar + ince ikincil damarlar
+    float v = dot(vPos, vec3(0.0042, 0.0026, 0.0031)) + fbm(vPos * 0.0028) * 2.4;
+    float ana = smoothstep(0.0, 0.09, abs(sin(v * 3.1416)));
+    float ince = smoothstep(0.0, 0.03, abs(sin(v * 7.0 + fbm(vPos * 0.01) * 3.0)));
+    vec3 damar = c * 0.58 + vec3(0.06, 0.045, 0.02);
+    c = mix(damar, c, ana * 0.85 + 0.15);
+    c = mix(c * 0.86, c, ince * 0.55 + 0.45);
+    return c * (0.97 + 0.05 * fbm(vPos * 0.02));
+  }
+  if (vDoku.w > 0.5) {
+    // Ahşap: eksen boyunca uzayan damar çizgileri ve lif gürültüsü
+    vec3 ax = normalize(vDoku.xyz);
+    vec3 pa = cross(ax, n);
+    if (dot(pa, pa) < 1e-4) pa = cross(ax, vec3(0.0, 0.0, 1.0));
+    pa = normalize(pa);
+    float u = dot(vPos, ax);
+    float t = dot(vPos, pa);
+    float bukul = fbm(vec3(u * 0.0018, t * 0.012, 0.5)) * 9.0;
+    float halka = 0.5 + 0.5 * sin(t * 0.21 + bukul);
+    float lif = gurultu(vec3(u * 0.012, t * 0.9, 1.7));
+    return c * (0.92 + 0.06 * halka + 0.04 * lif);
+  }
+  return c;
+}
 void main() {
   vec3 n = normalize(vNor);
   vec3 v = uOrto > 0.5 ? uBakis : normalize(uGoz - vPos);
@@ -88,9 +122,10 @@ void main() {
   float d = max(dot(n, uIsikYon), 0.0);
   vec3 gok = mix(vec3(0.80, 0.79, 0.77), vec3(1.0, 0.995, 0.98), n.y * 0.5 + 0.5);
   // Gölge tam karanlık değil (oda ışığı): doğrudan ışığın %35'i kalır
-  vec3 c = vRenk.rgb * (0.64 * gok + 0.50 * d * mix(0.35, 1.0, g) * vec3(1.0, 0.97, 0.92));
+  vec3 taban = dokuUygula(vRenk.rgb, n);
+  vec3 c = taban * (0.64 * gok + 0.50 * d * mix(0.35, 1.0, g) * vec3(1.0, 0.97, 0.92));
   vec3 h = normalize(uIsikYon + v);
-  c += vec3(0.10) * pow(max(dot(n, h), 0.0), 48.0) * g;
+  c += vec3(vDoku.w > 1.5 ? 0.22 : 0.10) * pow(max(dot(n, h), 0.0), vDoku.w > 1.5 ? 90.0 : 48.0) * g;
   // LED şeritler: en yakın şerit noktasından sıcak ışık
   for (int i = 0; i < ${LED_MAX}; i++) {
     if (i >= uLedN) break;
@@ -99,7 +134,7 @@ void main() {
     vec3 l = a + ab * t - vPos;
     float r = length(l);
     float k = max(dot(n, l / max(r, 1e-3)), 0.0) / (1.0 + (r / 160.0) * (r / 160.0));
-    c += vRenk.rgb * vec3(1.0, 0.72, 0.38) * k * 0.95;
+    c += taban * vec3(1.0, 0.72, 0.38) * k * 0.95;
   }
   c = mix(c, uVurgu.rgb, uVurgu.a);
   renk = vec4(c, min(vRenk.a, 1.0) * uAlfaCarpan);
@@ -139,6 +174,7 @@ void main() { renk = uRenk; }`;
     const V = [];
     const C = [];
     const N = [];
+    const T = [];
     const K = [];
     const araliklar = new Array(P.length);
     const kenarAraliklari = new Array(P.length);
@@ -156,8 +192,12 @@ void main() { renk = uRenk; }`;
       const rgb = hexRgb(p.renk || RENK[p.tur] || RENK.govde);
       const a = p.tur === 'led' ? 2 : p.saydam || 1;
       const bas = V.length / 3;
+      // Doku: tür (1 ahşap, 2 mermer) ve damar ekseni (parçanın en uzun kenarı)
+      const sb = [0, 1, 2].map((k) => Math.max(...v.map((q) => q[k])) - Math.min(...v.map((q) => q[k])));
+      const ax = [0, 1, 2].reduce((e, k) => (sb[k] > sb[e] ? k : e), 0);
+      const dk = [ax === 0 ? 1 : 0, ax === 1 ? 1 : 0, ax === 2 ? 1 : 0, p.doku === 'mermer' ? 2 : p.doku === 'ahsap' ? 1 : 0];
       const yuzN = [];
-      for (const f of F) {
+      for (const f of p.gizli ? [] : F) {
         const pts = f.map((j) => v[j]);
         let n = newell(pts);
         if (Math.hypot(n[0], n[1], n[2]) < 1e-9) { yuzN.push(null); continue; }
@@ -166,7 +206,7 @@ void main() { renk = uRenk; }`;
         if (nokta(n, alt(fm, m)) < 0) n = n.map((x) => -x);
         yuzN.push(n);
         for (let t = 1; t + 1 < pts.length; t++) {
-          for (const q of [pts[0], pts[t], pts[t + 1]]) { V.push(q[0], q[1], q[2]); N.push(n[0], n[1], n[2]); C.push(rgb[0], rgb[1], rgb[2], a); }
+          for (const q of [pts[0], pts[t], pts[t + 1]]) { V.push(q[0], q[1], q[2]); N.push(n[0], n[1], n[2]); C.push(rgb[0], rgb[1], rgb[2], a); T.push(dk[0], dk[1], dk[2], dk[3]); }
         }
       }
       araliklar[i] = [bas, V.length / 3 - bas];
@@ -199,11 +239,11 @@ void main() { renk = uRenk; }`;
         A[ax] = b[ax][0];
         B[ax] = b[ax][1];
         A[1] -= 8; B[1] -= 8; // şeridin hemen altından yayılır
-        ledler.push([A, B]);
+        ledler.push(p.ledA && p.ledB ? [p.ledA, p.ledB] : [A, B]);
       }
       kenarAraliklari[i] = [kBas, K.length / 3 - kBas];
     }
-    return { V: new Float32Array(V), N: new Float32Array(N), C: new Float32Array(C), K: new Float32Array(K), araliklar, kenarAraliklari, merkezler, opakSayi: opak.length, opak, saydam, ledler, min, max };
+    return { V: new Float32Array(V), N: new Float32Array(N), C: new Float32Array(C), T: new Float32Array(T), K: new Float32Array(K), araliklar, kenarAraliklari, merkezler, opakSayi: opak.length, opak, saydam, ledler, min, max };
   }
 
   function olustur(canvas) {
@@ -219,7 +259,7 @@ void main() { renk = uRenk; }`;
       return null;
     }
     const tampon = () => gl.createBuffer();
-    const b = { V: tampon(), N: tampon(), C: tampon(), K: tampon(), O: tampon() };
+    const b = { V: tampon(), N: tampon(), C: tampon(), T: tampon(), K: tampon(), O: tampon() };
     // Gölge haritası
     const GB = 2048;
     const golgeTex = gl.createTexture();
@@ -293,6 +333,7 @@ void main() { renk = uRenk; }`;
       gl.bindBuffer(gl.ARRAY_BUFFER, b.V); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.V, E), gl.STATIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, b.N); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.N, EN), gl.STATIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, b.C); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.C, EC), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.T); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.T, new Float32Array((E.length / 3) * 4)), gl.STATIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, b.K); gl.bufferData(gl.ARRAY_BUFFER, ag.K, gl.STATIC_DRAW);
       S.golgeVar = o.golge !== false;
       golgeGuncel = false;
@@ -372,7 +413,7 @@ void main() { renk = uRenk; }`;
       gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 0, 0);
     }
     function baglaHepsi() {
-      for (const [ad, buf, n] of [['aPos', b.V, 3], ['aNor', b.N, 3], ['aRenk', b.C, 4]]) {
+      for (const [ad, buf, n] of [['aPos', b.V, 3], ['aNor', b.N, 3], ['aRenk', b.C, 4], ['aDoku', b.T, 4]]) {
         const a = pr.a(ad);
         if (a < 0) continue;
         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -447,6 +488,7 @@ void main() { renk = uRenk; }`;
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.disableVertexAttribArray(pr.a('aNor'));
       gl.disableVertexAttribArray(pr.a('aRenk'));
+      if (pr.a('aDoku') >= 0) gl.disableVertexAttribArray(pr.a('aDoku'));
       const ka = prDuz.a('aPos');
       gl.bindBuffer(gl.ARRAY_BUFFER, b.K);
       gl.enableVertexAttribArray(ka);

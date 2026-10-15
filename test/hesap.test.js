@@ -1397,3 +1397,37 @@ test('boyama: renk tabakası anında oluşur, satır ön yüzüne uygulanır, ke
   assert.equal(Hesap.otoTabakalariTemizle(N), 1);
   assert.ok(!Hesap.malzemeBul(N.ayarlar, id2) && Hesap.malzemeBul(N.ayarlar, id));
 });
+
+test('trend: kapak deseni, kulp rengi/uzun kulp, alttan ve arkadan LED, kapsül/organik şekil, ayna panel', () => {
+  const g = Hesap.modulHesapla(Hesap.yeniModul('gardirop_cerceve'), ayar);
+  assert.deepEqual(g.uyarilar, []);
+  assert.equal(g.geo.kapakDesen, 'cerceve');
+  assert.equal(g.geo.kulpRenk, Hesap.KULP_RENKLERI.altin);
+  assert.ok(g.hirdavat.some((h) => h.kod === 'cnc_desen' && h.birim === 'm²' && h.adet > 3));
+  assert.ok(g.parcalar.filter((p) => p.ad.startsWith('Kapak')).every((p) => /Yüzey: çerçeveli/.test(p.not)));
+  // Uzun kulp: delik aralığı 448
+  const on = g.geo.satirlar.find((s) => s.onler[0] && s.onler[0].kulp).onler[0].kulp.delikler;
+  assert.equal(Math.round(Math.hypot(on[1].x - on[0].x, on[1].y - on[0].y)), 448);
+  // Kaplamalı (suntalam) kapakta freze deseni uyarı verir
+  const m = Hesap.yeniModul('gardirop_cerceve');
+  m.malzeme.kapak = 'sl18';
+  assert.ok(Hesap.modulHesapla(m, ayar).uyarilar.some((u) => /freze/.test(u)));
+  // Alttan LED: şerit + profil + adaptör, 3B'de LED parçası
+  const d = Hesap.modulHesapla(Hesap.yeniModul('dresuar_asma'), ayar);
+  assert.ok(d.hirdavat.some((h) => h.kod === 'led_serit') && d.hirdavat.some((h) => h.kod === 'led_adaptor'));
+  assert.ok(Uc.modulParcalari(d.geo, {}).some((p) => p.tur === 'led'));
+  // Kapsül ayna: ayna malzemesinden şekilli parça, arkadan LED, 3B'de gizli şerit
+  const a = Hesap.modulHesapla(Hesap.yeniModul('ayna_kapsul'), ayar);
+  assert.equal(a.parcalar[0].kullanim, 'ayna');
+  assert.equal(a.parcalar[0].sekil.tur, 'kapsul');
+  const sg = Hesap.sekilGeometrisi('kapsul', 600, 1600, 0, 0);
+  assert.ok(Math.abs(sg.alan - (600 * 1600 - (4 - Math.PI) * 300 * 300)) < 1);
+  assert.ok(Math.abs(sg.egri - 2 * Math.PI * 300) < 0.01);
+  const P = Uc.modulParcalari(a.geo, {});
+  assert.ok(P[0].tur === 'ayna' && P.some((p) => p.tur === 'led' && p.gizli && p.ledA));
+  const og = Hesap.sekilGeometrisi('organik', 700, 1400, 12, 0);
+  assert.ok(og.alan > 0.6 * 700 * 1400 && og.alan < 700 * 1400 && og.yol.length > 50);
+  // Ahşap damarlı malzeme 3B dokusu
+  assert.equal(Hesap.malzemeDokusu(Hesap.malzemeBul(ayar, 'sl18c')), 'ahsap');
+  assert.equal(Hesap.malzemeDokusu(Hesap.malzemeBul(ayar, 'mermer12')), 'mermer');
+});

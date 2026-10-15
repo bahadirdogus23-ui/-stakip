@@ -46,9 +46,25 @@ Her modül için adım adım patlatılmış 3B görünüş: takılan parçalar t
 gösterir. Parçalar ölçüsü (boy × en), adedi ve bantlı kenar simgesiyle listelenir; etiket olmadan tanınır.
 Atölye sekmesinde ve "Kurulum şeması PDF" çıktısında.
 
+## 5. Yeni 3B motoru, nesne menüsü, boyama, trendler — tamamlandı
+
+- **3B motoru (WebGL2)**: derinlik tamponu (üst üste binme hataları yok), gölge haritası, LED şeritlerin
+  yüzeylere sıcak ışık vurması, zemin ve duvar, perspektif, sağ tuş/iki parmakla kaydırma, ahşap damarı ve
+  mermer dokusu. WebGL yoksa ve baskı/PDF'te SVG çizimi kullanılır.
+- **Nesne menüsü**: 3B'de parçaya tıklayınca modül ölçüleri, satır tipi, kapak türü, raf, LED, askı;
+  satır/modül çoğaltma ve silme; formda açma.
+- **Boyama**: palet ya da özel renk; boya kovası modu; kapsam satır / modül / tüm proje. Seçilen renk için
+  kaynak malzemenin aynı kalınlık ve fiyattaki **renk tabakası** anında oluşur; kesim ve plaka listesi renge
+  göre ayrılır, kullanılmayan tabakalar silinir.
+- **Trendler** (gönderilen görsellerden): kapak deseni (çerçeveli, çıtalı, kemer, altın çıta; freze uyarısı),
+  kulp rengi (altın, bronz, krom…) ve uzun kulp, alttan LED (asma ünite, üst dolap altı), arkadan LED'li
+  kapsül / yuvarlak / kemer / organik ayna, mermer desenli TV paneli, LED'li niş, siyah profil vitrin,
+  aplik, sarkıt, pampas, minder; yeni stiller: sıcak minimal, koyu lüks, neo klasik, japandi.
+
 ## Sıradaki adaylar
 
 - Kurulum şemasında adım başına vida/minifix yerlerinin büyütülmüş detay çizimi.
-- Kavisli uç (çeyrek daire) açık raf modülü; 3B'de kavisli kenarların gerçek eğri çizimi.
+- Kavisli uç (çeyrek daire) açık raf modülü.
+- 3B'de iki modül arasına sürükleyerek yerleştirme (duvarda konum).
 - Mutfakta sürekli baza bandı ve tezgah modülü (yerleşimden otomatik).
 - Yapı şablonlarının kullanıcı tarafından kaydedilmesi (kendi atölye kuralları).

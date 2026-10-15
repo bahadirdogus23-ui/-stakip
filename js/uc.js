@@ -127,6 +127,46 @@
   }
 
   /**
+   * Kapak yüzey deseni kabartması (ön yüzün önünde 2–4 mm). Parçalar ön yüzün türünü alır;
+   * altın çıta kulp türünde ve altın renkte çizilir.
+   */
+  function desenEkle(P, x1, x2, y1, y2, z, desen, tur) {
+    const w = x2 - x1;
+    const h = y2 - y1;
+    if (w < 120 || h < 80) return;
+    if (desen === 'cerceve' || (desen === 'kemer' && h < 400)) {
+      const e = Math.min(65, w / 5, h / 5);
+      const d = 4;
+      P.push(kutu(x1, x1 + e, y1, y2, z, z + d, tur));
+      P.push(kutu(x2 - e, x2, y1, y2, z, z + d, tur));
+      P.push(kutu(x1 + e, x2 - e, y1, y1 + e, z, z + d, tur));
+      P.push(kutu(x1 + e, x2 - e, y2 - e, y2, z, z + d, tur));
+    } else if (desen === 'citali') {
+      const ad = 30;
+      const n = Math.max(2, Math.floor(w / ad));
+      const a = w / n;
+      for (let i = 0; i < n; i++) P.push(kutu(x1 + i * a + a * 0.18, x1 + i * a + a * 0.82, y1 + 2, y2 - 2, z, z + 3, tur));
+    } else if (desen === 'kemer') {
+      // İçeride kemerli kabartma pano: yan ve alttan 70 mm, üstü yarım daire
+      const e = Math.min(70, w / 5);
+      const iw = w - 2 * e;
+      const ih = h - 2 * e;
+      const f = Math.min(iw / 2, ih * 0.45);
+      const R = (iw * iw) / 4 / (2 * f) + f / 2;
+      const yol = [['M', 0, 0], ['L', iw, 0], ['L', iw, ih - f], ['A', R, R, 0, ih - f], ['Z']];
+      P.push(prizma(yolNoktalari(yol, 8), (u, v, ww) => [x1 + e + u, y1 + e + v, ww], z, z + 3, tur));
+    } else if (desen === 'altin_cita') {
+      const e = Math.min(55, w / 6, h / 6);
+      const c = 6;
+      const ek = { renk: '#c9a34a' };
+      P.push(kutu(x1 + e, x1 + e + c, y1 + e, y2 - e, z, z + 2, 'kulp', ek));
+      P.push(kutu(x2 - e - c, x2 - e, y1 + e, y2 - e, z, z + 2, 'kulp', ek));
+      P.push(kutu(x1 + e + c, x2 - e - c, y1 + e, y1 + e + c, z, z + 2, 'kulp', ek));
+      P.push(kutu(x1 + e + c, x2 - e - c, y2 - e - c, y2 - e, z, z + 2, 'kulp', ek));
+    }
+  }
+
+  /**
    * Bir modülün yerel parçaları. Yerel: x 0..W (önden bakınca soldan sağa), y zeminden,
    * z 0 = arka (duvar), z = D gövde ön yüzü; tam bini kapaklar z > D.
    */
@@ -137,7 +177,8 @@
       const k = TUR_RENK[p.tur];
       if (k && !p.kul) p.kul = k === 'ic' ? 'cekmece' : k; // boyamada hangi kullanıma gider
       if (renk && k && renk[k]) p.renk = renk[k];
-      if (p.satirRenk) p.renk = p.satirRenk; // satıra özel ön yüz rengi
+      if (renk && renk.doku && k && renk.doku[k] && !p.doku) p.doku = renk.doku[k];
+      if (p.satirRenk) { p.renk = p.satirRenk; p.doku = p.satirDoku || null; } // satıra özel ön yüz rengi
     }
     return P;
   }
@@ -240,6 +281,12 @@
         : kutu(t, W - t, hb + (altYok ? 10 : t), hb + Hc - t, z, z + geo.ta, 'arkalik'));
     } else if (geo.arkalik === 'cakma') {
       P.push(egim ? egimliKutu(0, W, hb, hb + HcL, hb + HcR, zArka - geo.ta, zArka, 'arkalik') : kutu(0, W, hb, hb + Hc, zArka - geo.ta, zArka, 'arkalik'));
+    }
+
+    // Alttan LED: modülün altında, ön kenara yakın (asma ünite altında zemine / tezgaha ışık)
+    if (geo.ledAlt) {
+      const yAlt = hb + (altYok ? 0 : 0);
+      P.push(kutu(20, W - 20, yAlt - 4, yAlt - 0.5, D - 70, D - 50, 'led'));
     }
 
     // ---------- İç parçalar ----------
@@ -346,6 +393,10 @@
         const y2Sol = hb + (o.y2sol != null ? o.y2sol : s.on.y2);
         const y2Sag = hb + (o.y2sag != null ? o.y2sag : s.on.y2);
         onYuz(P, o.x1, o.x2, hb + s.on.y1, y2Sol, y2Sag, z1, z1 + tk, s.tip === 'kapak' ? s.kapakTuru : 'panel', geo.cerceveEni || 70, tur, geo.profilPay || 18);
+        const duzPanel = s.tip === 'cekmece' || s.kapakTuru === 'panel';
+        if (geo.kapakDesen && duzPanel && Math.abs(y2Sol - y2Sag) < 0.5) desenEkle(P, o.x1, o.x2, hb + s.on.y1, y2Sol, z1 + tk, geo.kapakDesen, tur);
+        // Gola profil: her ön yüzün üst kenarında koyu kanal
+        if (geo.kulpTur === 'gola' && duzPanel) P.push(kutu(o.x1, o.x2, y2Sol - 14, y2Sol, z1 + tk, z1 + tk + 0.6, 'ayak', { renk: '#2a2a2c' }));
         if (o.kulp && o.kulp.delikler.length && !(s.tip === 'cekmece' && !s.cekmeceler.length)) {
           const d = o.kulp.delikler;
           const xs = d.map((p) => o.x1 + p.x);
@@ -355,13 +406,15 @@
           const x2 = Math.max(...xs) + (yatay ? 10 : 6);
           const y1 = Math.min(...ys) - (yatay ? 6 : 10);
           const y2 = Math.max(...ys) + (yatay ? 6 : 10);
-          P.push(kutu(x1, x2, y1, y2, z1 + tk + 18, z1 + tk + 28, 'kulp'));
+          P.push(kutu(x1, x2, y1, y2, z1 + tk + 18, z1 + tk + 28, 'kulp', geo.kulpRenk ? { renk: geo.kulpRenk } : null));
+          // Kulp ayakları (kapağa bağlanan iki uç)
+          for (const [dx, dy] of yatay ? [[xs[0], ys[0]], [xs[xs.length - 1], ys[0]]] : [[xs[0], ys[0]], [xs[0], ys[ys.length - 1]]]) P.push(kutu(dx - 4, dx + 4, dy - 4, dy + 4, z1 + tk, z1 + tk + 18, 'kulp', Object.assign({ ayrinti: true }, geo.kulpRenk ? { renk: geo.kulpRenk } : null)));
         }
       }
       // Ön yüz parçaları satırına bağlanır (3B'de tıklayınca satır düzenlenir / boyanır)
       for (let i = ilk; i < P.length; i++) {
         P[i].satir = [s.sutun, s.no != null ? s.no : 0];
-        if (s.onRenk && (P[i].tur === 'kapak' || P[i].tur === 'cekmece')) P[i].satirRenk = s.onRenk;
+        if (s.onRenk && (P[i].tur === 'kapak' || P[i].tur === 'cekmece')) { P[i].satirRenk = s.onRenk; P[i].satirDoku = s.onDoku || null; }
       }
     }
     return P;
@@ -424,6 +477,12 @@
     const r = g.renk || '#cccccc';
     const P = [];
     const k = (x1, x2, y1, y2, za, zb, renk, ek) => P.push(Object.assign(kutu(x1, x2, y1, y2, z0 + za, z0 + zb, 'nesne', ek), { renk }));
+    // Dönel dilim: (cx, cz) merkezli rx × rz elips kesitli silindir, y1..y2
+    const sil = (cx, cz, rx, rz, y1, y2, renk, ek) => {
+      const n = 16;
+      const pts = Array.from({ length: n }, (_, i) => [cx + rx * Math.cos((i / n) * 2 * Math.PI), z0 + cz + rz * Math.sin((i / n) * 2 * Math.PI)]);
+      P.push(Object.assign(prizma(pts, (u, v, w) => [u, w, v], y1, y2, 'nesne', ek), { renk }));
+    };
     const on = Math.min(20, D * 0.08);
     switch (g.nesne) {
       case 'buzdolabi': case 'buzdolabi_genis': {
@@ -493,6 +552,52 @@
         }
         break;
       }
+      case 'aplik': {
+        // Duvar plakası, ince gövde, iki ucunda ışık (duvara yukarı-aşağı hare)
+        k(W / 2 - 18, W / 2 + 18, H / 2 - 30, H / 2 + 30, 0, 12, r);
+        k(W / 2 - 7, W / 2 + 7, 30, H - 30, 12, D - 30, r);
+        P.push(Object.assign(kutu(W / 2 - 9, W / 2 + 9, H - 34, H - 26, z0 + D - 34, z0 + D - 22, 'led'), { ledA: [W / 2, H + 40, z0 + 20], ledB: [W / 2, H + 120, z0 + 20] }));
+        P.push(Object.assign(kutu(W / 2 - 9, W / 2 + 9, 26, 34, z0 + D - 34, z0 + D - 22, 'led'), { ledA: [W / 2, -40, z0 + 20], ledB: [W / 2, -120, z0 + 20] }));
+        break;
+      }
+      case 'sarkit': {
+        // Tavandan kablo, altta cam küre (dilimler) ve içinde ampul
+        const c = Math.min(W, D);
+        k(W / 2 - 2, W / 2 + 2, c, H, D / 2 - 2, D / 2 + 2, '#3a3a3a');
+        k(W / 2 - 22, W / 2 + 22, c - 10, c + 30, D / 2 - 22, D / 2 + 22, r);
+        [0.55, 0.85, 1, 0.85, 0.55].forEach((f, i) => { const w = c * f; sil(W / 2, D / 2, w / 2, w / 2, (i * c) / 5, ((i + 1) * c) / 5, '#e9dcc0', { saydam: 0.55 }); });
+        P.push(Object.assign(kutu(W / 2 - 14, W / 2 + 14, c / 2 - 14, c / 2 + 14, z0 + D / 2 - 14, z0 + D / 2 + 14, 'led'), { ledA: [W / 2 - 1, c / 2, z0 + D / 2], ledB: [W / 2 + 1, c / 2, z0 + D / 2] }));
+        break;
+      }
+      case 'pampas': {
+        // Seramik vazo ve üstte kabaran tüylü otlar
+        const vh = H * 0.38;
+        [0.55, 0.85, 0.75, 0.45].forEach((f, i) => { const w = W * 0.55 * f; sil(W / 2, D / 2, w / 2, w / 2, (i * vh) / 4, ((i + 1) * vh) / 4, '#d9cbb4'); });
+        // Otlar: vazodan yelpaze gibi açılan ince saplar ve üstlerinde tüylü başaklar
+        const oh = H - vh;
+        for (let i = 0; i < 7; i++) {
+          const a = (i - 3) / 3;
+          const x = W / 2 + a * W * 0.38;
+          const z = D / 2 + Math.sin(i * 2.1) * D * 0.18;
+          const ust = vh + oh * (0.75 + 0.25 * Math.cos(a * 1.2));
+          k(W / 2 + a * W * 0.08 - 2, W / 2 + a * W * 0.08 + 2, vh - 20, vh + oh * 0.35, z - 2, z + 2, '#b9a888');
+          // Başak: yukarı doğru kabarıp incelen tüylü dilimler
+          const y0 = vh + oh * 0.3;
+          const pr2 = [0.45, 0.85, 1, 0.8, 0.45];
+          pr2.forEach((f, j) => sil(x, z, W * 0.09 * f, D * 0.09 * f, y0 + ((ust - y0) * j) / pr2.length, y0 + ((ust - y0) * (j + 1)) / pr2.length, i % 2 ? r : koyu(r, 0.94)));
+        }
+        break;
+      }
+      case 'minder': {
+        k(0, W, 0, H * 0.75, 0, D, r);
+        k(15, W - 15, H * 0.75, H, 15, D - 15, koyu(r, 1.04));
+        break;
+      }
+      case 'tepsi': {
+        k(0, W, 0, 6, 0, D, r);
+        k(0, W, 6, H, 0, 6, r); k(0, W, 6, H, D - 6, D, r); k(0, 6, 6, H, 6, D - 6, r); k(W - 6, W, 6, H, 6, D - 6, r);
+        break;
+      }
       case 'vazo': case 'vazo_uzun': case 'biblo': case 'mum': case 'kettle': case 'blender': {
         // Dönel cisim: üst üste daralan/genişleyen dilimler
         const profil = { vazo: [0.6, 0.9, 1, 0.8, 0.5, 0.65], vazo_uzun: [0.55, 0.8, 0.95, 0.75, 0.5, 0.4, 0.55], biblo: [0.9, 0.6, 0.7, 0.5], mum: [1, 0.85], kettle: [1, 0.95, 0.75, 0.4], blender: [0.9, 0.7, 0.75, 0.85, 1, 0.9] }[g.nesne];
@@ -500,16 +605,17 @@
         profil.forEach((f, i) => {
           const w = W * f;
           const d = D * f;
-          k(W / 2 - w / 2, W / 2 + w / 2, (H * i) / n, (H * (i + 1)) / n, D / 2 - d / 2, D / 2 + d / 2, i === 0 && g.nesne === 'blender' ? '#2b2c2f' : koyu(r, 1 - i * 0.03));
+          sil(W / 2, D / 2, w / 2, d / 2, (H * i) / n, (H * (i + 1)) / n, i === 0 && g.nesne === 'blender' ? '#2b2c2f' : koyu(r, 1 - i * 0.03));
         });
         break;
       }
       case 'saksi': case 'bitki_buyuk': {
         const ph = H * 0.3;
-        k(W * 0.18, W * 0.82, 0, ph, D * 0.18, D * 0.82, '#a0613d');
+        sil(W / 2, D / 2, W * 0.3, D * 0.3, 0, ph * 0.85, '#a0613d');
+        sil(W / 2, D / 2, W * 0.33, D * 0.33, ph * 0.85, ph, koyu('#a0613d', 0.9));
         const yap = [[0.55, 0.12], [0.85, 0.18], [1, 0.2], [0.8, 0.12], [0.5, 0.08], [0.25, 0.1]];
         let y = ph;
-        yap.forEach(([f, h], i) => { const hh = (H - ph) * h / 0.8; k(W / 2 - (W * f) / 2, W / 2 + (W * f) / 2, y, Math.min(H, y + hh), D / 2 - (D * f) / 2, D / 2 + (D * f) / 2, koyu(r, 1 + (i % 2) * 0.12)); y += hh; });
+        yap.forEach(([f, h], i) => { const hh = (H - ph) * h / 0.8; sil(W / 2 + (i % 2 ? W * 0.04 : -W * 0.03), D / 2, (W * f) / 2, (D * f) / 2, y, Math.min(H, y + hh), koyu(r, 1 + (i % 2) * 0.12)); y += hh; });
         break;
       }
       case 'yatak_cift': case 'yatak_tek': {
@@ -651,7 +757,35 @@
   }
 
   function panelParcalari(g, onZ) {
-    const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
+    let P = panelParcalariHam(g, onZ);
+    if (g.ledArka && P.length) {
+      // Panel duvardan 30 mm takozla uzak; LED arada kalır
+      const it = (q) => [q[0], q[1], q[2] + 30];
+      P = P.map((p) => Object.assign({}, p, { k: p.k.map(it) }, p.sk ? { sk: { v: p.sk.v.map(it), f: p.sk.f } } : {}));
+      // Arkadan LED: panelin arkasında, kenardan 30 mm içeride çevre boyunca (duvara hare)
+      const p = P[0];
+      const v = p.sk ? p.sk.v.slice(0, p.sk.v.length / 2) : null;
+      const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
+      const z = b[2][0] - 1;
+      if (v && v.length > 8) {
+        // Şekilli: çevreyi merkeze doğru 30 mm içeri alıp en çok 12 parça
+        const m = [(b[0][0] + b[0][1]) / 2, (b[1][0] + b[1][1]) / 2];
+        const adim = Math.max(1, Math.floor(v.length / 12));
+        const pts = [];
+        for (let i = 0; i < v.length; i += adim) { const q = v[i]; const dx = q[0] - m[0]; const dy = q[1] - m[1]; const l = Math.hypot(dx, dy) || 1; pts.push([q[0] - (dx / l) * 30, q[1] - (dy / l) * 30]); }
+        // Şerit görünmez (aynanın arkasında); ışık ledA–ledB doğru parçasından yayılır
+        pts.forEach((q, i) => { const n = pts[(i + 1) % pts.length]; const mx = (q[0] + n[0]) / 2; const my = (q[1] + n[1]) / 2; P.push(Object.assign(kutu(mx - 2, mx + 2, my - 2, my + 2, z - 3, z, 'led'), { ledA: [q[0], q[1], z], ledB: [n[0], n[1], z] })); });
+      } else {
+        const [x1, x2] = [b[0][0] + 30, b[0][1] - 30];
+        const [y1, y2] = [b[1][0] + 30, b[1][1] - 30];
+        for (const [a, c] of [[[x1, y1], [x2, y1]], [[x2, y1], [x2, y2]], [[x2, y2], [x1, y2]], [[x1, y2], [x1, y1]]]) P.push(Object.assign(kutu(Math.min(a[0], c[0]) - 2, Math.max(a[0], c[0]) + 2, Math.min(a[1], c[1]) - 2, Math.max(a[1], c[1]) + 2, z - 3, z, 'led'), { ledA: [a[0], a[1], z], ledB: [c[0], c[1], z] }));
+      }
+      for (const p2 of P) if (p2.tur === 'led') p2.gizli = true; // panelin arkasında kalır; yalnız ışık verir
+    }
+    return P;
+  }
+  function panelParcalariHam(g, onZ) {
+    const tur = g.kullanim === 'govde' ? 'govde' : g.kullanim === 'ayna' ? 'ayna' : 'kapak';
     if (g.nesne) return nesneParcalari(g);
     if (g.lambri) {
       // Arka panel duvarda, çıtalar önünde eşit aralıklı
@@ -704,7 +838,7 @@
         return [p[2], y.montaj + p[1], y.bas + y.W - p[0]];
       };
       const kaynak = y.kaynak || y.modul;
-      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad, modulId: kaynak.id }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}));
+      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad, modulId: kaynak.id }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}, q.ledA ? { ledA: donustur(q.ledA), ledB: donustur(q.ledB) } : {}));
     }
     return P;
   }
@@ -830,6 +964,7 @@
     const ogeler = [];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const p of parcalar) {
+      if (p.ayrinti || p.gizli) continue; // küçük ayrıntılar (kulp ayakları) ve gizli ışık şeritleri yalnız gerçekçi görünümde
       const v = (p.sk ? p.sk.v : p.k).map(don);
       let ex1 = Infinity, ex2 = -Infinity, ey1 = Infinity, ey2 = -Infinity;
       for (const q of v) { ex1 = Math.min(ex1, q[0]); ex2 = Math.max(ex2, q[0]); ey1 = Math.min(ey1, -q[1]); ey2 = Math.max(ey2, -q[1]); }

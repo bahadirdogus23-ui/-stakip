@@ -498,7 +498,8 @@
         <div class="form-izgara">
           <label class="genis">Ad<input data-alan="ad" value="${esc(m.ad)}"></label>
           <label>Panel türü${secim('panelTuru', m.panelTuru, Object.entries(Hesap.PANEL_TURLERI).map(([k, v]) => [k, v.ad]))}</label>
-          <label>Malzeme${secim('panelMalzeme', m.panelMalzeme, [['kapak', 'Kapak malzemesi'], ['govde', 'Gövde malzemesi']])}</label>
+          <label>Malzeme${secim('panelMalzeme', m.panelMalzeme, [['kapak', 'Kapak malzemesi'], ['govde', 'Gövde malzemesi'], ['ayna', 'Ayna']])}</label>
+          ${['duvar', 'serbest', 'dolgu'].includes(m.panelTuru) ? `<label class="onay" title="Panelin / aynanın arkasında çevre boyunca LED: duvara hare ışık. Panel 30 mm takozla duvardan ayrılır."><input data-alan="ledArka" type="checkbox" ${m.ledArka ? 'checked' : ''}> Arkadan LED (hare)</label>` : ''}
           <label>Boy (mm)${sayiGir('boy', m.boy, 'min="20"')}</label>
           <label>En (mm)${sayiGir('en', m.en, 'min="20"')}</label>
           <label>Adet${sayiGir('adet', m.adet, 'min="1"')}</label>
@@ -585,6 +586,9 @@
           : `<label title="Tam bini: kapak gövdenin önüne biner. Gömme: kapak gövde içine girer, bölücüler önde görünür.">Kapak tipi${secim('kapakTipi', m.kapakTipi, [['tam', 'Tam bini (bindirme)'], ['ic', 'Gömme (iç bini)']])}</label>`}
         <label>Kulp yönü${secim('kulpYon', m.kulpYon, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_YONLERI)])}</label>
         <label>Kulp konumu${secim('kulpKonum', m.kulpKonum, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_KONUMLARI).map(([k, v]) => [k, v.split(' (')[0]])])}</label>
+        <label title="Kulp vida aralığı (mm). Uzun kulp için 320, 448, 640…; 0 = proje ayarı">Kulp boyu / aralık (mm)${sayiGir('kulpBoy', m.kulpBoy, 'min="0" step="32"')}</label>
+        <label title="Ön yüzlere desen: çerçeve, çıta ve kemer CNC freze ister (MDF Lake / ham MDF); altın çıta her yüzeye uygulanır">Kapak deseni${secim('kapakDesen', m.kapakDesen, Object.entries(Hesap.KAPAK_DESENLERI))}</label>
+        <label class="onay" title="Modülün altına, ön kenara yakın LED şerit: asma TV ünitesi, dresuar ve üst dolap altında dolaylı ışık"><input data-alan="ledAlt" type="checkbox" ${m.ledAlt ? 'checked' : ''}> Alttan LED</label>
       </div>
       <h4 class="yapi-grup">Zemin ve baza</h4>
       <div class="form-izgara">
@@ -1466,7 +1470,8 @@
     } else P = Uc.modulParcalari(s.geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) }).map((p) => Object.assign(p, { modulId: m.id }));
     // Tek modül montaj yüksekliğinde gösterilir (asma dolap havada, raf duvarda)
     const my = Number(m.montajYuksekligi) || 0;
-    if (my > 0 && $('#ucOda').checked) P = P.map((p) => Object.assign({}, p, { k: p.k.map((q) => [q[0], q[1] + my, q[2]]) }, p.sk ? { sk: { v: p.sk.v.map((q) => [q[0], q[1] + my, q[2]]), f: p.sk.f } } : {}));
+    const yuk = (q) => [q[0], q[1] + my, q[2]];
+    if (my > 0 && $('#ucOda').checked) P = P.map((p) => Object.assign({}, p, { k: p.k.map(yuk) }, p.sk ? { sk: { v: p.sk.v.map(yuk), f: p.sk.f } } : {}, p.ledA ? { ledA: yuk(p.ledA), ledB: yuk(p.ledB) } : {}));
     return { P };
   }
   function ucVurgula() {
@@ -1540,7 +1545,7 @@
     if (!m) { bildir('Bu süs yalnız görsel; boyanamaz. "Süsleri projeye ekle" ile eşyaya çevirebilirsiniz.'); return; }
     const A = proje.ayarlar;
     let kul = sec.kul;
-    if (m.tip === 'panel') kul = m.panelMalzeme === 'govde' ? 'govde' : 'kapak';
+    if (m.tip === 'panel') kul = m.panelMalzeme === 'govde' ? 'govde' : m.panelMalzeme === 'ayna' ? null : 'kapak';
     if (!kul) { bildir('Bu parça (cam, ayna, kulp, ayak, eşya) boyanmaz.'); return; }
     let k = kapsam === 'akilli' ? (sec.satir && kul === 'kapak' ? 'satir' : 'modul') : kapsam;
     if (k === 'satir' && !(sec.satir && kul === 'kapak')) k = 'modul';
@@ -1580,7 +1585,7 @@
       return;
     }
     const satir = sec.satir && m.sutunlar && m.sutunlar[sec.satir[0]] ? m.sutunlar[sec.satir[0]].satirlar[sec.satir[1]] : null;
-    const kul = m.tip === 'panel' ? (m.panelMalzeme === 'govde' ? 'govde' : 'kapak') : sec.kul;
+    const kul = m.tip === 'panel' ? (m.panelMalzeme === 'govde' ? 'govde' : m.panelMalzeme === 'ayna' ? null : 'kapak') : sec.kul;
     const M = Hesap.malzemeCoz(m, A);
     const simdiMalz = kul ? (satir && kul === 'kapak' && satir.onMalzeme ? Hesap.malzemeBul(A, satir.onMalzeme) || M.kapak : M[kul]) : null;
     const secenek = (L, v) => L.map(([k, ad]) => `<option value="${esc(k)}"${String(k) === String(v) ? ' selected' : ''}>${esc(ad)}</option>`).join('');
@@ -2029,12 +2034,21 @@
     try { onceki = gecmis.length > 1 ? JSON.parse(gecmis[gecmis.length - 2]) : null; } catch (e2) { onceki = null; }
     const yolAl = (o, yol) => yol.reduce((a, k) => (a == null ? a : a[k]), o);
     // Eksi/sıfır ölçü normalleştirmede değişmeyebilir (alt sınır 0): ayrıca yakala
-    const tara = (a, yol) => {
-      if (a && typeof a === 'object') { for (const k of Object.keys(a)) tara(a[k], yol.concat(k)); return; }
-      if (OLCU.includes(yol[yol.length - 1]) && typeof a === 'number' && a <= 0 && !farklar.some((f) => f.yol.join('.') === yol.join('.'))) farklar.push({ yol, eski: a, yeni: a });
-    };
-    tara(n.moduller, ['moduller']);
-    tara(n.ayarlar.malzemeler, ['ayarlar', 'malzemeler']);
+    // Yalnız modülün kendi ölçü alanları (baza yüksekliği gibi iç içe 0 değerleri geçerli) ve malzeme ölçüleri;
+    // panelde genişlik/yükseklik/derinlik, gövdede boy/en kullanılmaz
+    const ilgili = (m, k) => (m.tip === 'panel' ? ['boy', 'en'] : m.tip === 'lkose' ? ['genislik', 'genislik2', 'yukseklik', 'derinlik'] : ['genislik', 'yukseklik', 'derinlik']).includes(k);
+    n.moduller.forEach((m, i) => {
+      for (const k of OLCU) if (ilgili(m, k) && typeof m[k] === 'number' && m[k] <= 0 && !farklar.some((f) => f.yol.join('.') === ['moduller', String(i), k].join('.'))) farklar.push({ yol: ['moduller', String(i), k], eski: m[k], yeni: m[k] });
+    });
+    n.ayarlar.malzemeler.forEach((m, i) => {
+      for (const k of ['kalinlik', 'plakaUzun', 'plakaKisa']) if (typeof m[k] === 'number' && m[k] <= 0) farklar.push({ yol: ['ayarlar', 'malzemeler', String(i), k], eski: m[k], yeni: m[k] });
+    });
+    // Normalleştirmenin değiştirdiği ama o modülde kullanılmayan ölçüler (ör. panelde derinlik) bildirilmez
+    for (let i = farklar.length - 1; i >= 0; i--) {
+      const f = farklar[i];
+      if (f.yol[0] === 'moduller' && f.yol.length === 3 && OLCU.includes(f.yol[2])) { const m = n.moduller[Number(f.yol[1])]; if (m && !ilgili(m, f.yol[2])) farklar.splice(i, 1); }
+      else if (f.yol[0] === 'moduller' && f.yol.length > 3 && OLCU.includes(f.yol[f.yol.length - 1])) farklar.splice(i, 1);
+    }
     for (const f of farklar) {
       const gecersiz = f.eski == null || f.eski === '' || (typeof f.eski === 'number' && f.eski <= 0);
       if (!OLCU.includes(f.yol[f.yol.length - 1]) || !gecersiz) continue;

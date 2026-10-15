@@ -46,7 +46,7 @@
     mutfak: ['kahve', 'kettle', 'cay', 'ekmek', 'robot', 'airfryer', 'kase', 'tahta', 'saksi', 'sise'],
     komodin: ['lamba', 'lamba', 'kitap_yatay', 'saat', 'kupa'],
     banyo: ['sise', 'havlu', 'saksi', 'mum'],
-    salon: ['vazo', 'vazo_uzun', 'lamba', 'saksi', 'biblo', 'kitap_yatay', 'cerceve', 'mum', 'kase'],
+    salon: ['vazo', 'vazo_uzun', 'lamba', 'saksi', 'biblo', 'kitap_yatay', 'cerceve', 'mum', 'kase', 'pampas', 'pampas', 'tepsi'],
     gardirop: ['sepet', 'kutu', 'kutu'],
   };
 
@@ -127,6 +127,11 @@
           ekle(bw >= 1200 ? 'yatak_cift' : 'yatak_tek', y, (g.W - bw) / 2, bw, 0, 500, 2000, 25, 'Yatak');
         } else if (g.tur === 'bosluk' && /Buzdolabı/i.test(y.modul.ad) && g.W >= 600) {
           ekle(g.W >= 900 ? 'buzdolabi_genis' : 'buzdolabi', y, 5, g.W - 10, 0, Math.min(1850, g.H || 1850), 650, 0, 'Buzdolabı');
+        } else if (g.tur === 'duvar' && (g.kullanim === 'ayna' || g.ledArka) && y.montaj > 300 && R.ihtimal(Y.ust)) {
+          // Ayna / ışıklı panel: iki yanında LED aplik
+          const amt = y.montaj + g.H / 2 - 300;
+          ekle('aplik', y, -170, 60, amt, 600, 90, 0, 'Aplik');
+          ekle('aplik', y, g.W + 110, 60, amt, 600, 90, 0, 'Aplik');
         } else if (g.tur === 'raf' && R.ihtimal(Y.yuzey)) {
           // Duvar rafı üstü
           yuzeyDoldur(R, y, RAF_ESYA.salon, 0, g.W, y.montaj + g.H, 280, g.D - 10, 5, Y.adet);
@@ -164,6 +169,8 @@
             const ustK = s.icUst - 205;
             const h = Math.min(950, ustK - s.icAlt - 20);
             if (h >= 300 && R.ihtimal(Math.max(0.5, Y.yuzey))) ekle('mont', y, b.x1 + 15, w - 30, y.montaj + g.hb + ustK - h, h, Math.min(260, g.icDerinlik - 90), zArkaIc + 75, 'Kancada mont ve çanta');
+            // Kanca nişinin tabanı oturaksa (altında çekmece) minder
+            if (s.icAlt >= 300 && s.icAlt <= 560 && w >= 400 && R.ihtimal(0.85)) ekle('minder', y, b.x1 + 10, w - 20, tabanY, 90, Math.min(400, dMax), zArkaIc + Math.max(10, dMax - 400) + 10, 'Oturak minderi');
             continue;
           }
           // Cihaz nişleri (mutfak): yüksekliğe göre buzdolabı, fırın, mikrodalga
@@ -215,6 +222,12 @@
           const dUst = Math.min(g.D - (tezgah ? 60 : 40), 420);
           yuzeyDoldur(R, y, liste, 20, g.W - 20, ustY, 600, dUst, (g.D - dUst) / 2, Math.max(1, Y.adet - (g.W < 600 ? 1 : 0)));
         }
+      }
+      // Asma dresuar / konsol: bir ucunda tavandan sarkıt lamba
+      if (/dresuar|konsol/i.test(y.modul.ad) && g.H <= 700 && R.ihtimal(Y.ust * 0.8)) {
+        const tavan = S.tavan || 2600;
+        const mt = ustY + R.sec([550, 650, 750]);
+        if (tavan - mt >= 400) ekle('sarkit', y, R.ihtimal(0.5) ? 60 : g.W - 280, 220, mt, tavan - mt, 220, Math.max(40, g.D / 2 - 110), 'Sarkıt lamba');
       }
       // Gardırop / boy dolap üstünde kutular ve sepetler (tavana yer varsa)
       if (g.H >= 1700 && bg !== 'mutfak' && R.ihtimal(Y.ust * 0.6)) {

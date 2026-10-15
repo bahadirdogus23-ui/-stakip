@@ -549,7 +549,8 @@
     const moduller = [];
     const ozet = [];
     // Asma (duvara monte, yerden yüksek) ya da ayaklı / bazalı
-    const asma = o.yukseklik >= 700 && R.ihtimal(0.3);
+    const asma = o.yukseklik >= 700 && R.ihtimal(0.45);
+    const ledAlt = asma && R.ihtimal(st.ledAlt == null ? 0.6 : st.ledAlt);
     const mt = asma ? R.sec([200, 250, 300]) : 0;
     const H = o.yukseklik - mt;
     const baza = asma ? { tip: 'yok' } : R.ihtimal(st.ayak) ? AYAK(R.sec([100, 120, 150])) : BAZA(R.sec([60, 80]), 30);
@@ -580,12 +581,29 @@
         sutunlar.push(SUT(null, satir));
         tarif.push({ cekmece: 'çekmeceler', kapak: 'kapak', acik: 'açık raf', cam: 'camlı kapak' }[tip]);
       }
-      moduller.push(govdeli(`Dresuar${nMod > 1 ? ` ${i + 1}` : ''}`, { genislik: mw, yukseklik: H, derinlik: D, yapi: 'tabla_boydan', baza, montajYuksekligi: mt, sutunlar, ustKavisR: kavis, ustKavisKose: nMod === 1 ? 'on' : i === 0 ? 'sol' : 'sag', ustKapakUstu: kapakUstu }));
+      moduller.push(govdeli(`Dresuar${nMod > 1 ? ` ${i + 1}` : ''}`, { genislik: mw, yukseklik: H, derinlik: D, yapi: 'tabla_boydan', baza, montajYuksekligi: mt, sutunlar, ustKavisR: kavis, ustKavisKose: nMod === 1 ? 'on' : i === 0 ? 'sol' : 'sag', ustKapakUstu: kapakUstu, ledAlt }));
       ozet.push(`${mw} mm: ${tarif.join(' | ')}`);
     }
-    if (asma) ozet.push(`Duvara asma, yerden ${mt} mm yüksekte`);
-    const ust = R.sec(W >= 700 ? ['ayna', 'ayna', 'raf', 'panel', 'yok'] : ['raf', 'yok']);
-    if (ust === 'ayna') {
+    if (asma) ozet.push(`Duvara asma, yerden ${mt} mm yüksekte${ledAlt ? ', altı LED (zemine dolaylı ışık)' : ''}`);
+    const ust = R.sec(W >= 700 ? ['ayna_led', 'ayna_led', 'ayna_led', 'ayna', 'raf', 'panel', 'yok'] : ['raf', 'yok']);
+    if (ust === 'ayna_led') {
+      // Trend: kapsül / yuvarlak / kemer / organik ayna, arkadan LED; geniş duvarda yanında dikey lambri şeridi
+      const tur = R.sec(['ayna_kapsul', 'ayna_yuvarlak', 'ayna_kemer', 'ayna_organik']);
+      const led = R.ihtimal(st.aynaLed == null ? 0.6 : st.aynaLed);
+      const lambri = W >= 1300 && R.ihtimal(0.5);
+      const lw = lambri ? R.sec([300, 360, 420]) : 0;
+      const alan = W - lw;
+      const [aw, ah] = tur === 'ayna_yuvarlak' ? [Math.min(900, Math.round(alan * 0.7)), 0] : tur === 'ayna_organik' ? [Math.min(750, Math.round(alan * 0.6)), 1300] : [Math.min(650, Math.round(alan * 0.5)), R.sec([1300, 1400, 1500])];
+      const boy = tur === 'ayna_yuvarlak' ? aw : ah;
+      const lambriSolda = R.ihtimal(0.5);
+      const ax = (lambri && lambriSolda ? lw : 0) + Math.round((alan - aw) / 2);
+      moduller.push(hazir(tur, { ad: `${Hesap.PRESETLER[tur].ad.split(' (')[0]}`, en: aw, boy, montajYuksekligi: o.yukseklik + R.sec([150, 200, 250]), konum: ax, ledArka: led }));
+      ozet.push(`Üstte ${aw}×${boy} mm ${Hesap.SEKILLER[Hesap.PRESETLER[tur].sekil].kisa} ayna${led ? ', arkadan LED hare' : ''}`);
+      if (lambri) {
+        moduller.push(hazir('lambri_dikey', { ad: 'Lambri şerit', en: lw, boy: 2400 - o.yukseklik - 60, montajYuksekligi: o.yukseklik + 60, konum: lambriSolda ? 0 : W - lw, lambriCitaEn: 30, lambriAralik: 15, _aksan: true }));
+        ozet.push(`${lambriSolda ? 'Solda' : 'Sağda'} ${lw} mm dikey çıtalı lambri şerit`);
+      }
+    } else if (ust === 'ayna') {
       const aw = Math.min(R.sec([600, 800]), W);
       moduller.push(hazir('aynali', { ad: 'Aynalı dolap', genislik: aw, montajYuksekligi: o.yukseklik + R.sec([250, 300, 350]), konum: Math.round((W - aw) / 2), sutunlar: [SUT(null, [S('kapak', null, aw > 600 ? 2 : 1, { kapakTuru: 'ayna', raf: 2, rafTipi: 'cam' })])] }));
       ozet.push(`Üstte ${aw} mm aynalı dolap`);
@@ -616,12 +634,14 @@
     const vitrin = W >= 2200 && R.ihtimal(0.4) ? (W >= 3000 && R.ihtimal(0.5) ? 2 : 1) : 0;
     const vw = vitrin ? R.sec([400, 450, 500]) : 0;
     const vSolda = R.ihtimal(0.5);
-    const asma = R.ihtimal(0.4);
+    const asma = R.ihtimal(0.55);
+    const ledAlt = asma && R.ihtimal(st.ledAlt == null ? 0.6 : st.ledAlt);
     const mt = asma ? R.sec([250, 300, 350, 400]) : 0;
     const H = asma ? Math.min(o.yukseklik, 450) : o.yukseklik;
     const baza = asma ? { tip: 'yok' } : R.ihtimal(st.ayak) ? AYAK(R.sec([100, 150])) : BAZA(60, 30);
     const vitrinH = Math.min(2100, R.sec([1600, 1800, 2000]));
-    const vitrinM = (k) => govdeli(`Vitrin ${k}`, {
+    const nisLed = vitrin && R.ihtimal(0.45);
+    const vitrinM = (k) => nisLed ? hazir('nis_led', { ad: `LED'li niş ${k}`, genislik: vw, yukseklik: vitrinH, derinlik: Math.min(D, 380), _aksan: R.ihtimal(0.5) }) : govdeli(`Vitrin ${k}`, {
       genislik: vw, yukseklik: vitrinH, derinlik: Math.min(D, 400), yapi: 'tabla_boydan', baza: BAZA(60, 30), _aksan: R.ihtimal(0.3),
       sutunlar: [SUT(null, [S('kapak', null, 1, { kapakTuru: st.camTur, rafTipi: 'cam', raf: 4, led: R.ihtimal(st.led) }), S('kapak', 450, 1, { raf: 1 })])],
     });
@@ -643,12 +663,12 @@
         else satir = [S('kapak', null, 1)];
         sutunlar.push(SUT(null, satir));
       }
-      moduller.push(govdeli(`TV ünitesi${nMod > 1 ? ` ${i + 1}` : ''}`, { genislik: mw, yukseklik: H, derinlik: D, yapi: 'tabla_boydan', baza, montajYuksekligi: mt, sutunlar }));
+      moduller.push(govdeli(`TV ünitesi${nMod > 1 ? ` ${i + 1}` : ''}`, { genislik: mw, yukseklik: H, derinlik: D, yapi: 'tabla_boydan', baza, montajYuksekligi: mt, sutunlar, ledAlt }));
       ozet.push(`${mw} mm ${asma ? 'asma ' : ''}alt ünite, ${nSut} bölme (${{ klapa: 'klapalar', cekmece: 'çekmeceler', kapak: 'kapaklar', karma: 'klapa + çekmece' }[yan]}${nSut >= 3 ? ', ortada açık niş' : ''})`);
     }
     if (vitrin === 2 || (vitrin && !vSolda)) moduller.push(vitrinM(vitrin));
-    if (asma) ozet.push(`Ünite duvara asma, yerden ${mt} mm`);
-    if (vitrin) ozet.push(`${vitrin === 2 ? 'İki yanda' : vSolda ? 'Solda' : 'Sağda'} ${vw}×${vitrinH} mm camlı vitrin`);
+    if (asma) ozet.push(`Ünite duvara asma, yerden ${mt} mm${ledAlt ? ', altı LED' : ''}`);
+    if (vitrin) ozet.push(`${vitrin === 2 ? 'İki yanda' : vSolda ? 'Solda' : 'Sağda'} ${vw}×${vitrinH} mm ${nisLed ? 'LED\'li açık niş' : 'camlı vitrin'}`);
     // Üst duvar: TV arkası panel, iki yanda asma dolaplar, kademeli raflar
     const x0 = vitrin && (vitrin === 2 || vSolda) ? vw : 0;
     const ustAlt = mt + H; // ünitenin üstü
@@ -666,12 +686,27 @@
     if (bos >= 900 && R.ihtimal(0.55)) {
       const pw = Math.min(2700, Math.round(Math.min(bos, Math.max(1000, Wa * R.sec([0.45, 0.6])))));
       const ph = R.sec([900, 1000, 1200]);
-      const lambri = R.ihtimal(0.5);
-      moduller.push(lambri
-        ? hazir('lambri_tv', { ad: 'TV arkası lambri', en: pw, boy: ph, montajYuksekligi: ustAlt + R.sec([100, 150]), konum: x0 + Math.round((Wa - pw) / 2), lambriCitaEn: R.sec([30, 40]), lambriAralik: R.sec([15, 20, 30]), lambriArka: R.ihtimal(0.6) ? 'govde' : 'yok', _aksan: true })
-        : hazir('duvar_paneli', { ad: 'TV arkası duvar paneli', en: pw, boy: ph, montajYuksekligi: ustAlt + R.sec([100, 150]), konum: x0 + Math.round((Wa - pw) / 2), _aksan: true }));
-      if (lambri) ozet.push('TV arkası çıtalı lambri');
-      ozet.push(`TV arkasında ${pw}×${ph} mm duvar kaplama paneli`);
+      const mermerP = R.ihtimal(st.mermer == null ? 0.35 : st.mermer);
+      const lambri = !mermerP && R.ihtimal(0.5);
+      const pmt = ustAlt + R.sec([100, 150]);
+      const px = x0 + Math.round((Wa - pw) / 2);
+      if (mermerP) {
+        // Mermer desenli panel arkadan LED'li; yer varsa iki yanında dikey lambri şeritleri
+        const led = R.ihtimal(0.75);
+        moduller.push(hazir('panel_mermer', { ad: 'TV arkası mermer panel', en: pw, boy: ph, montajYuksekligi: pmt, konum: px, ledArka: led }));
+        ozet.push(`TV arkasında ${pw}×${ph} mm mermer desenli panel${led ? ', arkadan LED çerçeve' : ''}`);
+        const lw = R.sec([300, 400]);
+        if (bos - pw >= 2 * lw + 40 && R.ihtimal(0.6)) {
+          for (const [k2, x] of [[1, px - lw - 20], [2, px + pw + 20]]) moduller.push(hazir('lambri_dikey', { ad: `Lambri şerit ${k2}`, en: lw, boy: ph, montajYuksekligi: pmt, konum: x, lambriCitaEn: 30, lambriAralik: 15, _aksan: true }));
+          ozet.push(`Panelin iki yanında ${lw} mm çıtalı lambri şerit`);
+        }
+      } else {
+        moduller.push(lambri
+          ? hazir('lambri_tv', { ad: 'TV arkası lambri', en: pw, boy: ph, montajYuksekligi: pmt, konum: px, lambriCitaEn: R.sec([30, 40]), lambriAralik: R.sec([15, 20, 30]), lambriArka: R.ihtimal(0.6) ? 'govde' : 'yok', _aksan: true })
+          : hazir('duvar_paneli', { ad: 'TV arkası duvar paneli', en: pw, boy: ph, montajYuksekligi: pmt, konum: px, _aksan: true, ledArka: R.ihtimal(st.led || 0.4) }));
+        if (lambri) ozet.push('TV arkası çıtalı lambri');
+        ozet.push(`TV arkasında ${pw}×${ph} mm duvar kaplama paneli`);
+      }
     } else if (!asmaVar && R.ihtimal(0.6)) {
       // Kademeli raflar: yan yana iki ya da üç raf farklı yüksekliklerde
       const n = R.sec([2, 3]);
@@ -820,9 +855,11 @@
       if (aynaVar) {
         const mw = Math.min(R.sec([500, 600, 700]), W - aw - 100);
         const kalanX = ax === 0 ? aw : 0;
-        const ayna = Object.assign(Hesap.yeniModul('nesne_ayna_duvar'), { ad: 'Ayna', en: mw, boy: 900, montajYuksekligi: ayH + 450, konum: kalanX + Math.round((W - aw - mw) / 2) });
-        moduller.push(ayna);
-        ozet.push(`Yanında ${mw}×900 mm ayna`);
+        const tur = R.sec(['ayna_kapsul', 'ayna_kemer', 'ayna_kapsul']);
+        const led = R.ihtimal(st.aynaLed == null ? 0.6 : st.aynaLed);
+        const boy = Math.min(1500, H - ayH - 300);
+        moduller.push(hazir(tur, { ad: tur === 'ayna_kemer' ? 'Kemerli ayna' : 'Kapsül ayna', en: Math.min(mw, 600), boy, montajYuksekligi: ayH + 200, konum: kalanX + Math.round((W - aw - Math.min(mw, 600)) / 2), ledArka: led }));
+        ozet.push(`Yanında ${Math.min(mw, 600)}×${boy} mm ${tur === 'ayna_kemer' ? 'kemerli' : 'kapsül'} ayna${led ? ' (arkadan LED)' : ''}`);
       }
       ozet.push(`${ayW} mm alçak ayakkabılık (oturak), üstünde ${aw} mm asma vestiyer`);
     }
@@ -961,6 +998,10 @@
     klasik: { ad: 'Klasik', govde: ['sl18', 'sl18c'], kapak: ['lake18', 'sl18c', 'sl18k'], aksan: ['sl18c'], kulp: ['kulp'], ayak: 0.1, acik: 0.15, cam: 0.45, led: 0.3, camTur: 'cam_cerceve' },
     endustriyel: { ad: 'Endüstriyel', govde: ['sl18a'], kapak: ['sl18m', 'sl18c', 'sl18a'], aksan: ['sl18m', 'sl18c'], kulp: ['kulp'], metalAyak: true, ayak: 0.7, acik: 0.6, cam: 0.25, led: 0.3, camTur: 'cam_profil', camMalz: 'cam4f' },
     minimal: { ad: 'Minimal', govde: ['sl18'], kapak: ['mdflam18', 'lake18', 'sl18'], aksan: [], kulp: ['basac'], ayak: 0.2, acik: 0.15, cam: 0.05, led: 0.2, camTur: 'cam_profil' },
+    sicak_minimal: { ad: 'Sıcak minimal (kaşmir + meşe + LED)', govde: ['sl18k', 'sl18'], kapak: ['mdflam18t', 'sl18k', 'lake18v'], aksan: ['sl18m'], kulp: ['basac', 'gola', 'gomme'], kulpRenk: ['siyah'], ayak: 0.1, acik: 0.45, cam: 0.15, led: 0.9, ledAlt: 0.85, aynaLed: 0.8, camTur: 'cam_profil', camMalz: 'cam4f' },
+    koyu_luks: { ad: 'Koyu lüks (antrasit + ceviz + altın)', govde: ['sl18a'], kapak: ['sl18a', 'sl18c', 'lake18l'], aksan: ['sl18c'], kulp: ['kulp'], kulpRenk: ['altin', 'bronz'], uzunKulp: 0.75, ayak: 0.1, acik: 0.3, cam: 0.55, led: 0.9, ledAlt: 0.7, aynaLed: 0.7, mermer: 0.6, camTur: 'cam_profil', camMalz: 'cam4f' },
+    neo_klasik: { ad: 'Neo klasik (renkli lake + desenli kapak + altın kulp)', govde: ['sl18', 'sl18k'], kapak: ['lake18p', 'lake18l', 'lake18', 'lake18v', 'lake18y'], aksan: [], kulp: ['kulp'], kulpRenk: ['altin', 'altin', 'bronz'], uzunKulp: 0.8, desen: { cerceve: 4, kemer: 3, citali: 2, altin_cita: 1 }, ayak: 0.15, acik: 0.2, cam: 0.35, led: 0.5, ledAlt: 0.3, aynaLed: 0.5, camTur: 'cam_profil', camMalz: 'cam4f' },
+    japandi: { ad: 'Japandi (açık meşe, lake, çıtalı yüzey)', govde: ['sl18'], kapak: ['lake18v', 'lake18', 'sl18m'], aksan: ['sl18m'], kulp: ['gomme', 'basac'], kulpRenk: ['siyah'], desen: { citali: 3, duz: 2 }, ayak: 0.5, acik: 0.45, cam: 0.1, led: 0.6, ledAlt: 0.5, aynaLed: 0.5, camTur: 'cam_cerceve' },
     iki_renk: { ad: 'İki renkli', govde: ['sl18', 'sl18k'], kapak: ['sl18', 'lake18', 'sl18k'], aksan: ['lake18l', 'lake18y', 'sl18m', 'sl18c', 'sl18a'], kulp: ['gomme', 'kulp', 'gola'], ayak: 0.4, acik: 0.35, cam: 0.2, led: 0.4, camTur: 'cam_profil', ikiRenk: true },
   };
   /** "Proje malzemeleri": malzeme ve kulp değiştirilmez. */
@@ -974,8 +1015,20 @@
     const aksan = aksanlar.length && (stil.ikiRenk || R.ihtimal(0.6)) ? R.sec(aksanlar) : null;
     // Mutfakta iki ton: alt dolaplar aksan, üstler açık renk
     const ikiTon = !!aksan && tur === 'mutfak' && (stil.ikiRenk || R.ihtimal(0.35));
-    return { govde, kapak, aksan, kulp: R.sec(stil.kulp), ikiTon, cam: stil.camMalz || null };
+    // Trend eğilimleri: kapak deseni (yalnız lake/ham MDF önde), kulp rengi ve uzun kulp, alttan LED
+    let desen = null;
+    if (stil.desen) {
+      const L = Object.entries(stil.desen).flatMap(([k, n]) => new Array(n).fill(k));
+      desen = R.sec(L);
+      if (desen === 'duz') desen = null;
+    }
+    return {
+      govde, kapak, aksan, kulp: R.sec(stil.kulp), ikiTon, cam: stil.camMalz || null,
+      desen, kulpRenk: stil.kulpRenk ? R.sec(stil.kulpRenk) : null, uzunKulp: R.ihtimal(stil.uzunKulp || 0), ledAlt: R.ihtimal(stil.ledAlt == null ? 0.5 : stil.ledAlt),
+    };
   }
+  const MALZ_TUR = (() => { const T = {}; for (const m of Hesap.varsayilanAyarlar().malzemeler) T[m.id] = m.tur; return T; })();
+  const frezelenir = (id) => ['MDF Lake', 'Ham MDF', 'Masif panel'].includes(MALZ_TUR[id]);
 
   /** Paleti modüllere uygular: modül bazında malzeme ve kulp seçimi. _aksan işaretli modüller aksan rengi alır. */
   function stilUygula(moduller, stil, palet) {
@@ -1003,6 +1056,14 @@
       // Gola profil yalnız yerde duran dolaplarda; asma dolaplarda bas-aç
       const kulp = palet.kulp === 'gola' && (Number(m.montajYuksekligi) || 0) > 0 ? 'basac' : palet.kulp;
       m.hirdavat = Object.assign({}, m.hirdavat, { kulp });
+      if (palet.kulpRenk) m.hirdavat.kulpRenk = palet.kulpRenk;
+      const H = Number(m.yukseklik) || 0;
+      // Desen boy dolaplarda (gardırop, vitrin, vestiyer) ve freze yapılabilen ön yüzde
+      if (palet.desen && H >= 1200 && frezelenir(kapak)) m.kapakDesen = palet.desen;
+      else if (palet.desen === 'altin_cita' && H >= 1200) m.kapakDesen = 'altin_cita';
+      if (palet.uzunKulp && kulp === 'kulp' && H >= 1500) m.kulpBoy = 448;
+      // Asma (duvara monte) alçak ünite ya da üst dolap: alttan LED
+      if (palet.ledAlt && (Number(m.montajYuksekligi) || 0) > 0 && !(m.baza && m.baza.tip !== 'yok' && m.baza.yukseklik > 0)) m.ledAlt = true;
       if (stil.metalAyak && m.baza && m.baza.tip === 'ayak') m.hirdavat.ayak = 'metal';
     }
   }
