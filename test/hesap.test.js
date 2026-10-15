@@ -354,7 +354,7 @@ test('katalog: tüm hazır modüller uyarısız hesaplanır', () => {
     const s = Hesap.modulHesapla(Hesap.yeniModul(k), ayar);
     assert.ok(s.geo, `${k} çizilemedi`);
     assert.deepEqual(s.uyarilar, [], `${k}: ${s.uyarilar.join(' | ')}`);
-    if (k !== 'bosluk') assert.ok(s.parcalar.length > 0, `${k} parça üretmedi`);
+    if (k !== 'bosluk' && !k.startsWith('nesne_')) assert.ok(s.parcalar.length > 0, `${k} parça üretmedi`);
   }
   assert.ok(Object.keys(Hesap.PRESETLER).length >= 45);
 });

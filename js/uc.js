@@ -16,7 +16,7 @@
 
   const RENK = {
     govde: '#efe6d6', ic: '#e4d9c4', panel: '#d6c3a3', kapak: '#e7cfa8', cekmece: '#dcc19a',
-    cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', ayak: '#555555', kulp: '#6f6658', led: '#ffd84d', baza: '#c9bba3',
+    cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', ayak: '#555555', kulp: '#6f6658', led: '#ffd84d', baza: '#c9bba3', nesne: '#cccccc',
   };
 
   /** Eksenlere paralel kutu (8 köşe). */
@@ -320,8 +320,130 @@
     return P;
   }
 
+  // ---------- Eşya ve dekor nesneleri ----------
+  // Her şekil üst üste binmeyen kutulardan kurulur (çizim sırası güvenli kalsın). z: duvardan öne.
+  const koyu = (h, k) => '#' + hexRgb(h).map((c) => Math.max(0, Math.min(255, Math.round(c * k))).toString(16).padStart(2, '0')).join('');
+  const KITAP_RENK = ['#8a5a3c', '#34465f', '#9db09a', '#c9a57a', '#7a3b3b', '#e3dccf', '#4b4d50', '#b0763f'];
+  function nesneParcalari(g) {
+    const { W, H, D } = g;
+    const z0 = g.zGeri || 0;
+    const r = g.renk || '#cccccc';
+    const P = [];
+    const k = (x1, x2, y1, y2, za, zb, renk, ek) => P.push(Object.assign(kutu(x1, x2, y1, y2, z0 + za, z0 + zb, 'nesne', ek), { renk }));
+    const on = Math.min(20, D * 0.08);
+    switch (g.nesne) {
+      case 'buzdolabi': case 'buzdolabi_genis': {
+        k(0, W, 0, H, 0, D - on, r);
+        const cift = g.nesne === 'buzdolabi_genis';
+        if (cift) {
+          k(0, W / 2 - 2, 0, H, D - on, D, koyu(r, 1.05)); k(W / 2 + 2, W, 0, H, D - on, D, koyu(r, 1.05));
+          for (const x of [W / 2 - 30, W / 2 + 18]) k(x, x + 12, H * 0.45, H * 0.75, D, D + 25, '#777b80');
+        } else {
+          const s1 = H * 0.36;
+          k(0, W, 0, s1 - 3, D - on, D, koyu(r, 1.05)); k(0, W, s1 + 3, H, D - on, D, koyu(r, 1.05));
+          k(W - 60, W - 48, s1 - 160, s1 - 30, D, D + 25, '#777b80'); k(W - 60, W - 48, s1 + 40, s1 + 340, D, D + 25, '#777b80');
+        }
+        break;
+      }
+      case 'bulasik': case 'camasir': case 'kurutma': case 'derin_dondurucu': {
+        const panel = Math.min(90, H * 0.11);
+        k(0, W, 0, H, 0, D - on, r);
+        k(0, W, H - panel, H, D - on, D, koyu(r, 0.9));
+        k(0, W, 0, H - panel, D - on, D, koyu(r, 1.03));
+        if (g.nesne === 'camasir' || g.nesne === 'kurutma') { const c = Math.min(W, H) * 0.55; k(W / 2 - c / 2, W / 2 + c / 2, (H - panel) / 2 - c / 2, (H - panel) / 2 + c / 2, D, D + 8, '#5b6670'); }
+        if (g.nesne === 'derin_dondurucu') for (const f of [0.33, 0.66]) k(W * 0.35, W * 0.65, (H - panel) * f - 12, (H - panel) * f - 4, D, D + 15, '#777b80');
+        break;
+      }
+      case 'firin': case 'mikrodalga': {
+        const panel = Math.min(90, H * 0.2);
+        k(0, W, 0, H, 0, D - on, r);
+        k(0, W, H - panel, H, D - on, D, koyu(r, 1.3));
+        k(0, W, 0, H - panel, D - on, D, '#22252a');
+        k(W * 0.1, W * 0.9, H - panel - 40, H - panel - 28, D, D + 22, '#9a9ea3');
+        break;
+      }
+      case 'aspirator': {
+        const alt = Math.min(120, H * 0.3);
+        k(0, W, 0, alt, 0, D, r);
+        k(W * 0.3, W * 0.7, alt, H, 0, Math.min(D, 260), koyu(r, 0.95));
+        break;
+      }
+      case 'tv55': case 'tv65': case 'tv75': case 'monitor': {
+        if (g.nesne === 'monitor') {
+          k(W / 2 - 40, W / 2 + 40, 0, 12, D * 0.2, D * 0.8, '#333333');
+          k(W / 2 - 15, W / 2 + 15, 12, H * 0.25, D * 0.45, D * 0.55, '#333333');
+          k(0, W, H * 0.25, H, D * 0.55, D * 0.75, r);
+        } else { k(0, W, 0, H, 0, D * 0.4, '#2a2b2e'); k(0, W, 0, H, D * 0.4, D, r); }
+        break;
+      }
+      case 'kitap': {
+        // Farklı en ve boyda kitaplar yan yana
+        let x = 0;
+        let i = 0;
+        while (x < W - 8) {
+          const w = Math.min(W - x, [28, 34, 22, 40, 30, 26, 36][i % 7]);
+          const h = H * [0.95, 0.82, 1, 0.88, 0.76, 0.92, 0.85][i % 7];
+          k(x, x + w - 0.5, 0, h, 0, D * [1, 0.9, 0.95, 0.85, 1, 0.92, 0.88][i % 7], KITAP_RENK[i % KITAP_RENK.length]);
+          x += w; i++;
+        }
+        break;
+      }
+      case 'kitap_yatay': {
+        let y = 0;
+        let i = 0;
+        while (y < H - 5) {
+          const h = Math.min(H - y, [32, 24, 40, 28][i % 4]);
+          const ic = [0, 12, 4, 18][i % 4];
+          k(ic, W - ic / 2, y, y + h - 0.5, ic / 3, D - ic / 3, KITAP_RENK[(i + 2) % KITAP_RENK.length]);
+          y += h; i++;
+        }
+        break;
+      }
+      case 'vazo': case 'vazo_uzun': case 'biblo': case 'mum': case 'kettle': case 'blender': {
+        // Dönel cisim: üst üste daralan/genişleyen dilimler
+        const profil = { vazo: [0.6, 0.9, 1, 0.8, 0.5, 0.65], vazo_uzun: [0.55, 0.8, 0.95, 0.75, 0.5, 0.4, 0.55], biblo: [0.9, 0.6, 0.7, 0.5], mum: [1, 0.85], kettle: [1, 0.95, 0.75, 0.4], blender: [0.9, 0.7, 0.75, 0.85, 1, 0.9] }[g.nesne];
+        const n = profil.length;
+        profil.forEach((f, i) => {
+          const w = W * f;
+          const d = D * f;
+          k(W / 2 - w / 2, W / 2 + w / 2, (H * i) / n, (H * (i + 1)) / n, D / 2 - d / 2, D / 2 + d / 2, i === 0 && g.nesne === 'blender' ? '#2b2c2f' : koyu(r, 1 - i * 0.03));
+        });
+        break;
+      }
+      case 'saksi': case 'bitki_buyuk': {
+        const ph = H * 0.3;
+        k(W * 0.18, W * 0.82, 0, ph, D * 0.18, D * 0.82, '#a0613d');
+        const yap = [[0.55, 0.12], [0.85, 0.18], [1, 0.2], [0.8, 0.12], [0.5, 0.08], [0.25, 0.1]];
+        let y = ph;
+        yap.forEach(([f, h], i) => { const hh = (H - ph) * h / 0.8; k(W / 2 - (W * f) / 2, W / 2 + (W * f) / 2, y, Math.min(H, y + hh), D / 2 - (D * f) / 2, D / 2 + (D * f) / 2, koyu(r, 1 + (i % 2) * 0.12)); y += hh; });
+        break;
+      }
+      case 'lamba': {
+        k(W * 0.25, W * 0.75, 0, H * 0.06, D * 0.25, D * 0.75, '#444444');
+        k(W * 0.46, W * 0.54, H * 0.06, H * 0.55, D * 0.46, D * 0.54, '#555555');
+        k(0, W, H * 0.55, H, 0, D, r);
+        break;
+      }
+      case 'cerceve': {
+        k(0, W, 0, 12, 0, D, '#3a2e25');
+        k(0, W, 12, H, D - 15, D, '#3a2e25');
+        break;
+      }
+      case 'tablo': case 'ayna_duvar': k(0, W, 0, H, 0, D, r); break;
+      case 'kahve': case 'airfryer': case 'robot': case 'cay': case 'tost': case 'ekmek': {
+        k(0, W, 0, H * 0.12, 0, D, koyu(r, 0.9));
+        k(0, W, H * 0.12, H, 0, D * 0.8, r);
+        if (g.nesne === 'kahve' || g.nesne === 'cay') k(W * 0.3, W * 0.7, H * 0.12, H * 0.2, D * 0.8, D, '#aaaaaa');
+        break;
+      }
+      default: k(0, W, 0, H, 0, D, r);
+    }
+    return P;
+  }
+
   function panelParcalari(g, onZ) {
     const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
+    if (g.nesne) return nesneParcalari(g);
     if (g.tur === 'bosluk') return [];
     if (g.tur === 'duvar') return [kutu(0, g.W, 0, g.H, 0, g.t, tur)];
     if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
@@ -337,7 +459,8 @@
     const P = [];
     for (const y of yer.yerler) {
       let yerel;
-      if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza'].includes(y.geo.tur)) {
+      if (y.geo && y.geo.nesne) yerel = nesneParcalari(y.geo);
+      else if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza'].includes(y.geo.tur)) {
         // Ön panel: aynı duvar ve sıradaki en yakın gövdenin ön yüzüne hizalanır
         const komsu = yer.yerler.filter((x) => x !== y && x.geo && !x.geo.panel && x.sira === y.sira && (x.duvar === y.duvar || x.duvar === 'kose'))
           .sort((a, b) => Math.abs(a.bas - y.bas) - Math.abs(b.bas - y.bas))[0];
@@ -355,7 +478,7 @@
 
   // Altı yüzün köşe indisleri
   const YUZLER = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]];
-  const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const hexRgb = (h) => { const x = /^#[0-9a-f]{3}$/i.test(h) ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h; return [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16) || 0); };
 
   /**
    * Çizim sırası (uzaktan yakına). İki parçanın ekran kutuları örtüşüyorsa ve dünya

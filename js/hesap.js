@@ -51,6 +51,63 @@
     serbest: { ad: 'Serbest panel', aciklama: 'Herhangi bir düz parça' },
     duvar: { ad: 'Duvar kaplama paneli', aciklama: 'Duvara yaslanan dekor panel (TV arkası, yatak başı)' },
     bosluk: { ad: 'Boşluk', aciklama: 'Buzdolabı, bulaşık makinesi ya da diz boşluğu için yer tutar; parça çıkmaz' },
+    nesne: { ad: 'Eşya / dekor', aciklama: 'Beyaz eşya, elektronik, küçük ev aleti ya da dekor: yalnızca 3B ve çizimde görünür, parça ve maliyet çıkmaz, başka modülleri itmez. Duvarda konum ve yükseklikle yerleştirin' },
+  };
+
+  /**
+   * 3B ve çizimlerde gösterilen eşya ve dekor nesneleri (ölçüler mm, örnek değerler; serbestçe değiştirilir).
+   * W: en, H: yükseklik, D: derinlik, mt: varsayılan zeminden yükseklik, renk: gövde rengi.
+   */
+  const NESNELER = {
+    // Beyaz eşya
+    buzdolabi: { grup: 'Beyaz eşya', ad: 'Buzdolabı (tek kapı + dondurucu)', W: 600, H: 1850, D: 650, renk: '#c9ccd0' },
+    buzdolabi_genis: { grup: 'Beyaz eşya', ad: 'Gardrop tipi buzdolabı', W: 910, H: 1780, D: 700, renk: '#b9bdc2' },
+    bulasik: { grup: 'Beyaz eşya', ad: 'Bulaşık makinesi', W: 600, H: 820, D: 570, renk: '#e9eaec' },
+    camasir: { grup: 'Beyaz eşya', ad: 'Çamaşır makinesi', W: 600, H: 850, D: 560, renk: '#f2f3f4' },
+    kurutma: { grup: 'Beyaz eşya', ad: 'Kurutma makinesi', W: 600, H: 850, D: 600, renk: '#f2f3f4' },
+    derin_dondurucu: { grup: 'Beyaz eşya', ad: 'Derin dondurucu (çekmeceli)', W: 600, H: 850, D: 600, renk: '#eceef0' },
+    firin: { grup: 'Beyaz eşya', ad: 'Ankastre fırın', W: 595, H: 595, D: 560, renk: '#3a3d42' },
+    mikrodalga: { grup: 'Beyaz eşya', ad: 'Mikrodalga fırın', W: 595, H: 380, D: 400, renk: '#3a3d42' },
+    ocak: { grup: 'Beyaz eşya', ad: 'Ankastre ocak', W: 600, H: 50, D: 510, mt: 900, renk: '#1f2124' },
+    aspirator: { grup: 'Beyaz eşya', ad: 'Davlumbaz', W: 600, H: 500, D: 480, mt: 1550, renk: '#b9bdc2' },
+    kombi: { grup: 'Beyaz eşya', ad: 'Kombi', W: 400, H: 700, D: 300, mt: 1500, renk: '#f4f4f4' },
+    // Elektronik
+    tv55: { grup: 'Elektronik', ad: 'TV 55"', W: 1230, H: 710, D: 60, mt: 1000, renk: '#18191b' },
+    tv65: { grup: 'Elektronik', ad: 'TV 65"', W: 1450, H: 830, D: 60, mt: 950, renk: '#18191b' },
+    tv75: { grup: 'Elektronik', ad: 'TV 75"', W: 1680, H: 960, D: 60, mt: 900, renk: '#18191b' },
+    soundbar: { grup: 'Elektronik', ad: 'Soundbar', W: 900, H: 65, D: 100, renk: '#2a2b2e' },
+    modem: { grup: 'Elektronik', ad: 'Modem', W: 200, H: 40, D: 150, renk: '#f0f0f0' },
+    konsol: { grup: 'Elektronik', ad: 'Oyun konsolu', W: 300, H: 90, D: 260, renk: '#f2f2f2' },
+    monitor: { grup: 'Elektronik', ad: 'Bilgisayar monitörü', W: 620, H: 450, D: 200, renk: '#222326' },
+    yazici: { grup: 'Elektronik', ad: 'Yazıcı', W: 420, H: 250, D: 360, renk: '#d8d9db' },
+    klima: { grup: 'Elektronik', ad: 'Klima iç ünitesi', W: 900, H: 300, D: 230, mt: 2100, renk: '#f6f6f6' },
+    // Küçük ev aletleri
+    kahve: { grup: 'Küçük ev aletleri', ad: 'Kahve makinesi', W: 250, H: 360, D: 400, renk: '#2b2c2f' },
+    cay: { grup: 'Küçük ev aletleri', ad: 'Çay makinesi', W: 240, H: 400, D: 240, renk: '#c0c3c7' },
+    kettle: { grup: 'Küçük ev aletleri', ad: 'Su ısıtıcı', W: 220, H: 250, D: 180, renk: '#e8e8e8' },
+    tost: { grup: 'Küçük ev aletleri', ad: 'Tost makinesi', W: 300, H: 120, D: 340, renk: '#2b2c2f' },
+    ekmek: { grup: 'Küçük ev aletleri', ad: 'Ekmek kızartma makinesi', W: 280, H: 200, D: 170, renk: '#c0c3c7' },
+    blender: { grup: 'Küçük ev aletleri', ad: 'Blender', W: 180, H: 400, D: 180, renk: '#d0d3d6' },
+    robot: { grup: 'Küçük ev aletleri', ad: 'Mutfak robotu', W: 250, H: 360, D: 320, renk: '#e5e5e5' },
+    airfryer: { grup: 'Küçük ev aletleri', ad: 'Airfryer', W: 300, H: 330, D: 360, renk: '#2b2c2f' },
+    supurge: { grup: 'Küçük ev aletleri', ad: 'Dikey süpürge', W: 260, H: 1150, D: 230, renk: '#7a7f86' },
+    robot_supurge: { grup: 'Küçük ev aletleri', ad: 'Robot süpürge', W: 350, H: 100, D: 350, renk: '#2b2c2f' },
+    utu: { grup: 'Küçük ev aletleri', ad: 'Ütü', W: 130, H: 150, D: 280, renk: '#6b8fb0' },
+    // Dekor ve eşya
+    kitap: { grup: 'Dekor', ad: 'Kitap sırası', W: 300, H: 240, D: 180, renk: '#8a5a3c' },
+    kitap_yatay: { grup: 'Dekor', ad: 'Üst üste kitaplar', W: 260, H: 120, D: 190, renk: '#34465f' },
+    vazo: { grup: 'Dekor', ad: 'Vazo', W: 150, H: 300, D: 150, renk: '#9db09a' },
+    vazo_uzun: { grup: 'Dekor', ad: 'Uzun vazo', W: 180, H: 550, D: 180, renk: '#c9a57a' },
+    biblo: { grup: 'Dekor', ad: 'Biblo', W: 100, H: 160, D: 100, renk: '#e3dccf' },
+    saksi: { grup: 'Dekor', ad: 'Saksıda bitki', W: 300, H: 600, D: 300, renk: '#5f8a4c' },
+    bitki_buyuk: { grup: 'Dekor', ad: 'Büyük saksı bitkisi', W: 450, H: 1300, D: 450, renk: '#4f7a3f' },
+    lamba: { grup: 'Dekor', ad: 'Masa lambası', W: 220, H: 450, D: 220, renk: '#e9dfc9' },
+    cerceve: { grup: 'Dekor', ad: 'Fotoğraf çerçevesi', W: 200, H: 250, D: 60, renk: '#3a2e25' },
+    tablo: { grup: 'Dekor', ad: 'Duvar tablosu', W: 800, H: 600, D: 30, mt: 1400, renk: '#c58b5c' },
+    ayna_duvar: { grup: 'Dekor', ad: 'Duvar aynası', W: 600, H: 900, D: 25, mt: 1100, renk: '#cfdbe3' },
+    sepet: { grup: 'Dekor', ad: 'Hasır sepet', W: 350, H: 250, D: 300, renk: '#c8a26b' },
+    kutu: { grup: 'Dekor', ad: 'Saklama kutusu', W: 300, H: 200, D: 250, renk: '#ddd6c8' },
+    mum: { grup: 'Dekor', ad: 'Mumluk', W: 80, H: 140, D: 80, renk: '#efe7d6' },
   };
 
   /** Panel şekilleri. param: şekle özgü ölçü (etiket), kose: köşe sayısı kullanılır mı. */
@@ -411,7 +468,11 @@
     bosluk: P('Panel', 'Boşluk (cihaz / diz)', 'Buzdolabı, bulaşık makinesi, diz boşluğu', 'bosluk', 850, 600, { bantU: 0, bantK: 0 }),
     baza_bandi: P('Panel', 'Baza (Süpürgelik) Bandı', 'Dolap altı süpürgelik', 'baza', 2400, 100, { bantU: 1, bantK: 0 }),
   };
-  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel'];
+  // Eşya ve dekor nesneleri katalogda kendi gruplarında
+  for (const [id, n] of Object.entries(NESNELER)) {
+    PRESETLER['nesne_' + id] = P(n.grup, n.ad, `${n.W}×${n.H}×${n.D} mm · parça çıkmaz`, 'nesne', n.H, n.W, { nesneTuru: id, nesneD: n.D, montajYuksekligi: n.mt || 0, konum: 0, bantU: 0, bantK: 0 });
+  }
+  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Dekor'];
 
   const kopya = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (x) => Math.round(x * 10) / 10;
@@ -582,6 +643,9 @@
       sutunlar,
       // Panel modül alanları
       panelTuru: secenekAl(x.panelTuru, Object.keys(PANEL_TURLERI), 'serbest'),
+      nesneTuru: secenekAl(x.nesneTuru, Object.keys(NESNELER), 'buzdolabi'),
+      nesneD: sayiAl(x.nesneD, null, 1, 3000),
+      duvarMesafe: sayiAl(x.duvarMesafe, 0, 0, 3000), // nesnenin duvardan uzaklığı (ör. raf içinde öne alma)
       panelMalzeme: secenekAl(x.panelMalzeme, ['kapak', 'govde'], 'kapak'),
       boy: sayiAl(x.boy, 720, 0, 10000),
       en: sayiAl(x.en, 600, 0, 10000),
@@ -1817,6 +1881,15 @@
     const T = toplayici(M);
     const { ekle, hEkle, uyarilar } = T;
     const tur = modul.panelTuru;
+    if (tur === 'nesne') {
+      // Eşya / dekor: yalnız görsel; parça ve maliyet yok, yerleşimde başka modülleri itmez
+      const n = NESNELER[modul.nesneTuru] || NESNELER.buzdolabi;
+      const H = say(modul.boy, 0) || n.H;
+      const W = say(modul.en, 0) || n.W;
+      const D = say(modul.nesneD, 0) || n.D;
+      if (H < 10 || W < 10) T.uyarilar.push('Eşya ölçüleri çok küçük.');
+      return { parcalar: [], hirdavat: [], uyarilar: T.uyarilar, malzemeler: M, hirdavatSecimi: HS, geo: { panel: true, tur, bos: true, nesne: modul.nesneTuru, nesneAd: n.ad, renk: n.renk, boy: H, en: W, t: 0, W, D, H, zGeri: say(modul.duvarMesafe, 0), bant: { u: 0, k: 0 }, kullanim: 'kapak', sekil: null } };
+    }
     if (tur === 'bosluk') {
       // Yalnızca yer tutar: parça, hırdavat ve maliyet yok; yerleşimde derinliği yoktur (üstüne dolap gelebilir)
       const boy = say(modul.boy, 0);
@@ -1930,7 +2003,7 @@
     const hacimler = [];
     const cakisan = (k) => hacimler.find((o) => k.x1 < o.x2 - 0.5 && k.x2 > o.x1 + 0.5 && k.z1 < o.z2 - 0.5 && k.z2 > o.z1 + 0.5 && k.y1 < o.y2 - 1 && k.y2 > o.y1 + 1);
     // Ön paneller (dolgu, bulaşık kapağı, serbest) gövdelerin ön düzleminde durur
-    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk', 'duvar'].includes(g.tur);
+    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk', 'duvar', 'nesne'].includes(g.tur);
     const govdeD = {};
     for (const sr of ['zemin', 'duvar']) govdeD[sr] = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === sr).map((m) => sonuclar[m.id].geo.D)) || (sr === 'zemin' ? 560 : 320);
     // Düz yerleşimdeki L köşe dolap B kolu kadar odaya taşar
@@ -1972,6 +2045,11 @@
       }
       const yerlestir = (m, duvar, bas) => {
         const g = sonuclar[m.id].geo;
+        if (g.nesne) {
+          // Eşya / dekor: verilen konumda durur, yer kaplamaz (dolabın içinde ya da önünde olabilir)
+          yerler.push({ modul: m, kaynak: kaynak(m), duvar, sira, bas: m.konum != null ? m.konum : bas, W: g.W, D: g.D, montaj: montajOf(m), geo: g, nesne: true });
+          return bas;
+        }
         const sabit = m.konum != null && m.tip !== 'lkose';
         if (sabit) bas = m.konum;
         const mt = montajOf(m);
@@ -2070,6 +2148,7 @@
     const engeller = Y.engeller || [];
     const kutular = [];
     for (const y of yer.yerler) {
+      if (y.nesne) continue; // eşya/dekor saha kontrolüne girmez
       const alt = y.montaj;
       const ust = y.montaj + y.geo.H;
       if (y.duvar === 'kose') {
@@ -2129,7 +2208,7 @@
   function modulAlanM2(m) {
     if (!m) return 0;
     if (m.tip === 'panel') {
-      if (m.panelTuru === 'bosluk') return 0;
+      if (m.panelTuru === 'bosluk' || m.panelTuru === 'nesne') return 0;
       return (say(m.boy, 0) * say(m.en, 0)) / 1e6;
     }
     if (m.tip === 'lkose') return ((say(m.genislik, 0) + say(m.genislik2, 0) - say(m.derinlik, 0)) * say(m.yukseklik, 0)) / 1e6;
@@ -2256,6 +2335,7 @@
     PANEL_TURLERI,
     HIRDAVAT_SECENEKLERI,
     modulAlanM2,
+    NESNELER,
     HIRDAVAT_KALEMLERI,
     PRESETLER,
     KATALOG_GRUPLARI,

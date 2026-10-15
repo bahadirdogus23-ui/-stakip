@@ -45,8 +45,16 @@
   const onSinifi = (tur) => ({ cam: 'cam-kapak', cam_profil: 'cam-kapak profil', ayna: 'ayna' }[tur] || 'kapak');
   const camliMi = (tur) => tur === 'cam' || tur === 'cam_profil' || tur === 'cam_cerceve';
 
+  /** Eşya / dekor: renkli silüet ve adı (önden). */
+  function nesneCizim(geo) {
+    const fs = Math.max(30, Math.min(geo.W, geo.H) / 7);
+    return `<rect class="nesne" x="0" y="${f(-geo.H)}" width="${f(geo.W)}" height="${f(geo.H)}" rx="${f(Math.min(geo.W, geo.H) * 0.04)}" style="fill:${geo.renk}"/>`
+      + (geo.H > fs * 2 && geo.W > fs * 3 ? yazi(geo.W / 2, geo.H / 2, geo.nesneAd.split(' (')[0], Math.min(fs, geo.W / (geo.nesneAd.length * 0.6)), 'nesne-yazi') : '');
+  }
+
   /** Panel modülün görünüşü (orijin sol-alt): duvara bakınca görünen yüz. */
   function panelGovde(geo) {
+    if (geo.nesne) return nesneCizim(geo);
     if (geo.bos) return rect(0, 0, geo.W, geo.H, 'bosluk');
     const cls = geo.kullanim === 'govde' ? 'govde' : 'kapak';
     let s = geo.sekil && geo.tur !== 'raf' && geo.tur !== 'tabla' && geo.tur !== 'yan_kapama' ? sekilYolu(geo.sekil, cls) : rect(0, 0, geo.W, geo.H, cls);
@@ -310,6 +318,14 @@
 
   /** Panel modülün parça görünüşü: bantlı kenarlar kalın. */
   function panelOnGorunus(modul, geo) {
+    if (geo.nesne) {
+      const w = geo.W;
+      const h = geo.H;
+      const fs = Math.max(w, h) / 22;
+      const pay = fs * 4;
+      const s = nesneCizim(geo) + olcuYatay(0, w, -fs * 2, fs) + olcuDikey(0, h, -fs * 2, fs) + yazi(w / 2, h + fs * 1.4, `${modul.ad} (derinlik ${f(geo.D)})`, fs, 'baslik');
+      return `<svg class="cizim" viewBox="${f(-pay)} ${f(-h - fs * 3)} ${f(w + 2 * pay)} ${f(h + fs * 3 + pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    }
     if (geo.bos) {
       const w = geo.W;
       const h = geo.H;

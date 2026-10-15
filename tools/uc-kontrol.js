@@ -46,7 +46,7 @@ function ciftler(P, ayniModulMu) {
   const B = P.map(kutuSinir);
   const out = [];
   for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
-    if (ATLA.includes(P[i].tur) || ATLA.includes(P[j].tur)) continue;
+    if (ATLA.includes(P[i].tur) || ATLA.includes(P[j].tur) || P[i].tur === 'nesne' || P[j].tur === 'nesne') continue;
     if (ayniModulMu !== undefined && (P[i].modul === P[j].modul) !== ayniModulMu) continue;
     if (B[i].some((x, k) => x[1] <= B[j][k][0] + 1 || B[j][k][1] <= x[0] + 1)) continue;
     const r = Math.max(cakisma(P[i], P[j]), cakisma(P[j], P[i]));

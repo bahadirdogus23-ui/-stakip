@@ -24,6 +24,7 @@
   function kilavuz(modul, sonuc, proje, projeSonuc) {
     const g = sonuc && sonuc.geo;
     if (!g) return [{ baslik: 'Uyarı', adimlar: ['Geçerli ölçü yok; önce ölçüleri düzeltin.'] }];
+    if (g.nesne) return [{ baslik: 'Eşya / dekor', adimlar: [`${g.nesneAd}: yalnızca görsel yer tutucu (${g.W}×${g.H}×${g.D} mm); parça ve montaj yoktur.`] }];
     if (g.bos) return [{ baslik: 'Boşluk', adimlar: [`Bu modül yalnızca ${g.en} mm yer tutar (cihaz ya da diz boşluğu); parça ve montaj yoktur. Cihazın montaj ölçülerini kataloğundan kontrol edin.`] }];
     const A = proje.ayarlar;
     const HS = sonuc.hirdavatSecimi;

@@ -98,7 +98,7 @@
     // Esas modül ise: gövdeli modül ve panel başına sabit tutar.
     const adetOf = (m) => Math.max(1, Math.floor(sayi(m.adet) || 1));
     const govdeliler = proje.moduller.filter((m) => m.tip !== 'panel');
-    const paneller = proje.moduller.filter((m) => m.tip === 'panel' && m.panelTuru !== 'bosluk');
+    const paneller = proje.moduller.filter((m) => m.tip === 'panel' && m.panelTuru !== 'bosluk' && m.panelTuru !== 'nesne');
     const modulAdedi = govdeliler.reduce((a, m) => a + adetOf(m), 0);
     const panelAdedi = paneller.reduce((a, m) => a + adetOf(m), 0);
     const alanTop = (L) => L.reduce((a, m) => a + Hesap.modulAlanM2(m) * adetOf(m), 0);
@@ -141,7 +141,7 @@
     // ---------- Modül başına maliyet dağılımı ----------
     // Malzeme/ebatlama net alan payına, bant metre payına göre; hırdavat ve işçilik modülün kendisinden.
     const modulMaliyetleri = [];
-    for (const m of proje.moduller.filter((x) => !(x.tip === 'panel' && x.panelTuru === 'bosluk'))) {
+    for (const m of proje.moduller.filter((x) => !(x.tip === 'panel' && (x.panelTuru === 'bosluk' || x.panelTuru === 'nesne')))) {
       const s = sonuc.modulSonuclari[m.id];
       if (!s) continue;
       const adet = Math.max(1, Math.floor(sayi(m.adet) || 1));

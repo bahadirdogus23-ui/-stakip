@@ -137,6 +137,7 @@
     $('#modulListesi').innerHTML = proje.moduller.map((m) => {
       const olcu = m.tip === 'lkose'
         ? `L ${m.genislik}+${m.genislik2} × Y${m.yukseklik} × D${m.derinlik}`
+        : m.tip === 'panel' && m.panelTuru === 'nesne' ? `Eşya ${m.en} × ${m.boy}`
         : m.tip === 'panel' ? `Panel ${m.boy} × ${m.en}`
         : `G${m.genislik} × Y${m.yukseklik} × D${m.derinlik}${m.sutunlar.length > 1 ? ` · ${m.sutunlar.length} bölme` : ''}`;
       const duvar = L ? (m.tip === 'lkose' ? ' · köşe' : ` · ${m.duvar} duvarı`) : '';
@@ -191,11 +192,12 @@
       const olcu = m.tip === 'lkose' ? `${m.genislik}+${m.genislik2}×${m.yukseklik}` : m.tip === 'panel' ? `${m.boy}×${m.en}` : `${m.genislik}×${m.yukseklik}×${m.derinlik}`;
       (kartlar[p.grup] = kartlar[p.grup] || []).push(`
         <button class="k-kart" data-preset="${esc(anahtar)}" title="${esc(p.aciklama || '')}">
-          <span class="k-resim">${geo ? Cizim.onGorunus(m, geo, {}) : ''}</span>
+          <span class="k-resim">${geo ? (geo.nesne ? Uc.ciz(Uc.modulParcalari(geo, {}), { yaw: -30, pitch: 15 }, {}) : Cizim.onGorunus(m, geo, {})) : ''}</span>
           <b>${esc(p.ad)}</b><small>${esc(p.aciklama || '')}</small><small class="k-olcu">${esc(olcu)}</small>
         </button>`);
     }
-    $('#katalogIcerik').innerHTML = Hesap.KATALOG_GRUPLARI.filter((g) => kartlar[g]).map((g) => `<h3>${esc(g)}</h3><div class="k-izgara">${kartlar[g].join('')}</div>`).join('')
+    $('#katalogGruplar').innerHTML = Hesap.KATALOG_GRUPLARI.filter((g) => kartlar[g]).map((g) => `<button type="button" class="ikincil kucuk-buton" data-kgrup="${esc(g)}">${esc(g)}</button>`).join('');
+    $('#katalogIcerik').innerHTML = Hesap.KATALOG_GRUPLARI.filter((g) => kartlar[g]).map((g) => `<section data-grup="${esc(g)}"><h3>${esc(g)}</h3><div class="k-izgara">${kartlar[g].join('')}</div></section>`).join('')
       + `<h3>Boş başlangıç</h3><div class="k-izgara"><button class="k-kart k-bos" data-preset="__bos"><b>Boş gövde</b><small>Bölme ve satırları kendiniz ekleyin</small></button></div>`;
   }
   $('#btnKatalog').addEventListener('click', () => {
@@ -203,6 +205,26 @@
     $('#katalog').showModal();
   });
   $('#katalogKapat').addEventListener('click', () => $('#katalog').close());
+  // Katalogda arama: ad, açıklama ve grup adında geçen kartlar kalır
+  const trKucuk = (x) => String(x).toLocaleLowerCase('tr');
+  $('#katalogAra').addEventListener('input', (e) => {
+    const q = trKucuk(e.target.value.trim());
+    document.querySelectorAll('#katalogIcerik section[data-grup]').forEach((sec) => {
+      let gorunen = 0;
+      sec.querySelectorAll('.k-kart').forEach((k) => {
+        const ok = !q || trKucuk(k.textContent + ' ' + sec.dataset.grup).includes(q);
+        k.hidden = !ok;
+        if (ok) gorunen++;
+      });
+      sec.hidden = !gorunen;
+    });
+  });
+  $('#katalogGruplar').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-kgrup]');
+    if (!b) return;
+    const sec = document.querySelector(`#katalogIcerik section[data-grup="${CSS.escape(b.dataset.kgrup)}"]`);
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('#btnYardim').addEventListener('click', () => $('#yardim').showModal());
   $('#yardimKapat').addEventListener('click', () => $('#yardim').close());
   $('#yardim').addEventListener('click', (e) => { if (e.target === $('#yardim')) $('#yardim').close(); });
@@ -271,7 +293,7 @@
         const r = Maliyet.maliyetHesapla(t.proje, t.sonuc, Yerlesim.plakaSayilari(gr));
         fiyat = `≈ ${para(r.genelToplam)} (KDV dahil, fiyat ayarlarınıza göre)`;
       } catch (e) { fiyat = ''; }
-      const govdeSay = t.moduller.filter((m) => !(m.tip === 'panel' && m.panelTuru === 'bosluk')).length;
+      const govdeSay = t.moduller.filter((m) => !(m.tip === 'panel' && (m.panelTuru === 'bosluk' || m.panelTuru === 'nesne'))).length;
       const yer = t.sonuc.yerlesim;
       return `<article class="t-kart">
         <h3>${esc(t.ad)} <small>Öneri ${i + 1} · ${govdeSay} modül</small></h3>
@@ -316,7 +338,7 @@
       m.id = Hesap.yeniModul('alt').id;
       m.ad = benzersizAd(m.ad);
       proje.moduller.push(m);
-      if (!ilk && !(m.tip === 'panel' && m.panelTuru === 'bosluk')) ilk = m.id;
+      if (!ilk && !(m.tip === 'panel' && (m.panelTuru === 'bosluk' || m.panelTuru === 'nesne'))) ilk = m.id;
     }
     seciliId = ilk || seciliId;
     $('#tasarimPencere').close();
@@ -441,6 +463,25 @@
     const montaj = `<label title="Zeminden modülün altına mesafe. ${Hesap.ASILI_SINIR} mm üstü asılı (üst sıra) sayılır.">Montaj yük. (mm)${sayiGir('montajYuksekligi', m.montajYuksekligi, 'min="0"')}</label>`
       + (lk ? '' : `<label title="Duvar başından (L yerleşimde köşeden) modülün sol kenarına mesafe. Boş bırakılırsa modül sıradaki yere dizilir.">Duvarda konum (mm)${sayiGir('konum', m.konum, 'min="0" placeholder="sıradan"')}</label>`);
 
+    if (pn && m.panelTuru === 'nesne') {
+      const NS = Hesap.NESNELER;
+      const gruplar = [...new Set(Object.values(NS).map((n) => n.grup))];
+      kap.innerHTML = `
+        <h2>Eşya / dekor</h2>
+        <div class="form-izgara">
+          <label class="genis">Ad<input data-alan="ad" value="${esc(m.ad)}"></label>
+          <label class="genis">Eşya<select data-alan="nesneTuru">${gruplar.map((g) => `<optgroup label="${esc(g)}">${Object.entries(NS).filter(([, n]) => n.grup === g).map(([k, n]) => `<option value="${k}"${m.nesneTuru === k ? ' selected' : ''}>${esc(n.ad)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+          <label>Genişlik (mm)${sayiGir('en', m.en, 'min="10"')}</label>
+          <label>Yükseklik (mm)${sayiGir('boy', m.boy, 'min="10"')}</label>
+          <label>Derinlik (mm)${sayiGir('nesneD', m.nesneD, `min="1" placeholder="${NS[m.nesneTuru].D}"`)}</label>
+          <label title="Zeminden nesnenin altına (ör. tezgah üstü 900, raf yüksekliği)">Zeminden (mm)${sayiGir('montajYuksekligi', m.montajYuksekligi, 'min="0"')}</label>
+          <label title="Duvar başından (L'de köşeden) nesnenin sol kenarına">Duvarda konum (mm)${sayiGir('konum', m.konum, 'min="0" placeholder="0"')}</label>
+          <label title="Nesnenin arka yüzünün duvardan uzaklığı (ör. raf içinde öne almak için)">Duvardan (mm)${sayiGir('duvarMesafe', m.duvarMesafe, 'min="0"')}</label>
+          ${duvarSecimi}
+        </div>
+        <p class="not">Eşya ve dekorlar yalnızca 3B görünüşte ve çizimlerde yer alır; kesim listesine, plakaya ve maliyete girmez, dolapları itmez. Dolap içine koymak için konum, yükseklik ve duvardan uzaklığı dolabın iç ölçülerine göre verin.</p>`;
+      return;
+    }
     if (pn) {
       kap.innerHTML = `
         <h2>Panel</h2>
@@ -540,6 +581,12 @@
     if (alan === 'rayBoyu') deger = deger === '' ? null : Number(deger);
     if (alan === 'rafSabit') deger = deger === 'true';
     if (alan === 'rafYukseklikleri') deger = Hesap.rafListesi(el.value);
+    if (alan === 'nesneTuru' && Hesap.NESNELER[deger]) {
+      // Yeni eşyanın tipik ölçüleri ve adı
+      const n = Hesap.NESNELER[deger];
+      Object.assign(m, { en: n.W, boy: n.H, nesneD: n.D, ad: benzersizAd(n.ad) });
+      if (n.mt != null) m.montajYuksekligi = n.mt;
+    }
     if (kart) {
       const s = m.sutunlar[Number(kart.dataset.sutun)].satirlar[Number(kart.dataset.satir)];
       s[alan] = deger;
