@@ -1312,3 +1312,24 @@ test('eşya ve dekor: parça/maliyet yok, yerleşimi değiştirmez; önerilerde 
     }
   }
 });
+
+test('şeffaf bağlantılar: köşe takozu ve açılı T (çektirme) her blokta iki panele 2 vida; vida/blok sayısı tutarlı', () => {
+  const A = Hesap.varsayilanAyarlar();
+  A.hirdavat.baglanti = 'seffaf_kose';
+  const m = Hesap.yeniModul('gardirop');
+  m.sutunlar[0].satirlar = [{ tip: 'kapak', adet: 2, raf: 1, rafSabit: true }];
+  const p = Hesap.projeyiNormallestir({ ayarlar: A, moduller: [m] });
+  const s = Hesap.modulHesapla(p.moduller[0], p.ayarlar);
+  const d = Delik2.delikPlani(p.moduller[0], s, p.ayarlar);
+  const delikler = d.parcalar.flatMap((x) => x.delikler.filter((h) => /Şeffaf/.test(h.ad)).map((h) => Object.assign({ adet: x.adet }, h)));
+  const say = (re) => delikler.filter((h) => re.test(h.ad)).reduce((a, h) => a + h.adet, 0);
+  const blok = (kod) => (s.hirdavat.find((h) => h.kod === kod) || { adet: 0 }).adet;
+  // Gövde: 4 köşe × 3 takoz, baza: 4 köşe × 1 takoz; her takoz 4 vida
+  assert.equal(blok('seffaf_kose'), 16);
+  assert.equal(say(/köşe takozu/), 4 * blok('seffaf_kose'));
+  assert.equal(say(/çektirme/), 4 * blok('seffaf_t'));
+  assert.equal((s.hirdavat.find((h) => h.kod === 'sunta_vidasi') || {}).adet, 4 * (blok('seffaf_kose') + blok('seffaf_t')));
+  // Bloklar kenardan en az 50 mm içeride (vida 42 / 58)
+  const yan = d.parcalar.find((x) => x.ad === 'Yan (sol)');
+  assert.ok(yan.delikler.filter((h) => /Şeffaf/.test(h.ad)).every((h) => h.x >= 40 && h.x <= yan.w - 40));
+});

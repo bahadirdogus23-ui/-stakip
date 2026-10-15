@@ -14,7 +14,7 @@
   const tr = (x) => String(x).replace('.', ',');
   const BAGLANTI_AD = {
     minifix: 'minifix + kavela', konfirmat: 'konfirmat vida', kavela: 'kavela + tutkal',
-    seffaf_kose: 'şeffaf köşe bağlantı', seffaf_t: 'şeffaf T bağlantı',
+    seffaf_kose: 'şeffaf köşe takozu (her panele 2 vida)', seffaf_t: 'şeffaf açılı T bağlantı (çektirme)',
   };
 
   /**
@@ -57,6 +57,8 @@
       `Bu modülün parçalarını etiket numaralarına göre ayırın: ${sonuc.parcalar.map((p) => `${p.ad} ×${p.adet}`).join(', ')}.`,
       'Delik planındaki delikleri açın ya da CNC deliklerini kontrol edin; kenar bantlarının yapıştığını ve köşelerin temizlendiğini kontrol edin.',
       `Gövde bağlantısı: ${govdeB}; ara bağlantılar: ${araB}.`,
+      [HS.baglanti, araTur].includes('seffaf_kose') ? 'Şeffaf köşe takozu: takozu iç köşeye oturtun, önce dikey panele 2 vidayla (3,5×16), sonra panelleri gönyeleyip yatay panele 2 vidayla tutturun. Takozlar ön ve arka kenardan ~50 mm içeride olmalı.' : null,
+      [HS.baglanti, araTur].includes('seffaf_t') ? 'Şeffaf açılı T (çektirme): yarım parçalardan birini dikey panele, diğerini tablaya/rafa delik planındaki kılavuz deliklere 2’şer vidayla (3,5×16) vidalayın; paneli yerine koyup iki yarımı çektirme cıvatasıyla sıkarak birbirine çekin. Fazla sıkmayın, plastik çatlar.' : null,
     ]);
 
     if (g.panel) {

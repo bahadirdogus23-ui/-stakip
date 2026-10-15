@@ -28,9 +28,22 @@
     minifix: { yuz: { cap: 5, derinlik: 12, ad: 'Minifix pimi Ø5' }, uc: { cap: 8, derinlik: 34, ad: 'Pim geçişi Ø8 (uçtan)' }, canak: { cap: 15, derinlik: 13, ad: 'Minifix gövdesi Ø15', mesafe: 34 } },
     konfirmat: { yuz: { cap: 7, derinlik: 0, ad: 'Konfirmat Ø7 (boydan, havşalı)' }, uc: { cap: 5, derinlik: 50, ad: 'Konfirmat kılavuz Ø5 (uçtan)' } },
     kavela: { yuz: { cap: 8, derinlik: 12, ad: 'Kavela Ø8' }, uc: { cap: 8, derinlik: 25, ad: 'Kavela Ø8 (uçtan)' } },
-    seffaf_kose: { isaret: 'Şeffaf köşe bağlantı yeri (4 vida Ø3 kılavuz)' },
-    seffaf_t: { isaret: 'Şeffaf T bağlantı yeri (4 vida Ø3 kılavuz)' },
+    // Yüzeye vidalı plastik bağlantılar: delik yerine sunta vidası kılavuz delikleri (Ø2,5, 10 mm).
+    // Köşe: tek parça köşe takozu (~20×20×33 mm), her panele 2 vida. T: iki yarım parçalı açılı T (çektirme),
+    // biri her panele 2 vidayla, iki yarım çektirme cıvatasıyla birbirine sıkılır.
+    seffaf_kose: { isaret: 'Şeffaf köşe bağlantı yeri', vida: 'Şeffaf köşe takozu vidası Ø2,5 kılavuz (3,5×16)' },
+    seffaf_t: { isaret: 'Şeffaf T bağlantı yeri', vida: 'Şeffaf T (çektirme) yarım parça vidası Ø2,5 kılavuz (3,5×16)' },
   };
+  const SEFFAF_KENAR = 10; // vida ekseninin bağlanan panelin yüzeyinden uzaklığı (blok ~20 mm)
+  const SEFFAF_ARALIK = 8; // bir blok üzerindeki iki vidanın blok ortasına uzaklığı (derinlik yönünde)
+  /** Şeffaf bloklar ön ve arka kenardan en az 50 mm içeride (blok boyu ~33 mm); derin parçada ortada da. */
+  function seffafKonumlari(z0, z1) {
+    const d = z1 - z0;
+    if (d < 140) return [(z0 + z1) / 2];
+    const L = [z0 + 50, z1 - 50];
+    if (d >= 350) L.splice(1, 0, (z0 + z1) / 2);
+    return L;
+  }
 
   /** Derinlik boyunca bağlantı konumları (ön ve arka kenardan 37 mm; derin parçada ortada da). */
   function derinlikKonumlari(z0, z1) {
@@ -110,8 +123,13 @@
    * yuzN(z) → { p, x, y, yuz } (A'daki delik), ucN(z) → { p, x, y, yuz } (B'nin ucundaki delik),
    * canakN(z, mesafe) → { p, x, y, yuz } (B'nin yüzünde, uçtan mesafe kadar içeride).
    */
-  function yuzUcBagla(tur, konumlar, zMax, yuzN, ucN, canakN) {
+  function yuzUcBagla(tur, konumlar, zMax, yuzN, ucN, canakN, seffafN) {
     const b = BAGLANTI[tur] || BAGLANTI.minifix;
+    if (b.isaret && seffafN) {
+      // Gerçek blok geometrisi: her blokta iki panelin her birine 2 vida
+      for (const z of konumlar) for (const dz of [-SEFFAF_ARALIK, SEFFAF_ARALIK]) for (const d of seffafN(z, dz)) if (d) delik(d.p, 'vida', d.x, d.y, 2.5, 10, b.vida, d.yuz);
+      return;
+    }
     for (const z of konumlar) {
       const a = yuzN(z);
       if (b.isaret) {
@@ -293,10 +311,22 @@
         if (!f) { not(h.p, `${taraf === 'sol' ? 'Sol' : 'Sağ'} ucunda dikey parça yok; köşebentle sabitleyin.`); continue; }
         const ucX = taraf === 'sol' ? 0 : h.p.w;
         const konumlar = derinlikKonumlari(h.z0, h.z1);
-        yuzUcBagla(h.tur, konumlar, h.z1,
+        // Şeffaf blok: alt tablada üstte (dolap içinde), diğer tablalarda altta (görünmez tarafta)
+        const s = h.alt ? 1 : -1;
+        const seffaf = BAGLANTI[h.tur] && BAGLANTI[h.tur].isaret;
+        yuzUcBagla(h.tur, seffaf ? seffafKonumlari(h.z0, h.z1) : konumlar, h.z1,
           (z) => ({ p: f.v.p, x: z - f.v.z0, y: Y - f.v.y0, yuz: f.yuz }),
           (z) => ({ p: h.p, x: ucX, y: z - h.z0, yuz: taraf === 'sol' ? 'sol uç' : 'sağ uç' }),
-          (z, m) => ({ p: h.p, x: taraf === 'sol' ? m : h.p.w - m, y: z - h.z0, yuz: h.alt ? 'alt yüz' : h.ust ? 'alt yüz' : 'alt yüz' }));
+          (z, m) => ({ p: h.p, x: taraf === 'sol' ? m : h.p.w - m, y: z - h.z0, yuz: h.alt ? 'alt yüz' : h.ust ? 'alt yüz' : 'alt yüz' }),
+          (z, dz) => [
+            { p: f.v.p, x: z + dz - f.v.z0, y: Y + s * (t / 2 + SEFFAF_KENAR) - f.v.y0, yuz: f.yuz },
+            { p: h.p, x: taraf === 'sol' ? SEFFAF_KENAR : h.p.w - SEFFAF_KENAR, y: z + dz - h.z0, yuz: s > 0 ? 'üst yüz' : 'alt yüz' },
+          ]);
+        if (seffaf && h.alt) {
+          // Alt tablanın üstündeki blok, alttaki çekmecenin rayıyla aynı hatta kalabilir
+          const cek = g.satirlar.find((st) => st.cekmeceler.length && Math.abs(st.icAlt - (h.yAlt + t)) < 2 && st.bolumler.some((b) => Math.abs((taraf === 'sol' ? b.x1 : b.x2) - X) < 2));
+          if (cek) not(f.v.p, 'Dikkat: alt tabla üstündeki şeffaf köşe bloğu (≈20 mm) en alt çekmecenin ray hattına denk gelir; bu köşede blok yerine kavela/minifix kullanın ya da ray yüksekliğini kontrol edin.');
+        }
       }
     }
 
@@ -319,10 +349,17 @@
           // Çekmeceli satırdaki dikmenin alt ucunda minifix gövdesi ray hattına denk gelir: kavela + tutkal
           const rayHatti = ucta === 'alt' && v.satir && v.satir.cekmeceler.length && v.tur === 'minifix';
           if (rayHatti) not(v.p, 'Alt uç ray hattına yakın: minifix yerine kavela + tutkal ile bağlanır.');
-          yuzUcBagla(rayHatti ? 'kavela' : v.tur, derinlikKonumlari(z0, z1), z1,
+          // Şeffaf blok dikey parçanın iç tarafında (yanlarda dolap içine doğru)
+          const sx = v.kenar && v.x > W / 2 ? -1 : 1;
+          const seffaf = BAGLANTI[v.tur] && BAGLANTI[v.tur].isaret && !rayHatti;
+          yuzUcBagla(rayHatti ? 'kavela' : v.tur, seffaf ? seffafKonumlari(z0, z1) : derinlikKonumlari(z0, z1), z1,
             (z) => ({ p: h.p, x: h.yerel(Xc), y: z - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' }),
             (z) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? 0 : v.p.h, yuz: ucta === 'alt' ? 'alt uç' : 'üst uç' }),
-            (z, m) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? m : v.p.h - m, yuz: camYuz }));
+            (z, m) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? m : v.p.h - m, yuz: camYuz }),
+            (z, dz) => [
+              { p: h.p, x: h.yerel(Xc + sx * (t / 2 + SEFFAF_KENAR)), y: z + dz - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' },
+              { p: v.p, x: z + dz - v.z0, y: ucta === 'alt' ? SEFFAF_KENAR : v.p.h - SEFFAF_KENAR, yuz: sx > 0 ? (v.yuzSag || camYuz) : (v.yuzSol || camYuz) },
+            ]);
         }
       }
     }
@@ -593,10 +630,16 @@
       if (onYok) not(onArka, 'Baza çekmecesi var: baza yanları yerine çekmece taşıyıcıları kullanılır; arka parça taşıyıcılara köşebentle bağlanır.');
       else [t / 2, W - t / 2].forEach((X, i) => {
         const u = uclar[i];
-        yuzUcBagla(govdeTur, ys, hb,
+        const sx = i === 0 ? 1 : -1;
+        yuzUcBagla(govdeTur, BAGLANTI[govdeTur] && BAGLANTI[govdeTur].isaret ? [hb / 2] : ys, hb,
           (y) => ({ p: onArka, x: X, y, yuz: 'iç yüz' }),
           (y) => (u == null ? null : { p: yanP, x: u, y, yuz: u === 0 ? 'ön uç' : 'arka uç' }),
-          (y, m) => (u == null ? null : { p: yanP, x: u === 0 ? m : yanL - m, y, yuz: 'iç yüz' }));
+          (y, m) => (u == null ? null : { p: yanP, x: u === 0 ? m : yanL - m, y, yuz: 'iç yüz' }),
+          // Şeffaf blok çerçeve köşesinin içinde, dik konumda (vidalar yükseklik boyunca)
+          (y, dy) => [
+            { p: onArka, x: X + sx * (t / 2 + SEFFAF_KENAR), y: y + dy, yuz: 'iç yüz' },
+            u == null ? null : { p: yanP, x: u === 0 ? SEFFAF_KENAR : yanL - SEFFAF_KENAR, y: y + dy, yuz: 'iç yüz' },
+          ]);
       });
       if (govdeTur === 'konfirmat' && !onYok) not(onArka, 'Ön bazada konfirmat başı görünür: tapa ile kapatın veya bu birleşimde minifix kullanın.');
       not(onArka, 'Çerçeve gövdenin altına 4 köşebentle bağlanır.');

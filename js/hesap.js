@@ -204,14 +204,14 @@
         minifix: { ad: 'Minifix + kavela' },
         konfirmat: { ad: 'Konfirmat vida' },
         kavela: { ad: 'Kavela + tutkal' },
-        seffaf_kose: { ad: 'Şeffaf köşe bağlantı (plastik)' },
+        seffaf_kose: { ad: 'Şeffaf köşe bağlantı (tek parça köşe takozu)' },
       },
     },
     araBaglanti: {
       baslik: 'Ara bağlantı (sabit raf, dikme)',
       secenekler: {
         ayni: { ad: 'Gövde bağlantısıyla aynı' },
-        seffaf_t: { ad: 'Şeffaf T bağlantı (plastik)' },
+        seffaf_t: { ad: 'Şeffaf açılı T bağlantı (çektirme, 2 parça)' },
         minifix: { ad: 'Minifix + kavela' },
         konfirmat: { ad: 'Konfirmat vida' },
         kavela: { ad: 'Kavela + tutkal' },
@@ -261,8 +261,8 @@
     kavela: { ad: 'Kavela 8×35', birim: 'adet', fiyat: 0.5 },
     konfirmat: { ad: 'Konfirmat vida 7×50', birim: 'adet', fiyat: 1.5 },
     tutkal: { ad: 'Ahşap tutkalı', birim: 'birleşim', fiyat: 2 },
-    seffaf_kose: { ad: 'Şeffaf köşe bağlantı', birim: 'adet', fiyat: 3 },
-    seffaf_t: { ad: 'Şeffaf T bağlantı', birim: 'adet', fiyat: 3 },
+    seffaf_kose: { ad: 'Şeffaf köşe bağlantı (köşe takozu)', birim: 'adet', fiyat: 3 },
+    seffaf_t: { ad: 'Şeffaf açılı T bağlantı (çektirme takımı)', birim: 'takım', fiyat: 4 },
     sunta_vidasi: { ad: 'Sunta vidası 3,5×16', birim: 'adet', fiyat: 0.3 },
     mentese_standart: { ad: 'Menteşe standart', birim: 'adet', fiyat: 35 },
     mentese_frenli: { ad: 'Menteşe frenli', birim: 'adet', fiyat: 85 },
@@ -1024,9 +1024,10 @@
       T.hEkle('kavela', 'Kavela 8×35', nokta + birlesim);
       T.hEkle('tutkal', 'Ahşap tutkalı (birleşim)', birlesim + (tekNoktali ? 1 : 0), 'birleşim');
     } else if (tur === 'seffaf_kose' || tur === 'seffaf_t') {
-      // Plastik şeffaf bağlantılar her biri 4 sunta vidasıyla tutturulur.
-      const ad = tur === 'seffaf_t' ? 'Şeffaf T bağlantı (plastik)' : 'Şeffaf köşe bağlantı (plastik)';
-      T.hEkle(tur, ad, nokta);
+      // Köşe takozu: tek parça, her panele 2 vida (4 vida). Açılı T (çektirme): iki yarım parça, her biri
+      // kendi paneline 2 vidayla; yarımlar pakete dahil çektirme cıvatasıyla birbirine sıkılır (4 vida + 1 cıvata).
+      const ad = tur === 'seffaf_t' ? 'Şeffaf açılı T bağlantı (çektirme, 2 parça + cıvata)' : 'Şeffaf köşe bağlantı (köşe takozu)';
+      T.hEkle(tur, ad, nokta, tur === 'seffaf_t' ? 'takım' : 'adet');
       T.hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', 4 * nokta);
     } else {
       T.hEkle('minifix', 'Minifix (gövde + pim)', nokta, 'takım');
@@ -1378,7 +1379,16 @@
       // Baza yanların arasında: ön (geri çekilmiş) ve arka parça
       ekle('Baza önü', 'govde', iw, hb, 1, { u: 1, k: 0 }, { not: `Yanların arasında, önden ${r1(say(baza.geriCekme, 0))} mm geride; alt kenar zemine değer (bantlı)` });
       ekle('Baza arkası', 'govde', iw, hb, 1, { u: 1, k: 0 });
-    } else bazaEkle(T, baza, hb, W, Ds, t, HS.ayak, geoBazaCekmece ? (W > 1000 ? 3 : 2) : undefined, bazaOnYok, !!geoBazaCekmece);
+      hEkle('kavela', 'Kavela 8×35', 2 * 2 * (hb < 100 ? 1 : 2));
+    } else {
+      bazaEkle(T, baza, hb, W, Ds, t, HS.ayak, geoBazaCekmece ? (W > 1000 ? 3 : 2) : undefined, bazaOnYok, !!geoBazaCekmece);
+      // Baza çerçevesinin köşe birleşimleri (ön/arka ile yanlar): köşe başına 1 (100 mm altı) ya da 2 bağlantı;
+      // şeffaf bağlantıda köşe başına tek takoz
+      if (baza.tip === 'panel' && !geoBazaCekmece) {
+        const seffaf = HS.baglanti === 'seffaf_kose' || HS.baglanti === 'seffaf_t';
+        baglantiEkle(T, HS.baglanti, 0, Ds, 4 * (hb < 100 || seffaf ? 1 : 2));
+      }
+    }
 
     // ---------- Ön yüz alanı ve kör köşe paneli ----------
     let x0 = icDuzen ? t + g : db;
