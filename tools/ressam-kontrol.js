@@ -9,19 +9,18 @@ function dogrula(parcalar, gorus, adim) {
   const don = ([x, y, z]) => { const x1 = cy * x + sy * z; const z1 = -sy * x + cy * z; return [x1, cp * y - sp * z1, sp * y + cp * z1]; };
   const bakis = [don([1, 0, 0])[2], don([0, 1, 0])[2], don([0, 0, 1])[2]];
   const og = parcalar.map((p) => {
-    const v = p.k.map(don);
+    const v = (p.sk ? p.sk.v : p.k).map(don);
     const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
     let ex1 = Infinity, ex2 = -Infinity, ey1 = Infinity, ey2 = -Infinity;
     for (const q of v) { ex1 = Math.min(ex1, q[0]); ex2 = Math.max(ex2, q[0]); ey1 = Math.min(ey1, -q[1]); ey2 = Math.max(ey2, -q[1]); }
-    const m = v.reduce((a, q) => a.map((c, k) => c + q[k] / 8), [0, 0, 0]);
+    const m = v.reduce((a, q) => a.map((c, k) => c + q[k] / v.length), [0, 0, 0]);
     // planes in view space
     const pl = [];
-    for (const f of YUZ) {
+    for (const f of p.sk ? p.sk.f : YUZ) {
       const P = f.map((i) => v[i]);
-      const a = P[2].map((c, k) => c - P[0][k]); const c2 = P[3].map((c, k) => c - P[1][k]);
-      let n = [a[1] * c2[2] - a[2] * c2[1], a[2] * c2[0] - a[0] * c2[2], a[0] * c2[1] - a[1] * c2[0]];
+      let n = U.newell(P);
       const l = Math.hypot(...n); if (l < 1e-9) continue; n = n.map((x) => x / l);
-      const fc = P.reduce((s, q) => s.map((x, k) => x + q[k] / 4), [0, 0, 0]);
+      const fc = P.reduce((s, q) => s.map((x, k) => x + q[k] / P.length), [0, 0, 0]);
       let d = n[0] * fc[0] + n[1] * fc[1] + n[2] * fc[2];
       if (n[0] * m[0] + n[1] * m[1] + n[2] * m[2] > d) { n = n.map((x) => -x); d = -d; }
       pl.push([n, d]);

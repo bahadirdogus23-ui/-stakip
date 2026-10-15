@@ -26,6 +26,77 @@
     const [e, f] = z1 < z2 ? [z1, z2] : [z2, z1];
     return Object.assign({ k: [[a, c, e], [b, c, e], [b, d, e], [a, d, e], [a, c, f], [b, c, f], [b, d, f], [a, d, f]], tur }, ek || {});
   }
+  /**
+   * Dışbükey çokgen prizma: pts 2B çokgen [[u, v]], w1..w2 kalınlık yönü; esle(u, v, w) → [x, y, z].
+   * k: sınır kutusu (çakışma/sıralama için 8 köşe), sk: çizim ağı { v: köşeler, f: yüzler }.
+   */
+  function prizma(pts, esle, w1, w2, tur, ek) {
+    const n = pts.length;
+    const v = pts.map(([u, vv]) => esle(u, vv, w1)).concat(pts.map(([u, vv]) => esle(u, vv, w2)));
+    const f = [pts.map((_, i) => i), pts.map((_, i) => n + i)];
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; f.push([i, j, n + j, n + i]); }
+    const b = [0, 1, 2].map((k) => [Math.min(...v.map((q) => q[k])), Math.max(...v.map((q) => q[k]))]);
+    return Object.assign(kutu(b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], tur), { sk: { v, f } }, ek || {});
+  }
+  /**
+   * Şekil yolu (Hesap.sekilGeometrisi: M, L, Q köşe radyüsü, A yay, E elips; orijin sol-alt, y yukarı)
+   * → çokgen noktaları. Eğriler parçalara bölünür.
+   */
+  function yolNoktalari(yol, adim) {
+    const N = adim || 10;
+    const P = [];
+    let son = [0, 0];
+    const ekle = (q) => { const o = P[P.length - 1]; if (!o || Math.hypot(o[0] - q[0], o[1] - q[1]) > 0.05) P.push(q); son = q; };
+    for (const c of yol) {
+      if (c[0] === 'M' || c[0] === 'L') ekle([c[1], c[2]]);
+      else if (c[0] === 'Q') {
+        // Çeyrek daire köşe: merkez = başlangıç + bitiş − köşe
+        const [kx, ky, ex, ey] = c.slice(1);
+        const o = [son[0] + ex - kx, son[1] + ey - ky];
+        const a = [son[0] - o[0], son[1] - o[1]];
+        const b = [ex - o[0], ey - o[1]];
+        for (let i = 1; i <= N; i++) { const t = (i / N) * Math.PI / 2; ekle([o[0] + a[0] * Math.cos(t) + b[0] * Math.sin(t), o[1] + a[1] * Math.cos(t) + b[1] * Math.sin(t)]); }
+      } else if (c[0] === 'A') {
+        // Dışa doğru (gidiş yönünün sağına) şişen dairesel yay
+        const R = c[1];
+        const [ex, ey] = [c[3], c[4]];
+        const dx = ex - son[0], dy = ey - son[1];
+        const L = Math.hypot(dx, dy);
+        if (L < 1e-9) continue;
+        const h = Math.sqrt(Math.max(0, R * R - (L / 2) * (L / 2)));
+        const o = [(son[0] + ex) / 2 - (dy / L) * h, (son[1] + ey) / 2 + (dx / L) * h];
+        const a0 = Math.atan2(son[1] - o[1], son[0] - o[0]);
+        let a1 = Math.atan2(ey - o[1], ex - o[0]);
+        while (a1 <= a0) a1 += 2 * Math.PI;
+        const n = Math.max(4, Math.ceil(((a1 - a0) / (Math.PI / 2)) * N));
+        for (let i = 1; i <= n; i++) { const t = a0 + ((a1 - a0) * i) / n; ekle([o[0] + R * Math.cos(t), o[1] + R * Math.sin(t)]); }
+      } else if (c[0] === 'E') {
+        const [a, b] = [c[1], c[2]];
+        for (let i = 0; i < 4 * N; i++) { const t = (i / (4 * N)) * 2 * Math.PI; ekle([a + a * Math.cos(t), b + b * Math.sin(t)]); }
+      }
+    }
+    const o = P[0];
+    const z = P[P.length - 1];
+    if (P.length > 1 && Math.hypot(o[0] - z[0], o[1] - z[1]) < 0.05) P.pop();
+    return P;
+  }
+  /** Köşeleri ayrı ayrı yuvarlatılmış dikdörtgen (u1..u2 × v1..v2); r: [sol-alt, sağ-alt, sağ-üst, sol-üst]. */
+  function yuvarlakDikdortgen(u1, u2, v1, v2, r, adim) {
+    const N = adim || 10;
+    const P = [];
+    const kose = (cx, cy, rr, a0) => {
+      if (!(rr > 0)) { P.push([cx, cy]); return; }
+      // Köşe noktası (cx, cy); merkez içe doğru
+      const ox = cx + (cx === u1 ? rr : -rr);
+      const oy = cy + (cy === v1 ? rr : -rr);
+      for (let i = 0; i <= N; i++) { const t = a0 + (i / N) * (Math.PI / 2); P.push([ox + rr * Math.cos(t), oy + rr * Math.sin(t)]); }
+    };
+    kose(u1, v1, r[0], Math.PI);
+    kose(u2, v1, r[1], 1.5 * Math.PI);
+    kose(u2, v2, r[2], 0);
+    kose(u1, v2, r[3], Math.PI / 2);
+    return P;
+  }
   /** Üst yüzü eğimli kutu: sol (x1) üst yüksekliği ySol, sağ (x2) üst yüksekliği ySag. */
   function egimliKutu(x1, x2, y1, ySol, ySag, z1, z2, tur, ek) {
     return Object.assign({ k: [[x1, y1, z1], [x2, y1, z1], [x2, ySag, z1], [x1, ySol, z1], [x1, y1, z2], [x2, y1, z2], [x2, ySag, z2], [x1, ySol, z2]], tur, egik: true }, ek || {});
@@ -148,6 +219,13 @@
     else if (kusak) {
       P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, D - kusakEn, D, 'govde'));
       P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, zArka, zArka + kusakEn, 'govde'));
+    } else if (geo.kavisR > 0) {
+      // Kavisli ön köşeler: üstten bakınca gerçek yay (u = x, v = z; ön kenar v = D + tOn)
+      const [x1, x2, z1, z2] = [tx1 - tY, tx2 + tY, zArka, D + tOn];
+      const R = Math.min(geo.kavisR, (x2 - x1) / 2, z2 - z1);
+      const k = geo.kavisKose || 'on';
+      const r = [0, 0, k === 'on' || k === 'sag' ? R : 0, k === 'on' || k === 'sol' ? R : 0];
+      P.push(prizma(yuvarlakDikdortgen(x1, x2, z1, z2, r), (u, v, w) => [u, w, v], hb + Hc - t, hb + Hc, 'govde'));
     } else P.push(kutu(tx1 - tY, tx2 + tY, hb + Hc - t, hb + Hc, zArka, D + tOn, 'govde'));
 
     // ---------- Arkalık ----------
@@ -577,6 +655,18 @@
       return P;
     }
     if (g.tur === 'bosluk') return [];
+    if (g.sekil && g.sekil.yol) {
+      // Şekilli panel: kesim yolu (u: en 0..kutuW, v: boy 0..kutuH) gerçek biçimiyle
+      const pts = yolNoktalari(g.sekil.yol);
+      if (pts.length >= 3) {
+        const z = onZ != null ? onZ : 560;
+        if (g.tur === 'duvar') return [prizma(pts, (u, v, w) => [u, v, w], 0, g.t, tur)];
+        if (g.tur === 'yan_kapama') return [prizma(pts, (u, v, w) => [w, v, u], 0, g.t, tur)];
+        if (g.tur === 'raf' || g.tur === 'tabla') return [prizma(pts, (u, v, w) => [v, w, u], 0, g.t, tur)];
+        if (g.tur === 'baza') return [prizma(pts, (u, v, w) => [v, u, w], 0, g.t, tur)];
+        return [prizma(pts, (u, v, w) => [u, v, w], z, z + g.t, tur)];
+      }
+    }
     if (g.tur === 'duvar') return [kutu(0, g.W, 0, g.H, 0, g.t, tur)];
     if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
     if (g.tur === 'raf' || g.tur === 'tabla') return [kutu(0, g.boy, 0, g.t, 0, g.en, tur)];
@@ -603,11 +693,23 @@
         // B duvarı: modül +X yönüne bakar; yerel sol (x=0) köşeden uzakta
         return [p[2], y.montaj + p[1], y.bas + y.W - p[0]];
       };
-      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad }));
+      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}));
     }
     return P;
   }
 
+  /** Çokgenin (düzlemsel olmayabilir) Newell normali. */
+  function newell(pts) {
+    const n = [0, 0, 0];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      n[0] += (a[1] - b[1]) * (a[2] + b[2]);
+      n[1] += (a[2] - b[2]) * (a[0] + b[0]);
+      n[2] += (a[0] - b[0]) * (a[1] + b[1]);
+    }
+    return n;
+  }
   // Altı yüzün köşe indisleri
   const YUZLER = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]];
   const hexRgb = (h) => { const x = /^#[0-9a-f]{3}$/i.test(h) ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h; return [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16) || 0); };
@@ -717,25 +819,23 @@
     const ogeler = [];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const p of parcalar) {
-      const v = p.k.map(don);
+      const v = (p.sk ? p.sk.v : p.k).map(don);
       let ex1 = Infinity, ex2 = -Infinity, ey1 = Infinity, ey2 = -Infinity;
       for (const q of v) { ex1 = Math.min(ex1, q[0]); ex2 = Math.max(ex2, q[0]); ey1 = Math.min(ey1, -q[1]); ey2 = Math.max(ey2, -q[1]); }
       minX = Math.min(minX, ex1); maxX = Math.max(maxX, ex2); minY = Math.min(minY, ey1); maxY = Math.max(maxY, ey2);
       const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
-      const derinlik = v.reduce((a, q) => a + q[2], 0) / 8;
+      const derinlik = v.reduce((a, q) => a + q[2], 0) / v.length;
       const [r, g, bb] = hexRgb(p.renk || RENK[p.tur] || RENK.govde);
       const yuzler = [];
-      const merkez = v.reduce((a, q) => a.map((c, k) => c + q[k] / 8), [0, 0, 0]);
-      for (const idx of YUZLER) {
+      const merkez = v.reduce((a, q) => a.map((c, k) => c + q[k] / v.length), [0, 0, 0]);
+      for (const idx of p.sk ? p.sk.f : YUZLER) {
         const pts = idx.map((i2) => v[i2]);
-        // Normal: köşegenlerin çapraz çarpımı (eğik parçalarda da kararlı), dışa doğru yönlendirilir
-        const a = pts[2].map((c, k) => c - pts[0][k]);
-        const c2 = pts[3].map((c, k) => c - pts[1][k]);
-        let n = [a[1] * c2[2] - a[2] * c2[1], a[2] * c2[0] - a[0] * c2[2], a[0] * c2[1] - a[1] * c2[0]];
+        // Normal: Newell yöntemi (dörtgende köşegen çarpımına eşit; eğik parçalarda da kararlı), dışa doğru yönlendirilir
+        let n = newell(pts);
         const nl = Math.hypot(...n);
         if (nl < 1e-9) continue;
         n = n.map((x) => x / nl);
-        const yuzMerkez = pts.reduce((s2, q) => s2.map((x, k) => x + q[k] / 4), [0, 0, 0]);
+        const yuzMerkez = pts.reduce((s2, q) => s2.map((x, k) => x + q[k] / pts.length), [0, 0, 0]);
         if (n[0] * (yuzMerkez[0] - merkez[0]) + n[1] * (yuzMerkez[1] - merkez[1]) + n[2] * (yuzMerkez[2] - merkez[2]) < 0) n = n.map((x) => -x);
         if (n[2] <= 0.0001) continue; // arka yüz
         const parlak = 0.62 + 0.38 * Math.max(0, n[0] * isik[0] + n[1] * isik[1] + n[2] * isik[2]);
@@ -763,5 +863,5 @@
     return `<svg class="uc-svg" viewBox="${f(cx - vw / 2)} ${f(cyy - vh / 2)} ${f(vw)} ${f(vh)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { modulParcalari, projeParcalari, ciz, kutu, siraBul, zarf, cokgenOrtusur, RENK };
+  return { modulParcalari, projeParcalari, ciz, kutu, prizma, yolNoktalari, yuvarlakDikdortgen, newell, siraBul, zarf, cokgenOrtusur, RENK };
 });

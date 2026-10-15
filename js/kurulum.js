@@ -16,7 +16,8 @@
   const OK = '#c0392b';
 
   const sinir = (p) => [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
-  const tasi = (p, d) => Object.assign({}, p, { k: p.k.map(([x, y, z]) => [x + d[0], y + d[1], z + d[2]]) });
+  const kaydir = (d) => ([x, y, z]) => [x + d[0], y + d[1], z + d[2]];
+  const tasi = (p, d) => Object.assign({}, p, { k: p.k.map(kaydir(d)) }, p.sk ? { sk: { v: p.sk.v.map(kaydir(d)), f: p.sk.f } } : {});
 
   /**
    * Adım tanımları (gövdeli dolap). sec: 3B parçayı bu adıma alan koşul; yon: patlatma yönü;

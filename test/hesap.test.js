@@ -1344,3 +1344,30 @@ test('şeffaf bağlantılar: köşe takozu ve açılı T (çektirme) her blokta 
   assert.equal(h2[1] - h2[0], 32);
   assert.ok(alt.delikler.filter((h) => /T bağlantı kulak/.test(h.ad) && h.x < 50).every((h) => h.x === 18 + 12)); // yan iç yüzü + 12
 });
+
+test('3B: şekilli paneller ve kavisli üst tabla gerçek biçimiyle çizilir', () => {
+  const sinir = (v) => [0, 1, 2].map((k) => [Math.min(...v.map((q) => q[k])), Math.max(...v.map((q) => q[k]))]);
+  // Daire tabla: çizim ağı köşeleri merkeze eşit uzaklıkta, sınır kutusu çap kadar
+  const d = Hesap.modulHesapla(Hesap.yeniModul('tabla_yuvarlak'), ayar);
+  const [p] = Uc.modulParcalari(d.geo, {});
+  assert.ok(p.sk && p.sk.v.length > 30);
+  const b = sinir(p.sk.v);
+  assert.ok(Math.abs(b[0][1] - b[0][0] - 1000) < 1 && Math.abs(b[2][1] - b[2][0] - 1000) < 1);
+  for (const q of p.sk.v) assert.ok(Math.abs(Math.hypot(q[0] - 500, q[2] - 500) - 500) < 0.5);
+  // Yarım daire ve kemer: yay üstte, en yüksek nokta kutu yüksekliğinde
+  const yd = Hesap.sekilGeometrisi('yarim_daire', 800, 0, 0, 0);
+  const n = Uc.yolNoktalari(yd.yol);
+  assert.ok(Math.abs(Math.max(...n.map((q) => q[1])) - 400) < 0.5 && Math.min(...n.map((q) => q[1])) >= -0.01);
+  const km = Uc.yolNoktalari(Hesap.sekilGeometrisi('kemer', 800, 1600, 400, 0).yol);
+  assert.ok(Math.abs(Math.max(...km.map((q) => q[1])) - 1600) < 0.5);
+  // Kavisli üst tabla: yalnız sol ön köşe yuvarlak
+  const m = Hesap.yeniModul('komodin');
+  Object.assign(m, { ustKavisR: 100, ustKavisKose: 'sol' });
+  const s = Hesap.modulHesapla(m, ayar);
+  const ust = Uc.modulParcalari(s.geo, {}).find((x) => x.sk);
+  assert.ok(ust);
+  const on = ust.sk.v.filter((q) => q[2] > s.geo.D - 50);
+  const xs = on.map((q) => q[0]);
+  assert.ok(xs.some((x) => x > 1 && x < 100)); // sol köşede yay noktaları
+  assert.ok(on.some((q) => Math.abs(q[0] - Math.max(...xs)) < 0.01 && Math.abs(q[2] - Math.max(...on.map((r) => r[2]))) < 0.01)); // sağ ön köşe keskin
+});
