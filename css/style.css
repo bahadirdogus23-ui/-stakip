@@ -416,6 +416,18 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 .k-arac { position: sticky; top: 0; z-index: 2; background: #fff; padding: 8px 16px; border-bottom: 1px solid var(--cizgi); display: flex; flex-direction: column; gap: 6px; }
 .k-arac input { width: 100%; max-width: 420px; }
 .k-gruplar { display: flex; flex-wrap: wrap; gap: 4px; }
+h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--vurgu); border-bottom: 1px solid var(--cizgi); padding-bottom: 2px; }
+/* Görsel kurulum şeması */
+.ks-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.ks-adim { border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px 10px; background: #fff; break-inside: avoid; }
+.ks-adim h4 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.ks-no { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: #e08a2c; color: #fff; align-items: center; justify-content: center; font-weight: 700; flex: none; }
+.ks-resim { height: 230px; display: flex; align-items: center; justify-content: center; }
+.ks-resim svg { max-width: 100%; max-height: 100%; }
+.ks-parca { width: 100%; font-size: 12px; border-collapse: collapse; }
+.ks-parca td { padding: 2px 4px; border-top: 1px solid #eee; vertical-align: middle; }
+.ks-parca .bant-simge { color: #333; display: block; }
+.ks-adim .montaj-adim { font-size: 12px; margin: 6px 0 0; padding-left: 18px; }
 /* Bilgi kutusu (?) */
 .bilgi { display: inline-block; position: relative; vertical-align: middle; }
 .bilgi > summary { list-style: none; cursor: help; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--soluk); color: var(--soluk); font-size: 11px; line-height: 14px; text-align: center; font-weight: 700; }
@@ -454,6 +466,9 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   .y-modul svg, .y-on, .y-yan { break-inside: avoid; }
   .y-baslik, #yazdirAlan h2, #yazdirAlan h3 { break-after: avoid; }
   #bildirim, dialog, .bilgi { display: none !important; }
+  .ks-izgara { grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .ks-resim { height: 62mm; }
+  .ks-adim { padding: 2mm 3mm; }
   .cizim { max-height: 115mm; }
   .cizim.plan { max-height: 150mm; }
   .plaka-kart { border: 1px solid #999; }

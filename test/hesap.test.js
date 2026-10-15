@@ -1283,3 +1283,32 @@ test('lambri: çıta adedi ve aralık, arka panel, çıta stoğuna dizilim; kavi
   const ust = s.parcalar.find((x) => x.ad === 'Üst tabla – kavisli');
   assert.ok(ust && ust.sekil && ust.sekil.egri > 0);
 });
+
+test('kurulum şeması: gövdeli dolapta sıralı adımlar, her adımda görsel ve ölçülü parçalar', () => {
+  const Kurulum = require('../js/kurulum.js');
+  const m = Hesap.yeniModul('alt_cekmece3');
+  const s = Hesap.modulHesapla(m, ayar);
+  const L = Kurulum.sema(m, s);
+  assert.ok(L.length >= 5);
+  assert.ok(L.every((a) => /<svg/.test(a.svg) && !/NaN/.test(a.svg)));
+  assert.ok(L[0].parcalar.some((p) => p.ad === 'Yan'));
+  const tum = new Set(L.flatMap((a) => a.parcalar.map((p) => p.ad)));
+  for (const p of s.parcalar) assert.ok(tum.has(p.ad), `${p.ad} hiçbir adımda yok`);
+});
+
+test('eşya ve dekor: parça/maliyet yok, yerleşimi değiştirmez; önerilerde eşyalar başka parçaya girmez', () => {
+  const p = Hesap.projeyiNormallestir({ moduller: [Hesap.yeniModul('alt'), Hesap.yeniModul('nesne_buzdolabi'), Hesap.yeniModul('alt')] });
+  const r = Hesap.projeHesapla(p);
+  assert.equal(r.yerlesim.yerler.filter((y) => !y.nesne)[1].bas, 600); // buzdolabı yer kaplamaz
+  assert.ok(!r.kesimListesi.some((x) => x.moduller.some((ad) => /Buzdolabı/.test(ad))));
+  for (const tur of ['tv', 'kitaplik', 'mutfak', 'yatak', 'vestiyer']) {
+    for (let i = 1; i <= 4; i++) {
+      const t = Tasarim.uret(tur, {}, ayar, i * 17);
+      const P = Uc.projeParcalari(t.sonuc.yerlesim, {}).map((q) => ({ q, b: [0, 1, 2].map((k) => [Math.min(...q.k.map((v) => v[k])), Math.max(...q.k.map((v) => v[k]))]) }));
+      const ic = (a, b) => [0, 1, 2].every((k) => Math.min(a[k][1], b[k][1]) - Math.max(a[k][0], b[k][0]) > 1);
+      for (const a of P.filter((x) => x.q.tur === 'nesne')) {
+        for (const b of P) if (b.q.modul !== a.q.modul) assert.ok(!ic(a.b, b.b), `${tur}: ${a.q.modul} ∩ ${b.q.modul}`);
+      }
+    }
+  }
+});

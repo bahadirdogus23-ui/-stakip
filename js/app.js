@@ -550,30 +550,44 @@
       <p class="not">Katlanır iki kapak, L tablalar ve raflar ikişer parça halinde hesaplanır. Arkalık her kola ayrı çakılır.</p>`;
     } else {
       const surgu = m.onTipi === 'surgu';
+      const ustSecenek = !surgu && m.yapi === 'tabla_boydan' && m.ust === 'tam' && !m.egimli;
       html += `
-      <h3>Yapı</h3>
+      <h3>Yapı <small>(gruplar; tek seçimle hazır yapı uygulanabilir)</small></h3>
       <div class="form-izgara">
-        <label>Birleşim${secim('yapi', m.yapi, [['yanlar_boydan', 'Yanlar boydan'], ['tabla_boydan', 'Tablalar boydan']])}</label>
-        <label>Üst${secim('ust', m.ust, [['tam', 'Tam üst tabla'], ['kusak', 'Kuşak (tezgah altı)']])}</label>
+        <label class="genis" title="Birleşim, üst tabla, baza ve kapak kurallarını tek seferde ayarlar; sonra tek tek değiştirebilirsiniz.">Hazır yapı uygula<select data-islem-sec="yapiSablonu"><option value="">— seçin —</option>${Object.entries(YAPI_SABLONLARI).map(([k, v]) => `<option value="${k}">${esc(v.ad)}</option>`).join('')}</select></label>
+      </div>
+      <h4 class="yapi-grup">Gövde</h4>
+      <div class="form-izgara">
+        <label title="Yanlar boydan: tablalar yanların arasına girer. Tablalar boydan: alt ve üst tabla yanların üstünü/altını kapatır.">Birleşim${secim('yapi', m.yapi, [['yanlar_boydan', 'Yanlar boydan'], ['tabla_boydan', 'Tablalar boydan']])}</label>
         <label>Arkalık${secim('arkalik', m.arkalik, [['kanal', 'Kanala geçme'], ['cakma', 'Arkaya çakma'], ['yok', 'Arkalık yok']])}</label>
+        ${surgu ? '' : `<label class="onay" title="Çatı altı / merdiven altı: üst kenar eğimli"><input data-alan="egimli" type="checkbox" ${m.egimli ? 'checked' : ''}> Eğimli üst</label>`}
+        ${m.egimli && !surgu ? `<label title="Sağ kenarın zeminden yüksekliği (sol = Yükseklik)">Sağ yükseklik (mm)${sayiGir('sagYukseklik', m.sagYukseklik, 'min="200"')}</label>` : ''}
+        ${surgu ? '' : `<label class="onay" title="Alt tabla konmaz: yanlar zemine basar, en alt bölme zemine açılır (buzdolabı nişi gibi). Baza kullanılmaz."><input data-alan="altTablaYok" type="checkbox" ${m.altTablaYok ? 'checked' : ''}> Alt tabla yok (zemine açık)</label>`}
+        ${surgu ? '' : `<label title="Kör köşe dolapta komşu dolabın önünde kalan sabit panel">Kör panel (mm)${sayiGir('korPanel', m.korPanel, 'min="0"')}</label>
+        <label>Kör panel tarafı${secim('korTaraf', m.korTaraf, [['sol', 'Solda'], ['sag', 'Sağda']], m.korPanel > 0 ? '' : 'disabled')}</label>`}
+      </div>
+      <h4 class="yapi-grup">Üst tabla</h4>
+      <div class="form-izgara">
+        <label>Üst${secim('ust', m.ust, [['tam', 'Tam üst tabla'], ['kusak', 'Kuşak (tezgah altı)']])}</label>
+        ${ustSecenek ? `<label title="Üst tablanın kapak yüzünden öne taşması (mm). 0'dan büyükse kapaklar tablanın altında biter.">Ön taşma (mm)${sayiGir('ustTasmaOn', m.ustTasmaOn, 'min="0" max="100"')}</label>
+        <label title="Üst tablanın her yandan taşması (mm), ör. 18">Yan taşma (mm)${sayiGir('ustTasmaYan', m.ustTasmaYan, 'min="0" max="100"')}</label>
+        <label title="Üst tablanın ön köşelerini kavisli (yuvarlatılmış) keser; 0 = düz">Köşe kavisi R (mm)${sayiGir('ustKavisR', m.ustKavisR, 'min="0"')}</label>
+        ${m.ustKavisR > 0 ? `<label>Kavisli köşe${secim('ustKavisKose', m.ustKavisKose, [['on', 'İki ön köşe'], ['sol', 'Sol ön köşe'], ['sag', 'Sağ ön köşe']])}</label>` : ''}
+        <label class="onay" title="Üst tabla kapak kalınlığı kadar öne uzar, kapakların üstünü yandan yana kapatır; kapaklar tablanın altında biter"><input data-alan="ustKapakUstu" type="checkbox" ${m.ustKapakUstu ? 'checked' : ''}> Kapakların üstünü kapatsın</label>` : '<p class="not">Taşma, kavis ve kapak üstü için birleşim "Tablalar boydan" ve üst "Tam üst tabla" olmalı.</p>'}
+      </div>
+      <h4 class="yapi-grup">Ön yüz ve kulp</h4>
+      <div class="form-izgara">
         <label>Ön tipi${secim('onTipi', m.onTipi, [['normal', 'Menteşeli kapaklar'], ['surgu', 'Sürgü kapak']])}</label>
         ${surgu
           ? `<label>Sürgü kapak adedi${secim('surguAdet', m.surguAdet, [[2, '2'], [3, '3'], [4, '4']])}</label>
              <label>Sürgü kapak türü${secim('surguTuru', m.surguTuru, Object.entries(Hesap.SURGU_TURLERI))}</label>`
-          : `<label>Kapak tipi${secim('kapakTipi', m.kapakTipi, [['tam', 'Tam bini (bindirme)'], ['ic', 'Gömme (iç bini)']])}</label>`}
-        ${bazaAlanlari}
-        ${surgu ? '' : `<label class="onay" title="Çatı altı / merdiven altı: üst kenar eğimli"><input data-alan="egimli" type="checkbox" ${m.egimli ? 'checked' : ''}> Eğimli üst</label>`}
-        ${!surgu && m.yapi === 'tabla_boydan' && m.ust === 'tam' && !m.egimli ? `<label title="Üst tablanın kapak yüzünden öne taşması (mm). 0'dan büyükse kapaklar tablanın altında biter.">Üst tabla ön taşma${sayiGir('ustTasmaOn', m.ustTasmaOn, 'min="0" max="100"')}</label>
-        <label title="Üst tablanın her yandan taşması (mm), ör. 18">Üst tabla yan taşma${sayiGir('ustTasmaYan', m.ustTasmaYan, 'min="0" max="100"')}</label>
-        <label title="Üst tablanın ön köşelerini kavisli (yuvarlatılmış) keser; 0 = düz">Üst tabla kavis R (mm)${sayiGir('ustKavisR', m.ustKavisR, 'min="0"')}</label>
-        ${m.ustKavisR > 0 ? `<label>Kavisli köşe${secim('ustKavisKose', m.ustKavisKose, [['on', 'İki ön köşe'], ['sol', 'Sol ön köşe'], ['sag', 'Sağ ön köşe']])}</label>` : ''}
-        <label class="onay" title="Üst tabla kapak kalınlığı kadar öne uzar, kapakların üstünü yandan yana kapatır; kapaklar tablanın altında biter"><input data-alan="ustKapakUstu" type="checkbox" ${m.ustKapakUstu ? 'checked' : ''}> Üst tabla kapakların üstünü kapatsın</label>` : ''}
-        ${surgu ? '' : `<label class="onay" title="Alt tabla konmaz: yanlar zemine basar, en alt bölme zemine açılır (buzdolabı nişi gibi). Baza kullanılmaz."><input data-alan="altTablaYok" type="checkbox" ${m.altTablaYok ? 'checked' : ''}> Alt tabla yok (zemine açık)</label>`}
-        ${m.egimli && !surgu ? `<label title="Sağ kenarın zeminden yüksekliği (sol = Yükseklik)">Sağ yükseklik (mm)${sayiGir('sagYukseklik', m.sagYukseklik, 'min="200"')}</label>` : ''}
+          : `<label title="Tam bini: kapak gövdenin önüne biner. Gömme: kapak gövde içine girer, bölücüler önde görünür.">Kapak tipi${secim('kapakTipi', m.kapakTipi, [['tam', 'Tam bini (bindirme)'], ['ic', 'Gömme (iç bini)']])}</label>`}
         <label>Kulp yönü${secim('kulpYon', m.kulpYon, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_YONLERI)])}</label>
         <label>Kulp konumu${secim('kulpKonum', m.kulpKonum, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_KONUMLARI).map(([k, v]) => [k, v.split(' (')[0]])])}</label>
-        ${surgu ? '' : `<label title="Kör köşe dolapta komşu dolabın önünde kalan sabit panel">Kör panel (mm)${sayiGir('korPanel', m.korPanel, 'min="0"')}</label>
-        <label>Kör panel tarafı${secim('korTaraf', m.korTaraf, [['sol', 'Solda'], ['sag', 'Sağda']], m.korPanel > 0 ? '' : 'disabled')}</label>`}
+      </div>
+      <h4 class="yapi-grup">Zemin ve baza</h4>
+      <div class="form-izgara">
+        ${m.altTablaYok ? '<p class="not">Alt tablasız dolapta baza kullanılmaz; yanlar zemine basar.</p>' : bazaAlanlari}
       </div>
       ${surgu ? '<p class="not">Sürgü kapaklı dolapta satırların kapağı olmaz; sürgü kapaklar tüm önü kapatır. Çekmeceler gövde içine gömme yerleşir.</p>' : ''}
       ${bolmeDuzenleyici(m)}`;
@@ -582,6 +596,26 @@
     kap.innerHTML = html;
   }
 
+  /** Hazır yapı şablonları: sık kullanılan gövde kurallarını tek seçimde uygular. */
+  const YAPI_SABLONLARI = {
+    mutfak_alt: { ad: 'Mutfak alt dolabı (kuşak, ayak + önde baza)', alanlar: { yapi: 'yanlar_boydan', ust: 'kusak', arkalik: 'kanal', kapakTipi: 'tam', yanlarYere: false, ustTasmaOn: 0, ustTasmaYan: 0, ustKapakUstu: false, ustKavisR: 0, altTablaYok: false, baza: { tip: 'ayak_on', yukseklik: 100, geriCekme: 50 } } },
+    mutfak_ust: { ad: 'Mutfak üst / asma dolap', alanlar: { yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam', yanlarYere: false, ustTasmaOn: 0, ustTasmaYan: 0, ustKapakUstu: false, ustKavisR: 0, altTablaYok: false, baza: { tip: 'yok', yukseklik: 0, geriCekme: 0 } } },
+    tekli: { ad: 'Tekli mobilya (yanlar bazaya iner, üst tabla 18 mm taşmalı, kapak üstü)', alanlar: { yapi: 'tabla_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam', yanlarYere: true, ustTasmaOn: 0, ustTasmaYan: 18, ustKapakUstu: true, altTablaYok: false, baza: { tip: 'panel', yukseklik: 60, geriCekme: 30 } } },
+    gardirop: { ad: 'Gardırop / boy dolap (tablalar boydan, yanlar bazaya iner)', alanlar: { yapi: 'tabla_boydan', ust: 'tam', arkalik: 'kanal', yanlarYere: true, ustTasmaOn: 0, ustTasmaYan: 0, ustKapakUstu: false, ustKavisR: 0, altTablaYok: false, baza: { tip: 'panel', yukseklik: 80, geriCekme: 40 } } },
+    gomme: { ad: 'Gömme kapaklı (iç bini, ön kayıtlı bölücüler)', alanlar: { kapakTipi: 'ic', onTipi: 'normal' } },
+    nis: { ad: 'Tabansız cihaz nişi (buzdolabı)', alanlar: { altTablaYok: true, arkalik: 'yok', baza: { tip: 'yok', yukseklik: 0, geriCekme: 0 } } },
+  };
+  $('#modulForm').addEventListener('change', (e) => {
+    if (e.target.dataset.islemSec === 'yapiSablonu') {
+      const m = seciliModul();
+      const sb = YAPI_SABLONLARI[e.target.value];
+      if (!m || !sb) return;
+      Object.assign(m, JSON.parse(JSON.stringify(sb.alanlar)));
+      bildir(`Hazır yapı uygulandı: ${esc(sb.ad)}`, true);
+      tumunuCiz(true);
+      return;
+    }
+  });
   $('#modulForm').addEventListener('change', (e) => {
     clearTimeout(canliZamanlayici);
     const m = seciliModul();
@@ -1333,19 +1367,44 @@
     const k = Montaj.kilavuz(m, sonuc.modulSonuclari[m.id], proje, sonuc);
     return k.map((b) => `<h4>${esc(b.baslik)}</h4><ol class="montaj-adim">${b.adimlar.map((a) => `<li>${esc(a)}</li>`).join('')}</ol>`).join('');
   }
+  /**
+   * Görsel kurulum şeması: her adımda patlatılmış 3B görünüş (takılan parçalar turuncu),
+   * parçaların ölçüleri ve bant kenarları (etiketsiz tanıma) ve ilgili yazılı adımlar.
+   */
+  function kurulumHtml(m) {
+    const s = sonuc.modulSonuclari[m.id];
+    const adimlar = Kurulum.sema(m, s);
+    if (!adimlar.length) return montajHtml(m);
+    const k = Montaj.kilavuz(m, s, proje, sonuc);
+    const kullanilan = new Set();
+    const kart = adimlar.map((a, i) => {
+      const yazi = a.kilavuz ? k.filter((b) => a.kilavuz.test(b.baslik) && !kullanilan.has(b)) : [];
+      yazi.forEach((b) => kullanilan.add(b));
+      return `<article class="ks-adim">
+        <h4><span class="ks-no">${i + 1}</span>${esc(a.baslik)}</h4>
+        <div class="ks-resim">${a.svg}</div>
+        ${a.parcalar.length ? `<table class="ks-parca"><tbody>${a.parcalar.map((p) => `<tr><td>${Cizim.bantSimgesi(p.bant, 28)}</td><td>${esc(p.ad.replace(/ \(.*\)$/, ''))}</td><td class="sag kalin">${sayiYaz(p.boy, 1)} × ${sayiYaz(p.en, 1)}</td><td class="sag">×${p.adet}</td></tr>`).join('')}</tbody></table>` : ''}
+        ${yazi.map((b) => `<ol class="montaj-adim">${b.adimlar.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>`).join('')}
+      </article>`;
+    }).join('');
+    const kalan = k.filter((b) => !kullanilan.has(b) && b.baslik !== 'Hazırlık');
+    return `<p class="not ks-not">Turuncu parçalar o adımda takılır; ok takma yönünü gösterir. Parçalar ölçüsüyle (boy × en) ve kalın çizgiyle gösterilen bantlı kenarlarıyla tanınır, etiket gerekmez.</p>
+      <div class="ks-izgara">${kart}</div>
+      ${kalan.map((b) => `<h4>${esc(b.baslik)}</h4><ol class="montaj-adim">${b.adimlar.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>`).join('')}`;
+  }
   function atolyeCiz() {
     if (!proje.moduller.some((m) => m.id === atolyeModulId)) atolyeModulId = seciliId;
     $('#atolyeModul').innerHTML = proje.moduller.map((m) => `<option value="${esc(m.id)}"${m.id === atolyeModulId ? ' selected' : ''}>${esc(m.ad)}</option>`).join('');
     const m = proje.moduller.find((x) => x.id === atolyeModulId);
     if (!m) { $('#montajAlan').innerHTML = '<p class="bos">Modül yok.</p>'; $('#delikAlan').innerHTML = ''; return; }
-    $('#montajAlan').innerHTML = montajHtml(m);
+    $('#montajAlan').innerHTML = kurulumHtml(m);
     $('#delikAlan').innerHTML = delikHtml(m);
   }
   $('#atolyeModul').addEventListener('change', (e) => { atolyeModulId = e.target.value; atolyeCiz(); });
   // Parçasız modüller (boşluk, eşya/dekor) üretim çıktılarına girmez
   const uretimModulleri = () => proje.moduller.filter((m) => !(m.tip === 'panel' && (m.panelTuru === 'bosluk' || m.panelTuru === 'nesne')));
   const delikYazdirHtml = () => uretimModulleri().map((m) => `<section class="y-sayfa">${baslikHtml(`Delik planı — ${m.ad}`)}${delikHtml(m)}</section>`).join('');
-  const montajYazdirHtml = () => uretimModulleri().map((m) => `<section class="y-sayfa">${baslikHtml(`Montaj kılavuzu — ${m.ad}`)}<div class="y-modul y-montaj"><div class="y-on">${Cizim.onGorunus(m, sonuc.modulSonuclari[m.id].geo, {})}</div><div>${montajHtml(m)}</div></div></section>`).join('');
+  const montajYazdirHtml = () => uretimModulleri().map((m) => `<section class="y-sayfa">${baslikHtml(`Kurulum şeması — ${m.ad}`)}${kurulumHtml(m)}</section>`).join('');
   $('#btnYazdirDelik').addEventListener('click', () => yazdir('delik'));
   $('#btnYazdirMontaj').addEventListener('click', () => yazdir('montaj'));
 

@@ -838,11 +838,13 @@
   function dekorEkle(R, tur, sonuc) {
     const L = [];
     const NS = Hesap.NESNELER;
+    const sayac = {};
+    const adVer = (ad) => { sayac[ad] = (sayac[ad] || 0) + 1; return sayac[ad] > 1 ? `${ad} ${sayac[ad]}` : ad; };
     const nesne = (id, y, a, w, mt, h, d, zGeri, ad) => {
       // Modülün yerel x aralığından duvar konumuna (B duvarında yön terstir)
       const konum = y.duvar === 'B' ? y.bas + y.W - (a + w) : y.bas + a;
       L.push(Object.assign(Hesap.yeniModul('nesne_' + id), {
-        ad: `Dekor – ${ad || NS[id].ad}`, en: Math.round(w), boy: Math.round(h), nesneD: Math.round(d), konum: Math.round(konum),
+        ad: adVer(`Dekor – ${ad || NS[id].ad}`), en: Math.round(w), boy: Math.round(h), nesneD: Math.round(d), konum: Math.round(konum),
         montajYuksekligi: Math.round(mt), duvarMesafe: Math.round(zGeri), duvar: y.duvar === 'B' ? 'B' : 'A',
       }));
     };
@@ -938,9 +940,14 @@
         const x2 = Math.max(...un.map((y) => y.bas + y.W));
         const ust = Math.max(...un.map((y) => y.montaj + y.geo.H));
         const span = x2 - x1;
-        const id = ['tv75', 'tv65', 'tv55'].find((k) => NS[k].W <= span * 0.8);
+        // Asma dolaplarla çakışmayan en büyük TV
+        const asmalar = sonuc.yerlesim.yerler.filter((y) => y.sira === 'duvar' && y.geo && !y.geo.panel && !y.nesne);
+        const mt = Math.round(ust + R.sec([180, 220, 260]));
+        const orta = (x1 + x2) / 2;
+        const bos = (k) => asmalar.every((a) => a.bas >= orta + NS[k].W / 2 + 40 || a.bas + a.W <= orta - NS[k].W / 2 - 40 || a.montaj >= mt + NS[k].H + 40);
+        const id = ['tv75', 'tv65', 'tv55'].find((k) => NS[k].W <= span * 0.8 && bos(k));
         const n = NS[id || 'tv55'];
-        if (id) L.push(Object.assign(Hesap.yeniModul('nesne_' + id), { ad: `Dekor – ${n.ad}`, konum: Math.round((x1 + x2) / 2 - n.W / 2), montajYuksekligi: Math.round(ust + R.sec([180, 220, 260])), duvarMesafe: 30 }));
+        if (id) L.push(Object.assign(Hesap.yeniModul('nesne_' + id), { ad: `Dekor – ${n.ad}`, konum: Math.round(orta - n.W / 2), montajYuksekligi: mt, duvarMesafe: 30 }));
         if (span >= 1000 && R.ihtimal(0.5)) L.push(Object.assign(Hesap.yeniModul('nesne_soundbar'), { ad: 'Dekor – Soundbar', konum: Math.round((x1 + x2) / 2 - 450), montajYuksekligi: Math.round(ust), duvarMesafe: 120 }));
       }
     }
@@ -954,6 +961,23 @@
       }
     }
     return L;
+  }
+
+  /** Eşyaların 3B kutuları başka parçalarla ya da birbirleriyle iç içe mi? İç içe olanların adları. */
+  function dekorCakismalari(yer) {
+    const Uc = (typeof self !== 'undefined' && self.Uc) || (typeof require === 'function' ? require('./uc.js') : null);
+    if (!Uc) return new Set();
+    const P = Uc.projeParcalari(yer, {}).map((p) => ({ p, b: [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]) }));
+    const ic = (a, b) => [0, 1, 2].every((k) => Math.min(a[k][1], b[k][1]) - Math.max(a[k][0], b[k][0]) > 1);
+    const dek = P.filter((x) => x.p.tur === 'nesne');
+    const kotu = new Set();
+    for (const a of dek) {
+      for (const b of P) {
+        if (b === a || b.p.modul === a.p.modul) continue;
+        if (ic(a.b, b.b)) { kotu.add(a.p.modul); if (b.p.tur === 'nesne') kotu.add(b.p.modul); break; }
+      }
+    }
+    return kotu;
   }
 
   // ---------- Banyo ----------
@@ -1202,9 +1226,15 @@
       if (typeof d === 'string' || !d) { if (tani) tani(d || 'doğrulanamadı'); continue; }
       // Eşya ve dekor (yalnız görsel); istenmezse secenek.dekor = false
       if (!secenek || secenek.dekor !== false) {
-        const dekor = dekorEkle(R, tur, d.sonuc);
+        let dekor = dekorEkle(R, tur, d.sonuc);
         if (dekor.length) {
-          const d2 = dogrula({ moduller: d.proje.moduller.concat(dekor), yerlesim: tasarim.yerlesim }, A);
+          let d2 = dogrula({ moduller: d.proje.moduller.concat(dekor), yerlesim: tasarim.yerlesim }, A);
+          // Başka parçaya ya da başka eşyaya giren eşyalar çıkarılır
+          const cakisan = d2 && typeof d2 !== 'string' ? dekorCakismalari(d2.sonuc.yerlesim) : null;
+          if (cakisan && cakisan.size) {
+            dekor = dekor.filter((m) => !cakisan.has(m.ad));
+            d2 = dogrula({ moduller: d.proje.moduller.concat(dekor), yerlesim: tasarim.yerlesim }, A);
+          }
           if (d2 && typeof d2 !== 'string') d = d2;
         }
       }
