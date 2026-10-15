@@ -93,11 +93,18 @@
     const gc = (geo.baza && geo.baza.geriCekme) || 0;
 
     // ---------- Baza ----------
-    if (geo.baza.tip === 'ayak' || geo.baza.tip === 'tekerlek') {
+    if (geo.baza.tip === 'ayak' || geo.baza.tip === 'ayak_on' || geo.baza.tip === 'tekerlek') {
       const xs = W > 1000 ? [50, W / 2, W - 50] : [50, W - 50];
       // Baza çekmecesinde önde taşıyıcılar var; ayaklar yalnız arkada (kutunun arkasında)
-      const zs = geo.bazaCekmece ? [zArka + 20] : [zArka + 50, D - gc - 30];
+      const zOnAyak = geo.baza.tip === 'ayak_on' ? D - gc - t - 30 : D - gc - 30;
+      const zs = geo.bazaCekmece ? [zArka + 20] : [zArka + 50, zOnAyak];
       for (const x of xs) for (const z of zs) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
+      // Yalnız önde baza bandı (ayaklara klipsli)
+      if (geo.baza.tip === 'ayak_on') P.push(kutu(0, W, 3, hb, D - gc - t, D - gc, 'baza'));
+    } else if (geo.baza.tip === 'panel' && geo.yanYere) {
+      // Yanlar bazaya iner: baza önü ve arkası yanların arasında
+      P.push(kutu(t, W - t, 0, hb, zArka, zArka + t, 'baza'));
+      P.push(kutu(t, W - t, 0, hb, D - gc - t, D - gc, 'baza'));
     } else if (geo.baza.tip === 'panel') {
       const zOn = D - gc;
       P.push(kutu(0, W, 0, hb, zArka, zArka + t, 'baza'));
@@ -120,7 +127,10 @@
     }
 
     // ---------- Gövde ----------
-    const yanAlt = hb + (tabla ? t : 0);
+    const altYok = !!geo.altYok; // alt tablasız: yanlar ve dikmeler zemine iner
+    const yanYere = !!geo.yanYere; // yanlar bazaya iner, alt tabla yanların arasında
+    const yanAlt = yanYere ? 0 : hb + (tabla && !altYok ? t : 0);
+    const icTaban = altYok ? 0 : t; // iç parçaların alt sınırı
     const yanUstY = tabla ? (kusak ? Hc : Hc - t) : Hc;
     for (const [x1, x2] of [[0, t], [W - t, W]]) {
       if (egim) {
@@ -131,19 +141,21 @@
     }
     const tx1 = tabla ? 0 : t;
     const tx2 = tabla ? W : W - t;
-    P.push(kutu(tx1, tx2, hb, hb + t, zArka, D, 'govde'));
+    if (!altYok) P.push(yanYere ? kutu(t, W - t, hb, hb + t, zArka, D, 'govde') : kutu(tx1, tx2, hb, hb + t, zArka, D, 'govde'));
+    const tY = geo.tasmaYan || 0;
+    const tOn = geo.tasmaOn || 0;
     if (egim) P.push(egikPlaka(tx1, tx2, hb + HX(tx1) - tc, hb + HX(tx2) - tc, tc, zArka, D, 'govde'));
     else if (kusak) {
       P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, D - kusakEn, D, 'govde'));
       P.push(kutu(t, W - t, hb + Hc - t, hb + Hc, zArka, zArka + kusakEn, 'govde'));
-    } else P.push(kutu(tx1, tx2, hb + Hc - t, hb + Hc, zArka, D, 'govde'));
+    } else P.push(kutu(tx1 - tY, tx2 + tY, hb + Hc - t, hb + Hc, zArka, D + tOn, 'govde'));
 
     // ---------- Arkalık ----------
     if (geo.arkalik === 'kanal') {
       const z = zArka + (geo.kanalGeri != null ? geo.kanalGeri : 10);
       P.push(egim
-        ? egimliKutu(t, W - t, hb + t, hb + HX(t) - tc, hb + HX(W - t) - tc, z, z + geo.ta, 'arkalik')
-        : kutu(t, W - t, hb + t, hb + Hc - t, z, z + geo.ta, 'arkalik'));
+        ? egimliKutu(t, W - t, hb + (altYok ? 10 : t), hb + HX(t) - tc, hb + HX(W - t) - tc, z, z + geo.ta, 'arkalik')
+        : kutu(t, W - t, hb + (altYok ? 10 : t), hb + Hc - t, z, z + geo.ta, 'arkalik'));
     } else if (geo.arkalik === 'cakma') {
       P.push(egim ? egimliKutu(0, W, hb, hb + HcL, hb + HcR, zArka - geo.ta, zArka, 'arkalik') : kutu(0, W, hb, hb + Hc, zArka - geo.ta, zArka, 'arkalik'));
     }
@@ -155,17 +167,21 @@
     const acikSatir = (s) => kapaksiz || surguSaydam || (!geo.surgu && (s.tip === 'acik' || s.tip === 'nis' || camli(s)));
     const herhangiAcik = geo.satirlar.some(acikSatir);
     const ustSatir = (s) => geo.sutunlar[s.sutun].satirlar.indexOf(s) === 0;
-    if (herhangiAcik) {
+    // Bölücüler (boydan dikme, satır arası tabla): gömme kapakta öne kadar gelir ve kapaklar arasında görünür
+    const gomme = geo.kapakTipi === 'ic';
+    const zBolOn = zIcArka + (geo.bolucuD || geo.icDerinlik);
+    const araD = geo.araTablaD || geo.icDerinlik;
+    if (herhangiAcik || gomme) {
       for (const dx of geo.dikmeX) {
-        if (egim) P.push(egimliKutu(dx, dx + t, hb + t, hb + HX(dx) - tc, hb + HX(dx + t) - tc, zIcArka, zIcOn, 'panel'));
-        else P.push(kutu(dx, dx + t, hb + t, hb + Hc - t, zIcArka, zIcOn, 'panel'));
+        if (egim) P.push(egimliKutu(dx, dx + t, hb + icTaban, hb + HX(dx) - tc, hb + HX(dx + t) - tc, zIcArka, zBolOn, 'panel'));
+        else P.push(kutu(dx, dx + t, hb + icTaban, hb + Hc - t, zIcArka, zBolOn, 'panel'));
       }
     }
     for (const c of geo.sutunlar) {
       c.sinirlar.forEach((b, i) => {
         if (!b.panel) return;
-        if (!acikSatir(c.satirlar[i]) && !acikSatir(c.satirlar[i + 1])) return;
-        P.push(kutu(b.x1, b.x2, hb + b.y - t / 2, hb + b.y + t / 2, zIcArka, zIcOn, 'panel'));
+        if (!gomme && !acikSatir(c.satirlar[i]) && !acikSatir(c.satirlar[i + 1])) return;
+        P.push(kutu(b.x1, b.x2, hb + b.y - t / 2, hb + b.y + t / 2, zBolOn - araD, zBolOn, 'panel'));
       });
     }
     for (const s of geo.satirlar) {
@@ -263,7 +279,7 @@
     const Hc = g.Hc;
     const P = [];
     const gc = (g.baza && g.baza.geriCekme) || 0;
-    if (g.baza.tip === 'ayak' || g.baza.tip === 'tekerlek') {
+    if (g.baza.tip === 'ayak' || g.baza.tip === 'ayak_on' || g.baza.tip === 'tekerlek') {
       for (const [x, z] of [[ta + 50, ta + 50], [W - 50, ta + 50], [W - 50, D - gc - 30], [ta + 50, W2 - 50], [D - gc - 30, W2 - 50], [D - gc - 30, D - gc - 30]]) P.push(kutu(x - 15, x + 15, 0, hb, z - 15, z + 15, 'ayak'));
     } else if (g.baza.tip === 'panel') {
       const on = D - gc;

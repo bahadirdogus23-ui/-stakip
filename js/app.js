@@ -406,6 +406,7 @@
           ${rafli && s.aski ? `<label title="Askı borusu ekseninin satırın iç tavanından mesafesi (mm)">Askı üstten${sayiGir('askiUstten', s.askiUstten, 'min="30" placeholder="60"')}</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="led" type="checkbox" ${s.led ? 'checked' : ''}> LED</label>` : ''}
         </div>` : ''}
+        ${i < m.sutunlar[si].satirlar.length - 1 && !(s.tip === 'cekmece' && m.sutunlar[si].satirlar[i + 1].tip === 'cekmece') ? `<div class="sk-alt"><label class="onay" title="Bu satırla altındaki satır arasına sabit tabla (ara raf) konmaz; iki satır tek iç boşluğu paylaşır"><input data-alan="altTablaYok" type="checkbox" ${s.altTablaYok ? 'checked' : ''}> Altında ara tabla yok</label></div>` : ''}
       </div>`;
   }
 
@@ -465,9 +466,10 @@
     }
 
     const bazaAlanlari = `
-        <label>Baza${secim('baza.tip', m.baza.tip, [['yok', 'Yok'], ['ayak', 'Ayarlı ayak'], ['panel', 'Baza çerçevesi'], ['tekerlek', 'Tekerlek']])}</label>
+        <label title="Ayak + önde baza: mutfakta yaygın; ayaklar taşır, önde klipsli baza bandı">Baza${secim('baza.tip', m.baza.tip, [['yok', 'Yok'], ['ayak', 'Ayarlı ayak'], ['ayak_on', 'Ayak + önde baza'], ['panel', 'Baza çerçevesi'], ['tekerlek', 'Tekerlek']])}</label>
         <label>Baza yük. (mm)${sayiGir('baza.yukseklik', m.baza.yukseklik, `min="0" ${m.baza.tip === 'yok' ? 'disabled' : ''}`)}</label>
-        <label>Baza geri çekme${sayiGir('baza.geriCekme', m.baza.geriCekme, `min="0" ${m.baza.tip !== 'panel' ? 'disabled' : ''}`)}</label>
+        <label title="Ön bazanın kapak düzleminden geride kalması">Baza geri çekme${sayiGir('baza.geriCekme', m.baza.geriCekme, `min="0" ${m.baza.tip !== 'panel' && m.baza.tip !== 'ayak_on' ? 'disabled' : ''}`)}</label>
+        ${m.tip === 'normal' && m.baza.tip === 'panel' ? `<label class="onay" title="Tekli mobilyada: yanlar zemine kadar iner, baza yanların arasında kalır; yandan baza görünmez. Mutfak dizisinde kapalı tutun (baza ayrı)."><input data-alan="yanlarYere" type="checkbox" ${m.yanlarYere ? 'checked' : ''}> Yanlar bazaya insin</label>` : ''}
         ${m.tip === 'normal' && (m.baza.tip === 'ayak' || m.baza.tip === 'panel') ? `<label class="onay" title="Süpürgelikte bas-aç ile açılan gizli çekmece (baza en az 100 mm)"><input data-alan="bazaCekmece" type="checkbox" ${m.bazaCekmece ? 'checked' : ''}> Baza çekmecesi (gizli)</label>` : ''}`;
 
     let html = `
@@ -507,6 +509,10 @@
           : `<label>Kapak tipi${secim('kapakTipi', m.kapakTipi, [['tam', 'Tam bini (bindirme)'], ['ic', 'Gömme (iç bini)']])}</label>`}
         ${bazaAlanlari}
         ${surgu ? '' : `<label class="onay" title="Çatı altı / merdiven altı: üst kenar eğimli"><input data-alan="egimli" type="checkbox" ${m.egimli ? 'checked' : ''}> Eğimli üst</label>`}
+        ${!surgu && m.yapi === 'tabla_boydan' && m.ust === 'tam' && !m.egimli ? `<label title="Üst tablanın kapak yüzünden öne taşması (mm). 0'dan büyükse kapaklar tablanın altında biter.">Üst tabla ön taşma${sayiGir('ustTasmaOn', m.ustTasmaOn, 'min="0" max="100"')}</label>
+        <label title="Üst tablanın her yandan taşması (mm), ör. 18">Üst tabla yan taşma${sayiGir('ustTasmaYan', m.ustTasmaYan, 'min="0" max="100"')}</label>
+        <label class="onay" title="Üst tabla kapak kalınlığı kadar öne uzar, kapakların üstünü yandan yana kapatır; kapaklar tablanın altında biter"><input data-alan="ustKapakUstu" type="checkbox" ${m.ustKapakUstu ? 'checked' : ''}> Üst tabla kapakların üstünü kapatsın</label>` : ''}
+        ${surgu ? '' : `<label class="onay" title="Alt tabla konmaz: yanlar zemine basar, en alt bölme zemine açılır (buzdolabı nişi gibi). Baza kullanılmaz."><input data-alan="altTablaYok" type="checkbox" ${m.altTablaYok ? 'checked' : ''}> Alt tabla yok (zemine açık)</label>`}
         ${m.egimli && !surgu ? `<label title="Sağ kenarın zeminden yüksekliği (sol = Yükseklik)">Sağ yükseklik (mm)${sayiGir('sagYukseklik', m.sagYukseklik, 'min="200"')}</label>` : ''}
         <label>Kulp yönü${secim('kulpYon', m.kulpYon, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_YONLERI)])}</label>
         <label>Kulp konumu${secim('kulpKonum', m.kulpKonum, [['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_KONUMLARI).map(([k, v]) => [k, v.split(' (')[0]])])}</label>
@@ -860,6 +866,8 @@
     ['arkalikGeriPay', 'Kanalın arkaya mesafesi (mm)'],
     ['arkalikCakmaPay', 'Çakma arkalık kenar payı (mm)'],
     ['rafOnGeriCekme', 'Raf önden geri çekme (mm)'],
+    ['gommeKayitEn', 'Gömme kapakta ön kayıt derinliği (mm)'],
+    ['cekmeceRayBosluk', 'Çekmece kutusu yan boşluğu, ray başına (mm, 0 = ray kataloğu)'],
     ['rafYanBosluk', 'Raf yan boşluğu (mm)'],
     ['kusakGenisligi', 'Kuşak eni (mm)'],
   ];
@@ -906,7 +914,9 @@
         <label>Kulp konumu (çekmece)<select data-ayar="kulpCekmece"><option value="ust"${A.kulpCekmece === 'ust' ? ' selected' : ''}>Üstte</option><option value="orta"${A.kulpCekmece === 'orta' ? ' selected' : ''}>Ortada</option></select></label>
         <label>Asma dolap askısı<select data-ayar="duvarAski"><option value="aparat"${A.duvarAski === 'aparat' ? ' selected' : ''}>Gizli askı aparatı</option><option value="ray"${A.duvarAski === 'ray' ? ' selected' : ''}>Askı rayı + aparat</option></select></label>
         <label>Çekmece tabanı<select data-ayar="cekmeceTabani"><option value="cakma"${A.cekmeceTabani === 'cakma' ? ' selected' : ''}>Alttan çakma</option><option value="kanal"${A.cekmeceTabani === 'kanal' ? ' selected' : ''}>Kanala geçme</option></select></label>
+        <label title="Gömme (iç bini) kapaklı dolapta satırlar arasındaki tabla: tam derinlik ya da yalnız önde kayıt (10–12 cm yeterli)">Gömme kapakta ara tabla<select data-ayar="gommeAraTabla"><option value="tam"${A.gommeAraTabla === 'tam' ? ' selected' : ''}>Tam derinlik</option><option value="kayit"${A.gommeAraTabla === 'kayit' ? ' selected' : ''}>Önde kayıt</option></select></label>
         <label class="onay"><input data-ayar="bantDus" type="checkbox" ${A.bantDus ? 'checked' : ''}> Bant kalınlığını kesim ölçüsünden düş</label>
+        <label class="onay" title="Kapalıysa arkalıklar çizimde görünür ama kesim listesine, plakaya ve maliyete girmez (ayrı alınıyorsa)"><input data-ayar="arkalikListede" type="checkbox" ${A.arkalikListede ? 'checked' : ''}> Arkalıkları kesim listesine ve maliyete kat</label>
       </div>
       <button id="btnAyarSifirla" class="ikincil">Varsayılanlara dön</button>`;
   }
@@ -1260,7 +1270,7 @@
   }
   $('#atolyeModul').addEventListener('change', (e) => { atolyeModulId = e.target.value; atolyeCiz(); });
   const delikYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Delik planı — ${m.ad}`)}${delikHtml(m)}</section>`).join('');
-  const montajYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Montaj kılavuzu — ${m.ad}`)}<div class="y-modul"><div class="y-on">${Cizim.onGorunus(m, sonuc.modulSonuclari[m.id].geo, {})}</div><div>${montajHtml(m)}</div></div></section>`).join('');
+  const montajYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Montaj kılavuzu — ${m.ad}`)}<div class="y-modul y-montaj"><div class="y-on">${Cizim.onGorunus(m, sonuc.modulSonuclari[m.id].geo, {})}</div><div>${montajHtml(m)}</div></div></section>`).join('');
   $('#btnYazdirDelik').addEventListener('click', () => yazdir('delik'));
   $('#btnYazdirMontaj').addEventListener('click', () => yazdir('montaj'));
 

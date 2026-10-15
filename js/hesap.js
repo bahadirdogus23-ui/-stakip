@@ -238,6 +238,7 @@
     bulasik_seti: { ad: 'Bulaşık makinesi kapak montaj seti', birim: 'takım', fiyat: 150 },
     arkalik_vida: { ad: 'Arkalık vidası / zımba çivisi', birim: 'adet', fiyat: 0.4 },
     kosebent: { ad: 'Bağlantı köşebendi', birim: 'adet', fiyat: 5 },
+    baza_klips: { ad: 'Baza klipsi', birim: 'adet', fiyat: 4 },
     catal_kasiklik: { ad: 'Çatal-kaşıklık', birim: 'adet', fiyat: 350 },
     dolap_birlestirme: { ad: 'Dolap birleştirme vidası (somunlu)', birim: 'adet', fiyat: 4 },
     aski_aparati: { ad: 'Asma dolap askı aparatı', birim: 'adet', fiyat: 45 },
@@ -309,6 +310,10 @@
     arkalikGeriPay: 10,       // kanalın arka kenara uzaklığı
     arkalikCakmaPay: 2,       // çakma arkalıkta her kenardan içeri pay
     rafOnGeriCekme: 20,       // hareketli raf önden geri çekme
+    gommeAraTabla: 'tam',     // gömme kapakta satırlar arası tabla: 'tam' derin | 'kayit' (yalnız önde kayıt)
+    gommeKayitEn: 110,        // gömme kapakta ön kayıt derinliği (mm)
+    cekmeceRayBosluk: 0,      // çekmece kutusu–gövde yan boşluğu (ray başına, mm); 0 = ray kataloğu değeri
+    arkalikListede: true,     // arkalık parçaları kesim listesine ve maliyete girsin mi
     rafYanBosluk: 1,          // hareketli raf her yandan boşluk
     kusakGenisligi: 100,      // üst kuşak eni
     profilCamPay: 18,         // alüminyum profilli kapakta camın her kenardan küçülmesi
@@ -322,6 +327,7 @@
   const S = (tip, yukseklik, adet, ek) => Object.assign({ tip, yukseklik, adet: adet || 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false }, ek || {});
   const SUT = (genislik, satirlar) => ({ genislik, satirlar });
   const AYAK = (h) => ({ tip: 'ayak', yukseklik: h || 100, geriCekme: 50 });
+  const AYAK_ON = (h) => ({ tip: 'ayak_on', yukseklik: h || 100, geriCekme: 50 });
   const BAZA = (h, gc) => ({ tip: 'panel', yukseklik: h || 80, geriCekme: gc == null ? 40 : gc });
   const YOK = { tip: 'yok', yukseklik: 0, geriCekme: 0 };
   const G = (grup, ad, aciklama, o) => Object.assign({
@@ -333,9 +339,9 @@
     grup, ad, aciklama, tip: 'panel', panelTuru, panelMalzeme: 'kapak', boy, en, bantU: 2, bantK: 2, montajYuksekligi: 0,
     genislik: en, yukseklik: boy, derinlik: 0, baza: YOK,
   }, ek || {});
-  const ALT = { yukseklik: 870, derinlik: 560, ust: 'kusak', baza: AYAK(100) };
+  const ALT = { yukseklik: 870, derinlik: 560, ust: 'kusak', baza: AYAK_ON(100) };
   const UST = { yukseklik: 720, derinlik: 320, montajYuksekligi: 1450 };
-  const BOY = { yukseklik: 2150, derinlik: 560, baza: AYAK(100) };
+  const BOY = { yukseklik: 2150, derinlik: 560, baza: AYAK_ON(100) };
 
   const PRESETLER = {
     // Mutfak – alt
@@ -365,7 +371,7 @@
     boy_firin: G('Mutfak boy', 'Boy Dolap – Fırın + Mikrodalga', 'Ankastre fırın ve mikrodalga nişli', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', null, 1, { raf: 1 }), S('nis', 380), S('nis', 595), S('cekmece', 180), S('cekmece', 180)) }, BOY)),
     boy_kiler: G('Mutfak boy', 'Kiler Boy Dolap', 'Üst ve alt kapaklı, bol raflı', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', 700, 1, { raf: 1 }), S('kapak', null, 1, { raf: 4 })) }, BOY)),
     kahve: G('Mutfak boy', 'Kahve Köşesi', 'Cam kapak, LED\'li makine nişi, çekmece', Object.assign({ genislik: 800, sutunlar: TEK(S('kapak', 600, 2, { kapakTuru: 'cam_profil', raf: 1, rafTipi: 'cam', led: true }), S('acik', 450, 1, { led: true }), S('cekmece', 180, 2), S('kapak', null, 2, { raf: 1 })) }, BOY)),
-    buzdolabi_kabin: G('Mutfak boy', 'Ankastre Buzdolabı Kabini', 'Buzdolabı nişi + üst dolap', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', 400, 1), S('nis', null)) }, BOY)),
+    buzdolabi_kabin: G('Mutfak boy', 'Buzdolabı Kabini', 'Tabansız buzdolabı nişi + üst dolap', Object.assign({ genislik: 600, sutunlar: TEK(S('kapak', 400, 1), S('nis', null)) }, BOY, { baza: YOK, altTablaYok: true, arkalik: 'yok' })),
     // Yatak odası
     gardirop: G('Yatak odası', 'Gardırop (2 kapak)', 'Üst bölme + askı', { genislik: 1000, yukseklik: 2400, derinlik: 580, yapi: 'tabla_boydan', baza: BAZA(80, 40), sutunlar: TEK(S('kapak', 400, 2), S('kapak', null, 2, { aski: true })) }),
     gardirop3: G('Yatak odası', 'Gardırop (3 kapak)', 'Raflı bölme + askı bölmesi', { genislik: 1500, yukseklik: 2400, derinlik: 580, yapi: 'tabla_boydan', baza: BAZA(80, 40), sutunlar: [SUT(476, [S('kapak', 400, 1), S('kapak', null, 1, { raf: 5 })]), SUT(null, [S('kapak', 400, 2), S('kapak', null, 2, { aski: true })])] }),
@@ -495,6 +501,7 @@
       rafYukseklikleri: rafListesi(s.rafYukseklikleri),
       askiUstten: (() => { const v = sayiAl(s.askiUstten, null, 0, 600); return v >= 30 ? v : null; })(),
       rafGeri: sayiAl(s.rafGeri, null, 0, 300),
+      altTablaYok: !!s.altTablaYok, // satırın altında sabit tabla olmasın
     };
   }
   /** "300, 650" ya da [300, 650] → sıralı, tekrarsız, en fazla 20 pozitif sayı. */
@@ -545,13 +552,21 @@
       arkalik: lk ? 'cakma' : secenekAl(x.arkalik, ['kanal', 'cakma', 'yok'], 'kanal'),
       kapakTipi: lk ? 'tam' : secenekAl(x.kapakTipi, ['tam', 'ic'], 'tam'),
       baza: {
-        tip: secenekAl(baza.tip, ['yok', 'ayak', 'panel', 'tekerlek'], 'yok'),
+        tip: secenekAl(baza.tip, ['yok', 'ayak', 'ayak_on', 'panel', 'tekerlek'], 'yok'),
         yukseklik: sayiAl(baza.yukseklik, 0, 0, 500),
         geriCekme: sayiAl(baza.geriCekme, 0, 0, 500),
       },
       korPanel: sayiAl(x.korPanel, 0, 0, 2000),
       korTaraf: secenekAl(x.korTaraf, ['sol', 'sag'], 'sol'),
       bazaCekmece: !!x.bazaCekmece,
+      // Alt tabla yok: yanlar zemine basar, en alt satır zemine açılır (ör. buzdolabı nişi)
+      altTablaYok: tip === 'normal' && !!x.altTablaYok,
+      // Yanlar bazaya iner (baza çerçevesi yanların arasında, yalnız ön ve arka)
+      yanlarYere: !!x.yanlarYere,
+      // Üst tabla taşması (tablalar boydan): önden ve her yandan mm; kapak üstü: üst tabla kapakların üstünü de kapatır
+      ustTasmaOn: sayiAl(x.ustTasmaOn, 0, 0, 100),
+      ustTasmaYan: sayiAl(x.ustTasmaYan, 0, 0, 100),
+      ustKapakUstu: !!x.ustKapakUstu,
       egimli: !!x.egimli,
       sagYukseklik: sayiAl(x.sagYukseklik, sayiAl(x.yukseklik, 720, 0, 5000), 0, 5000),
       kulpYon: secenekAl(x.kulpYon, ['proje', ...Object.keys(KULP_YONLERI)], 'proje'),
@@ -587,6 +602,7 @@
       else if (typeof v[k] === 'boolean') A[k] = g[k] == null ? v[k] : !!g[k];
     }
     A.cekmeceTabani = secenekAl(g.cekmeceTabani, ['cakma', 'kanal'], 'cakma');
+    A.gommeAraTabla = secenekAl(g.gommeAraTabla, ['tam', 'kayit'], 'tam');
     A.kulpYon = secenekAl(g.kulpYon, Object.keys(KULP_YONLERI), 'dikey');
     A.kulpKonum = secenekAl(g.kulpKonum, Object.keys(KULP_KONUMLARI), 'oto');
     A.kulpCekmece = secenekAl(g.kulpCekmece, ['ust', 'orta'], 'ust');
@@ -936,16 +952,22 @@
   }
 
   function bazaEkle(T, baza, hb, W, Ds, t, ayakTur, ayakAdedi, onYok, yanYok) {
-    if (baza.tip === 'ayak') {
+    if (baza.tip === 'ayak' || baza.tip === 'ayak_on') {
       T.hEkle('ayak_' + ayakTur, `${HIRDAVAT_SECENEKLERI.ayak.secenekler[ayakTur].ad} (${hb} mm)`, ayakAdedi || (W > 1000 ? 6 : 4));
+      if (baza.tip === 'ayak_on') {
+        // Ayaklar + yalnız önde baza bandı (ayaklara klipsle takılır)
+        T.ekle('Baza önü (klipsli)', 'govde', W, hb - 3, 1, { u: 1, k: 0 }, { not: `Ön ayaklara klipsle takılır; önden ${say(baza.geriCekme, 0)} mm geride, zeminden 3 mm boşluk` });
+        T.hEkle('baza_klips', 'Baza klipsi', W > 1000 ? 3 : 2);
+      }
     } else if (baza.tip === 'tekerlek') {
       T.hEkle('tekerlek', `Tekerlek (${hb} mm)`, 4);
     } else if (baza.tip === 'panel') {
       const gc = say(baza.geriCekme, 0);
       // Baza çerçevesi: ön parça önden geri çekilir, yanlar gövdeyle aynı hizada.
-      if (onYok) T.ekle('Baza arkası', 'govde', W, hb, 1, { u: 0, k: 0 });
-      else T.ekle('Baza ön/arka', 'govde', W, hb, 2, { u: 0, k: 0 });
-      if (!yanYok) T.ekle('Baza yanı', 'govde', Ds - gc - 2 * t, hb, 2, { u: 0, k: 0 });
+      // Zemine değen alt kenar bantlanır (nemden korunur): 1 uzun kenar
+      if (onYok) T.ekle('Baza arkası', 'govde', W, hb, 1, { u: 1, k: 0 });
+      else T.ekle('Baza ön/arka', 'govde', W, hb, 2, { u: 1, k: 0 });
+      if (!yanYok) T.ekle('Baza yanı', 'govde', Ds - gc - 2 * t, hb, 2, { u: 1, k: 0 });
       if (!yanYok && Ds - gc - 2 * t < 100) T.uyarilar.push('Baza yanı çok kısa; baza geri çekme değerini kontrol edin.');
     }
   }
@@ -1014,7 +1036,10 @@
     const W = say(modul.genislik, 0);
     const H = say(modul.yukseklik, 0);
     const D = say(modul.derinlik, 0);
-    const baza = modul.baza || { tip: 'yok', yukseklik: 0, geriCekme: 0 };
+    // Alt tablasız dolapta yanlar zemine basar: baza ve sürgü (alt ray) kullanılamaz
+    const altYok = !!modul.altTablaYok && modul.onTipi !== 'surgu';
+    if (modul.altTablaYok && !altYok) uyarilar.push('Sürgü kapaklı dolapta alt ray için alt tabla gerekir; alt tabla eklendi.');
+    const baza = altYok ? YOK : modul.baza || { tip: 'yok', yukseklik: 0, geriCekme: 0 };
     const hb = baza.tip === 'yok' ? 0 : say(baza.yukseklik, 0);
     let Hc = H - hb; // gövde (baza hariç) yüksekliği; eğimli dolapta alçak taraf
     const iw = W - 2 * t; // iç genişlik
@@ -1064,6 +1089,10 @@
     if (ic) icDerinlik -= tk;
     // Sürgü kapaklı dolapta raflar tam derin; yalnızca gömme iç çekmeceler ön kalınlığı kadar kısalır
     const cekmeceDerinlik = surgu && !ic ? icDerinlik - tk : icDerinlik;
+    // Gömme kapakta kapaklar bölücülerin arasına girer: boydan dikmeler ve satır arası tablalar öne kadar gelir
+    // (iç raflar kapağın arkasında kalır). İstenirse satır arası tabla yalnız önde bir kayıt olur.
+    const bolucuD = ic ? icDerinlik + tk : icDerinlik;
+    const araTablaD = ic && A.gommeAraTabla === 'kayit' ? Math.min(bolucuD, Math.max(50, say(A.gommeKayitEn, 110))) : bolucuD;
 
     // ---------- Gövde ----------
     if (egim && modul.ust === 'kusak') uyarilar.push('Eğimli dolapta kuşak yerine tam üst tabla kullanıldı.');
@@ -1071,19 +1100,38 @@
     const kusakSigmaz = modul.ust === 'kusak' && !egim && Ds < 2 * kusakEn + 20;
     if (kusakSigmaz) uyarilar.push(`Derinlik (${r1(Ds)} mm) iki kuşak (${kusakEn} mm) için yetersiz; tam üst tabla kullanıldı.`);
     const usttam = modul.ust !== 'kusak' || !!egim || kusakSigmaz;
-    if (modul.yapi === 'tabla_boydan') {
-      ekle('Alt tabla', 'govde', W, Ds, 1, { u: 1, k: 2 });
+    const tablaBoydan = modul.yapi === 'tabla_boydan';
+    // Yanlar bazaya iner: yalnız baza çerçevesinde; alt tabla yanların arasına girer
+    const yanYere = !!modul.yanlarYere && baza.tip === 'panel' && hb > 0;
+    const hbYan = yanYere ? hb : 0;
+    const altUstte = tablaBoydan && !altYok && !yanYere; // alt tabla yanların altında mı
+    // Üst tabla taşması: üst tabla yanların üstünde olmalı (tablalar boydan, tam üst tabla, eğimsiz)
+    const tasmaIstek = say(modul.ustTasmaOn, 0) > 0 || say(modul.ustTasmaYan, 0) > 0 || !!modul.ustKapakUstu;
+    const tasmaOlur = tablaBoydan && usttam && !egim && !surgu;
+    if (tasmaIstek && !tasmaOlur) uyarilar.push('Üst tabla taşması / kapak üstü yalnız "Tablalar boydan", tam üst tablalı, eğimsiz ve menteşeli dolapta uygulanır.');
+    // Önden taşan üst tabla tam bini kapakların üstünü de kapatır: kapaklar tablanın altında biter.
+    // Ön taşma kapak yüzünden ölçülür (tabla derinliği = gövde + kapak kalınlığı + taşma).
+    const kapakUstu = tasmaOlur && !ic && (!!modul.ustKapakUstu || say(modul.ustTasmaOn, 0) > 0);
+    const tasmaYan = tasmaOlur ? say(modul.ustTasmaYan, 0) : 0;
+    const tasmaOn = tasmaOlur ? say(modul.ustTasmaOn, 0) + (kapakUstu ? tk : 0) : 0;
+    const yanNot = altYok ? { not: 'Alt tabla yok: alt ucu zemine basar; zemine/duvara köşebentle sabitleyin' }
+      : yanYere ? { not: `Yan bazaya iner: alt ${hb} mm baza yüksekliği; alt tabla yanların arasına girer` } : undefined;
+    if (tablaBoydan) {
+      if (!altYok) {
+        if (altUstte) ekle('Alt tabla', 'govde', W, Ds, 1, { u: 1, k: 2 });
+        else ekle('Alt tabla', 'govde', iw, Ds, 1, { u: 1, k: 0 });
+      }
       if (usttam) {
-        ekle('Üst tabla', 'govde', W, Ds, 1, { u: 1, k: 2 });
-        ekle('Yan', 'govde', Hc - 2 * t, Ds, 2, { u: 1, k: 0 });
+        ekle('Üst tabla', 'govde', W + 2 * tasmaYan, Ds + tasmaOn, 1, { u: 1, k: 2 }, tasmaOn || tasmaYan ? { not: `Taşma: önden ${r1(tasmaOn)}${kapakUstu ? ' (kapak kalınlığı dahil, kapakların üstünü kapatır)' : ''}, yanlardan ${r1(tasmaYan)} mm` } : undefined);
+        ekle('Yan', 'govde', Hc - t - (altUstte ? t : 0) + hbYan, Ds, 2, { u: 1, k: 0 }, yanNot);
       } else {
-        ekle('Yan', 'govde', Hc - t, Ds, 2, { u: 1, k: 1 });
+        ekle('Yan', 'govde', Hc - (altUstte ? t : 0) + hbYan, Ds, 2, { u: 1, k: 1 }, yanNot);
         ekle('Ön kuşak', 'govde', iw, kusakEn, 1, { u: 1, k: 0 });
         ekle('Arka kuşak', 'govde', iw, kusakEn, 1, { u: 0, k: 0 });
       }
     } else {
-      ekle('Yan', 'govde', Hc, Ds, 2, { u: 1, k: 0 });
-      ekle('Alt tabla', 'govde', iw, Ds, 1, { u: 1, k: 0 });
+      ekle('Yan', 'govde', Hc + hbYan, Ds, 2, { u: 1, k: 0 }, yanNot);
+      if (!altYok) ekle('Alt tabla', 'govde', iw, Ds, 1, { u: 1, k: 0 });
       if (usttam) {
         ekle('Üst tabla', 'govde', iw, Ds, 1, { u: 1, k: 0 });
       } else {
@@ -1091,21 +1139,25 @@
         ekle('Arka kuşak', 'govde', iw, kusakEn, 1, { u: 0, k: 0 });
       }
     }
-    const birlesim = usttam ? 4 : 2; // köşe birleşimleri: alt + üst tablanın iki ucu
+    const birlesim = (usttam ? 4 : 2) - (altYok ? 2 : 0); // köşe birleşimleri: alt + üst tablanın iki ucu
+    if (altYok) hEkle('kosebent', 'Bağlantı köşebendi', 4);
     const kusakNokta = usttam ? 0 : 4; // kuşaklar uç başına tek nokta
     let araBirlesim = 0; // T birleşimleri: ara tabla ve dikme uçları
 
     // ---------- Arkalık ----------
     if (modul.arkalik === 'kanal') {
       const kd = say(A.arkalikKanalDerinligi, 8);
-      ekle('Arkalık (kanallı)', 'arkalik', Hc - 2 * t + 2 * (kd - 1), iw + 2 * (kd - 1), 1);
+      // Alt tablasızda arkalık alttan zeminden 10 mm yukarıda biter
+      ekle('Arkalık (kanallı)', 'arkalik', altYok ? Hc - t + (kd - 1) - 10 : Hc - 2 * t + 2 * (kd - 1), iw + 2 * (kd - 1), 1);
     } else if (modul.arkalik === 'cakma') {
       const p = say(A.arkalikCakmaPay, 2);
       ekle('Arkalık (çakma)', 'arkalik', Hc - 2 * p, W - 2 * p, 1);
       hEkle('arkalik_vida', 'Arkalık vidası / zımba çivisi', Math.ceil((2 * (Hc + W)) / 150));
     }
 
-    const ray = HIRDAVAT_SECENEKLERI.ray.secenekler[HS.ray];
+    const ray0 = HIRDAVAT_SECENEKLERI.ray.secenekler[HS.ray];
+    // Kullanıcının girdiği ray yan boşluğu kataloğun önüne geçer (metal yanlı sistem hariç)
+    const ray = HS.ray !== 'metal' && say(A.cekmeceRayBosluk, 0) > 0 ? Object.assign({}, ray0, { yanBosluk: say(A.cekmeceRayBosluk, 0) }) : ray0;
     const kd = say(A.arkalikKanalDerinligi, 8);
     let metalUyarisi = false;
     const kutular = []; // delik planı için çekmece kutusu ölçüleri
@@ -1173,7 +1225,7 @@
     // ---------- Baza çekmecesi (süpürgelikte gizli çekmece) ----------
     let geoBazaCekmece = null;
     let bazaOnYok = false;
-    if (modul.bazaCekmece) {
+    if (modul.bazaCekmece && !altYok) {
       if (baza.tip !== 'ayak' && baza.tip !== 'panel') {
         uyarilar.push('Baza çekmecesi için ayaklı veya baza çerçeveli dolap gerekir.');
       } else if (hb < 100) {
@@ -1199,13 +1251,17 @@
     }
 
     // Baza çekmecesinde ön ayaklar çekmece yolunda kalır: yalnızca arka ayaklar
-    bazaEkle(T, baza, hb, W, Ds, t, HS.ayak, geoBazaCekmece ? (W > 1000 ? 3 : 2) : undefined, bazaOnYok, !!geoBazaCekmece);
+    if (yanYere) {
+      // Baza yanların arasında: ön (geri çekilmiş) ve arka parça
+      ekle('Baza önü', 'govde', iw, hb, 1, { u: 1, k: 0 }, { not: `Yanların arasında, önden ${r1(say(baza.geriCekme, 0))} mm geride; alt kenar zemine değer (bantlı)` });
+      ekle('Baza arkası', 'govde', iw, hb, 1, { u: 1, k: 0 });
+    } else bazaEkle(T, baza, hb, W, Ds, t, HS.ayak, geoBazaCekmece ? (W > 1000 ? 3 : 2) : undefined, bazaOnYok, !!geoBazaCekmece);
 
     // ---------- Ön yüz alanı ve kör köşe paneli ----------
     let x0 = icDuzen ? t + g : db;
     let x1 = icDuzen ? W - t - g : W - db;
-    const yUst = icDuzen ? Hc - t - g : Hc - db;
-    const yAlt = icDuzen ? t + g : db;
+    const yUst = icDuzen ? Hc - t - g : kapakUstu ? Hc - t - db : Hc - db;
+    const yAlt = altYok ? 10 : icDuzen ? t + g : db;
     // Dikey bölme genişlikleri (kör panel kontrolü bunlara bağlı)
     const sutunlar = modul.sutunlar && modul.sutunlar.length ? modul.sutunlar : [{ genislik: null, satirlar: [] }];
     const ns = sutunlar.length;
@@ -1247,10 +1303,10 @@
         let x = t;
         for (let k = 0; k < ns - 1; k++) {
           x += genislikler[k];
-          ekle(`Bölme dikmesi (boydan) ${k + 1}`, 'govde', Math.max(HcX(x), HcX(x + t)) - t - t / Math.cos(egim.alfa), icDerinlik, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir (ölçü uzun kenar)` });
+          ekle(`Bölme dikmesi (boydan) ${k + 1}`, 'govde', Math.max(HcX(x), HcX(x + t)) - (altYok ? 0 : t) - t / Math.cos(egim.alfa), bolucuD, 1, { u: 1, k: 0 }, { not: `Üst ucu ${egim.aciDer}° eğimli kesilir (ölçü uzun kenar)` });
           x += t;
         }
-      } else ekle('Bölme dikmesi (boydan)', 'govde', Hc - 2 * t, icDerinlik, ns - 1, { u: 1, k: 0 });
+      } else ekle('Bölme dikmesi (boydan)', 'govde', altYok ? Hc - t : Hc - 2 * t, bolucuD, ns - 1, { u: 1, k: 0 }, ic ? { not: 'Gömme kapak: önde gövdeyle aynı hizada' } : undefined);
       araBirlesim += 2 * (ns - 1);
     }
 
@@ -1281,7 +1337,8 @@
         const panelVar = [];
         const ayrac = [];
         for (let i = 0; i < satirlar.length - 1; i++) {
-          const p = !(satirlar[i].tip === 'cekmece' && satirlar[i + 1].tip === 'cekmece');
+          // Kullanıcı satırın altındaki sabit tablayı kaldırabilir (ör. çekmece altı)
+          const p = !(satirlar[i].tip === 'cekmece' && satirlar[i + 1].tip === 'cekmece') && !satirlar[i].altTablaYok;
           panelVar.push(p);
           ayrac.push(icDuzen && p ? t + 2 * g : g);
         }
@@ -1308,7 +1365,7 @@
           const s = satirlar[i];
           const on = onlar[i];
           const icUst = i === 0 ? Hc - t : sinirlar[i - 1].panel ? sinirlar[i - 1].y - t / 2 : sinirlar[i - 1].y;
-          const icAlt = i === satirlar.length - 1 ? t : sinirlar[i].panel ? sinirlar[i].y + t / 2 : sinirlar[i].y;
+          const icAlt = i === satirlar.length - 1 ? (altYok ? 0 : t) : sinirlar[i].panel ? sinirlar[i].y + t / 2 : sinirlar[i].y;
           const icH = icUst - icAlt;
           const n = Math.max(1, Math.floor(say(s.adet, 1)));
           const dikme = s.tip === 'cekmece' ? n - 1 : s.tip === 'nis' ? 0 : Math.max(0, Math.floor(say(s.dikme, 0)));
@@ -1524,7 +1581,8 @@
         // Satırlar arası sabit raflar (ara tabla)
         const araTabla = sinirlar.filter((b) => b.panel).length;
         if (araTabla > 0) {
-          ekle(ns > 1 ? `Ara tabla (bölme ${si + 1})` : 'Ara tabla (sabit raf)', 'govde', cw, icDerinlik, araTabla, { u: 1, k: 0 });
+          ekle(ns > 1 ? `Ara tabla (bölme ${si + 1})` : 'Ara tabla (sabit raf)', 'govde', cw, araTablaD, araTabla, { u: 1, k: 0 },
+            araTablaD < bolucuD ? { not: `Gömme kapak: yalnız önde ${r1(araTablaD)} mm kayıt` } : ic ? { not: 'Gömme kapak: önde gövdeyle aynı hizada' } : undefined);
           araBirlesim += 2 * araTabla;
         }
       }
@@ -1572,8 +1630,7 @@
       const cikar = (ad) => { const i = T.parcalar.findIndex((p) => p.ad === ad); if (i >= 0) T.parcalar.splice(i, 1); };
       cikar('Yan');
       cikar('Üst tabla');
-      const tablaBoydan = modul.yapi === 'tabla_boydan';
-      const yanH = (h) => (tablaBoydan ? h - t - t / cos : h);
+      const yanH = (h) => (tablaBoydan ? h - (altUstte ? t : 0) - t / cos + hbYan : h + hbYan);
       const yanNot = `Üst kenarı kalınlık boyunca ${aci}° eğimli kesilir`;
       // Kalınlık boyunca açılı kesimde kaba ölçü uzun kenardır (yüksek tarafta dış, alçak tarafta iç kenar)
       const yanEkle = (ad, xDis, xIc) => {
@@ -1595,7 +1652,7 @@
         // Kenar yükseklikleri arkalığın kendi sol/sağ kenarındaki gövde yüksekliğinden; böylece
         // arkalığın eğimi gövdeyle aynı olur. Kanallıda üst tablanın düşey kalınlığı t/cos'tur.
         const xa = modul.arkalik === 'kanal' ? t - (kd - 1) : p;
-        const hX = (x) => (modul.arkalik === 'kanal' ? HcX(x) - t / cos - t + 2 * (kd - 1) : HcX(x) - 2 * p);
+        const hX = (x) => (modul.arkalik === 'kanal' ? (altYok ? HcX(x) - t / cos + (kd - 1) - 10 : HcX(x) - t / cos - t + 2 * (kd - 1)) : HcX(x) - 2 * p);
         const hL = hX(xa);
         const hR = hX(xa + en);
         const sg = sekilGeometrisi('egimli', en, hL, hR, 0);
@@ -1616,7 +1673,7 @@
         W, H: egim ? hb + egim.max : H, D, Hc, hb, t, ta, Ds, icDerinlik, cekmeceDerinlik, tk, db,
         egim: egim ? { HcL: egim.HcL, HcR: egim.HcR, aci: egim.aciDer } : null,
         kulpTur: HS.kulp, montajYuksekligi: kulpC.montaj,
-        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: usttam ? 'tam' : 'kusak', yapi: modul.yapi,
+        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: usttam ? 'tam' : 'kusak', yapi: modul.yapi, altYok, bolucuD, araTablaD, yanYere, tasmaOn, tasmaYan, kapakUstu,
         baza: { tip: baza.tip, yukseklik: hb, geriCekme: say(baza.geriCekme, 0) },
         korPanel,
         sutunlar: geoSutunlar,
@@ -1693,7 +1750,7 @@
       ekle('Baza önü – B kolu', 'govde', LB - on + t, hb, 1); // köşedeki ve kol ucundaki t×t boşlukları kapatır
       ekle('Baza arkası – A kolu', 'govde', LA, hb, 1);
       ekle('Baza arkası – B kolu', 'govde', LB - t, hb, 1);
-      ekle('Baza yanı (kol ucu)', 'govde', on - 2 * t, hb, 2);
+      ekle('Baza yanı (kol ucu)', 'govde', on - 2 * t, hb, 2, { u: 1, k: 0 });
       if (on - 2 * t < 100) uyarilar.push('Baza yanı çok kısa; baza geri çekme değerini kontrol edin.');
     } else if (baza.tip === 'tekerlek') {
       hEkle('tekerlek', `Tekerlek (${hb} mm)`, 6);
@@ -2076,7 +2133,7 @@
       modulSonuclari[m.id] = sonuc;
       const adet = Math.max(1, Math.floor(say(m.adet, 1)));
       for (const u of sonuc.uyarilar) uyarilar.push(`${m.ad}: ${u}`);
-      for (const p of sonuc.parcalar) tumParcalar.push(Object.assign({}, p, { adet: p.adet * adet, modul: m.ad, modulId: m.id }));
+      for (const p of sonuc.parcalar) if (A.arkalikListede !== false || !/^Arkalık/.test(p.ad)) tumParcalar.push(Object.assign({}, p, { adet: p.adet * adet, modul: m.ad, modulId: m.id }));
       for (const h of sonuc.hirdavat) {
         const onceki = hirdavatMap.get(h.ad);
         if (onceki) {

@@ -72,8 +72,11 @@
       for (const x of W > 1000 ? [40, W / 2 - 15, W - 70] : [40, W - 70]) s += rect(x, 0, x + 30, hb, 'ayak');
     } else if (geo.baza.tip === 'tekerlek') {
       for (const x of [50, W - 50]) s += `<circle class="ayak" cx="${f(x)}" cy="${f(-hb / 2)}" r="${f(hb / 2)}"/>`;
+    } else if (geo.baza.tip === 'ayak_on') {
+      s += rect(0, 3, W, hb, 'baza'); // önde klipsli baza bandı (ayaklar arkasında)
     } else if (geo.baza.tip === 'panel') {
-      s += rect(0, 0, W, hb, 'baza');
+      if (geo.yanYere) s += rect(t, 0, W - t, hb, 'baza') + rect(0, 0, t, hb, 'govde') + rect(W - t, 0, W, hb, 'govde');
+      else s += rect(0, 0, W, hb, 'baza');
     }
 
     if (geo.bazaCekmece && !ic) {
@@ -81,18 +84,20 @@
       s += rect(b.x1, b.y1, b.x2, b.y2, 'cekmece-on baza-cekmece');
       s += `<circle class="basac-isaret" cx="${f((b.x1 + b.x2) / 2)}" cy="${f(-(b.y1 + b.y2) / 2)}" r="${f(Math.min(10, (b.y2 - b.y1) / 4))}"/>`;
     }
+    const ti = geo.altYok ? 0 : t; // alt tablasızda iç boşluk zemine iner
     const cokgen = (pts, cls) => `<polygon class="${cls}" points="${pts.map(([x, y]) => `${f(x)},${f(-y)}`).join(' ')}"/>`;
     if (geo.egim) {
       const { HcL, HcR } = geo.egim;
       s += cokgen([[0, yb], [W, yb], [W, yb + HcR], [0, yb + HcL]], 'govde');
-      s += cokgen([[t, yb + t], [W - t, yb + t], [W - t, yb + HcR - t], [t, yb + HcL - t]], 'ic');
+      s += cokgen([[t, yb + ti], [W - t, yb + ti], [W - t, yb + HcR - t], [t, yb + HcL - t]], 'ic');
     } else {
       s += rect(0, yb, W, yb + Hc, 'govde');
-      s += rect(t, yb + t, W - t, yb + Hc - t, 'ic');
+      if (geo.tasmaYan) s += rect(-geo.tasmaYan, yb + Hc - t, W + geo.tasmaYan, yb + Hc, 'govde');
+      s += rect(t, yb + ti, W - t, yb + Hc - t, 'ic');
     }
 
     // Boydan bölme dikmeleri ve ara tablalar
-    for (const dx of geo.dikmeX) s += rect(dx, yb + t, dx + t, yb + Hc - t, 'panel');
+    for (const dx of geo.dikmeX) s += rect(dx, yb + ti, dx + t, yb + Hc - t, 'panel');
     for (const b of geo.sinirlar) if (b.panel) s += rect(b.x1, yb + b.y - t / 2, b.x2, yb + b.y + t / 2, 'panel');
 
     // İç düzen: kapaksız, cam kapaklı veya iç görünüşte görünür
@@ -206,7 +211,7 @@
     const X = (u) => (kol === 'B' ? L - u : u);
     const aralik = (u1, u2) => [Math.min(X(u1), X(u2)), Math.max(X(u1), X(u2))];
     let s = '';
-    if (geo.baza.tip === 'ayak') for (const u of [D - 70, L - 70]) { const [a] = aralik(u, u + 30); s += rect(a, 0, a + 30, hb, 'ayak'); }
+    if (geo.baza.tip === 'ayak' || geo.baza.tip === 'ayak_on') for (const u of [D - 70, L - 70]) { const [a] = aralik(u, u + 30); s += rect(a, 0, a + 30, hb, 'ayak'); }
     else if (geo.baza.tip === 'panel') s += rect(0, 0, L, hb, 'baza');
     s += rect(0, yb, L, yb + Hc, 'govde');
     // Diğer kolun ucu (yan panel yüzü) bu görünüşte köşe tarafında görünür
@@ -406,14 +411,15 @@
     // x=0 gövdenin ön yüzü, arkaya doğru pozitif; kapak x<0 tarafında
     let s = '';
     if (geo.baza.tip === 'panel') s += rect(geo.baza.geriCekme, 0, Ds, hb, 'baza');
-    if (geo.baza.tip === 'ayak') s += rect(40, 0, 70, hb, 'ayak') + rect(Ds - 70, 0, Ds - 40, hb, 'ayak');
+    if (geo.baza.tip === 'ayak' || geo.baza.tip === 'ayak_on') s += rect(40, 0, 70, hb, 'ayak') + rect(Ds - 70, 0, Ds - 40, hb, 'ayak');
+    if (geo.baza.tip === 'ayak_on') s += rect(geo.baza.geriCekme, 3, geo.baza.geriCekme + t, hb, 'baza');
     if (geo.baza.tip === 'tekerlek') s += `<circle class="ayak" cx="${f(60)}" cy="${f(-hb / 2)}" r="${f(hb / 2)}"/><circle class="ayak" cx="${f(Ds - 60)}" cy="${f(-hb / 2)}" r="${f(hb / 2)}"/>`;
-    s += rect(0, hb, Ds, hb + Hc, 'yan-kesit');
-    s += rect(0, hb, Ds, hb + t, 'panel');
+    s += rect(0, geo.yanYere ? 0 : hb, Ds, hb + Hc, 'yan-kesit');
+    if (!geo.altYok) s += rect(0, hb, Ds, hb + t, 'panel');
     if (geo.ust === 'kusak') {
       s += rect(0, hb + Hc - t, 100, hb + Hc, 'panel');
       s += rect(Ds - 100, hb + Hc - t, Ds, hb + Hc, 'panel');
-    } else s += rect(0, hb + Hc - t, Ds, hb + Hc, 'panel');
+    } else s += rect(-(geo.tasmaOn || 0), hb + Hc - t, Ds, hb + Hc, 'panel');
     const icOn = geo.kapakTipi === 'ic' || geo.surgu ? tk : 0;
     // Yalnızca ilk bölmenin kesiti çizilir
     const bolme = geo.sutunlar[0];
@@ -423,7 +429,7 @@
       for (const c of sat.cekmeceler) s += rect(icOn + 2, hb + c.y1, icOn + 2 + c.L, hb + c.y2, 'cekmece-kutu');
       if (sat.aski) s += `<circle class="aski-ucu" cx="${f(icOn + geo.icDerinlik / 2)}" cy="${f(-(hb + sat.icUst - (sat.askiUstten || 60)))}" r="14"/>`;
     }
-    if (geo.arkalik === 'kanal') s += rect(Ds - 10 - ta, hb + t - 7, Ds - 10, hb + Hc - t + 7, 'arkalik');
+    if (geo.arkalik === 'kanal') s += rect(Ds - 10 - ta, geo.altYok ? hb + 10 : hb + t - 7, Ds - 10, hb + Hc - t + 7, 'arkalik');
     else if (geo.arkalik === 'cakma') s += rect(Ds, hb + 2, Ds + ta, hb + Hc - 2, 'arkalik');
     // Kapaklar
     if (geo.surgu) {

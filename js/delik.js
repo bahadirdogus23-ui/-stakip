@@ -92,6 +92,8 @@
       if (!p.disariOrnek) p.disariOrnek = `${ad} (${r1(x)}, ${r1(y)})`;
       return;
     }
+    // Aynı yerde aynı delik (ör. ara tablasız iki satırın ortak raf pimi) bir kez açılır
+    if (p.delikler.some((d) => d.tur === tur && d.cap === cap && d.yuz === (yuz || '') && Math.abs(d.x - x) < 0.6 && Math.abs(d.y - y) < 0.6)) return;
     p.delikler.push({ tur, x: r1(x), y: r1(y), cap, derinlik, ad, yuz: yuz || '' });
   }
   function not(p, metin) {
@@ -183,7 +185,15 @@
       const Hs = egim ? Math.max(HcX(xDis), HcX(xIc)) : Hc;
       return tablaBoydan ? (kusak ? Hc : egim ? Hs - t / cos : Hs - t) : Hs;
     };
-    const yanY0 = tablaBoydan ? t : 0;
+    const altYok = !!g.altYok; // alt tablasız: yanlar ve dikmeler zemine iner
+    const yanYere = !!g.yanYere; // yanlar bazaya iner: alt tabla yanların arasında
+    const altUstte = tablaBoydan && !altYok && !yanYere; // alt tabla yanların altında
+    const ustUstte = tablaBoydan && !kusak; // üst tabla yanların üstünde
+    const yanY0 = yanYere ? -g.hb : altUstte ? t : 0;
+    // Gömme kapakta bölücüler öne kadar gelir
+    const bolOn = g.kapakTipi === 'ic' ? 0 : icOn;
+    const bolD = g.bolucuD || g.icDerinlik;
+    const araD = g.araTablaD || g.icDerinlik;
     const yanEksen = 'x: ön kenardan · y: alt kenardan (iç yüz)';
     dikey({
       p: P.yeni(egim ? 'Sol yan' : 'Yan (sol)', egim ? 'Sol yan' : 'Yan', Ds, yanUst(0, t) - yanY0, yanEksen),
@@ -192,8 +202,8 @@
     g.dikmeX.forEach((dx, k) => {
       const ust = egim ? Math.max(HcX(dx), HcX(dx + t)) - t / cos : Hc - t;
       dikey({
-        p: P.yeni(`Bölme dikmesi ${k + 1}`, egim ? `Bölme dikmesi (boydan) ${k + 1}` : 'Bölme dikmesi (boydan)', g.icDerinlik, ust - t, 'x: ön kenardan · y: alt kenardan', { konumlar: [`soldan ${tr(dx)} mm`] }),
-        x: dx, y0: t, z0: icOn, yuzSol: 'sol yüz', yuzSag: 'sağ yüz', tur: araTur,
+        p: P.yeni(`Bölme dikmesi ${k + 1}`, egim ? `Bölme dikmesi (boydan) ${k + 1}` : 'Bölme dikmesi (boydan)', bolD, ust - (altYok ? 0 : t), 'x: ön kenardan · y: alt kenardan', { konumlar: [`soldan ${tr(dx)} mm`] }),
+        x: dx, y0: altYok ? 0 : t, z0: bolOn, yuzSol: 'sol yüz', yuzSag: 'sağ yüz', tur: araTur,
       });
     });
     dikey({
@@ -235,22 +245,29 @@
     const tablaX0 = tablaBoydan ? 0 : t;
     const tablaGenis = tablaBoydan ? W : W - 2 * t;
     const tablaEksen = (yuz) => `x: sol uçtan · y: ön kenardan (${yuz})`;
-    yatay({ p: P.yeni('Alt tabla', 'Alt tabla', tablaGenis, Ds, tablaEksen('üst yüz')), x0: tablaX0, genis: tablaGenis, yAlt: 0, z0: 0, z1: Ds, tur: govdeTur, govde: true, alt: true });
+    if (!altYok) {
+      const ax0 = altUstte ? 0 : t;
+      const ag = altUstte ? W : W - 2 * t;
+      yatay({ p: P.yeni('Alt tabla', 'Alt tabla', ag, Ds, tablaEksen('üst yüz')), x0: ax0, genis: ag, yAlt: 0, z0: 0, z1: Ds, tur: govdeTur, govde: true, alt: true, ustte: altUstte });
+    }
     if (egim) {
-      yatay({ p: P.yeni('Üst tabla (eğimli)', 'Üst tabla (eğimli)', tablaGenis / cos, Ds, 'x: sol uçtan, eğik yüzey boyunca · y: ön kenardan'), x0: tablaX0, genis: tablaGenis, egik: true, z0: 0, z1: Ds, tur: govdeTur, govde: true, ust: true });
+      yatay({ p: P.yeni('Üst tabla (eğimli)', 'Üst tabla (eğimli)', tablaGenis / cos, Ds, 'x: sol uçtan, eğik yüzey boyunca · y: ön kenardan'), x0: tablaX0, genis: tablaGenis, egik: true, z0: 0, z1: Ds, tur: govdeTur, govde: true, ust: true, ustte: tablaBoydan });
       not(Hz[Hz.length - 1].p, `Uçlar ${tr(egim.aci)}° açılı kesilir; uç delikleri kesik yüzeye dik delinir.`);
     } else if (kusak) {
       yatay({ p: P.yeni('Ön kuşak', 'Ön kuşak', W - 2 * t, kusakEn, 'x: sol uçtan · y: ön kenardan'), x0: t, genis: W - 2 * t, yAlt: Hc - t, z0: 0, z1: kusakEn, tur: govdeTur, govde: true, ust: true });
       yatay({ p: P.yeni('Arka kuşak', 'Arka kuşak', W - 2 * t, kusakEn, 'x: sol uçtan · y: ön kenardan'), x0: t, genis: W - 2 * t, yAlt: Hc - t, z0: Ds - kusakEn, z1: Ds, tur: govdeTur, govde: true, ust: true });
     } else {
-      yatay({ p: P.yeni('Üst tabla', 'Üst tabla', tablaGenis, Ds, tablaEksen('alt yüz')), x0: tablaX0, genis: tablaGenis, yAlt: Hc - t, z0: 0, z1: Ds, tur: govdeTur, govde: true, ust: true });
+      // Taşmalı üst tabla: yanlardan ve önden taşar (x ve y taşan kenardan ölçülür)
+      const tY = g.tasmaYan || 0;
+      const tOn = g.tasmaOn || 0;
+      yatay({ p: P.yeni('Üst tabla', 'Üst tabla', tablaGenis + 2 * tY, Ds + tOn, tablaEksen('alt yüz')), x0: tablaX0 - tY, genis: tablaGenis + 2 * tY, yAlt: Hc - t, z0: -tOn, z1: Ds, tur: govdeTur, govde: true, ust: true, ustte: ustUstte });
     }
     g.sutunlar.forEach((c, si) => {
       const cw = c.x2 - c.x1;
       const ad = g.sutunlar.length > 1 ? `Ara tabla (bölme ${si + 1})` : 'Ara tabla (sabit raf)';
       for (const b of c.sinirlar) {
         if (!b.panel) continue;
-        yatay({ p: P.yeni(ad, ad, cw, g.icDerinlik, 'x: sol uçtan · y: ön kenardan', { konumlar: [`alttan ${tr(b.y - t / 2 + g.hb)} mm`] }), x0: c.x1, genis: cw, yAlt: b.y - t / 2, z0: icOn, z1: icSon, tur: araTur });
+        yatay({ p: P.yeni(ad, ad, cw, araD, 'x: sol uçtan · y: ön kenardan', { konumlar: [`alttan ${tr(b.y - t / 2 + g.hb)} mm`] }), x0: c.x1, genis: cw, yAlt: b.y - t / 2, z0: bolOn, z1: bolOn + araD, tur: araTur });
       }
       for (const sat of c.satirlar) {
         if (!sat.rafSabit) continue;
@@ -267,7 +284,7 @@
 
     // ---------- 1) Yatay parçaların uçları dikey yüzlere ----------
     for (const h of Hz) {
-      if (tablaBoydan && h.govde && !(kusak && h.ust)) continue; // tablalar boydan: yanlar tablaya oturur
+      if (h.ustte) continue; // yanların üstünü/altını kapatan tabla: yanlar tablaya oturur
       for (const taraf of ['sol', 'sag']) {
         const X = taraf === 'sol' ? h.x0 : h.x0 + h.genis;
         const Y = (h.egik ? h.yAltX(X) + t / cos / 2 : h.yAlt + t / 2);
@@ -284,9 +301,10 @@
 
     // ---------- 2) Dikey parçaların uçları yatay yüzlere ----------
     for (const v of V) {
-      if (v.kenar && !tablaBoydan) continue;
       const Xc = v.x + t / 2;
       for (const ucta of ['alt', 'ust']) {
+        // Yanların yalnız tablaya oturan uçları bağlanır (tabla yanların arasındaysa bağlantı tablanın ucundan yapılır)
+        if (v.kenar && !(ucta === 'alt' ? altUstte : ustUstte)) continue;
         const Y = ucta === 'alt' ? v.y0 : v.y0 + v.p.h;
         const adaylar = yatayBul(Xc, Y, ucta === 'ust', v.z0, v.z0 + v.w);
         if (!adaylar.length) {
@@ -543,11 +561,26 @@
     for (const k of g.kutular || []) kutuPlani(P, k, HS);
 
     // ---------- 6) Baza, ayak, baza çekmecesi ----------
-    const alt = Hz[0];
+    const alt = Hz.find((h) => h.alt) || Hz[0];
     const baza = g.baza || { tip: 'yok' };
     const hb = g.hb;
     const gc = say(baza.geriCekme, 0);
-    if (baza.tip === 'panel') {
+    if (baza.tip === 'panel' && yanYere) {
+      // Baza önü ve arkası yanların arasında: uçlarından yanların iç yüzüne bağlanır
+      const yanlar = V.filter((v) => v.kenar);
+      const ys = hb < 100 ? [-hb / 2] : [-hb / 2 - 20, -hb / 2 + 20];
+      for (const [ad, z] of [['Baza önü', gc + t / 2], ['Baza arkası', Ds - t / 2]]) {
+        const bp = P.yeni(ad, ad, W - 2 * t, hb, 'x: soldan · y: alttan (iç yüz)');
+        yanlar.forEach((v, i) => {
+          const X = i === 0 ? 0 : W - 2 * t;
+          for (const y of ys) {
+            delik(bp, 'baglanti', X, y + hb, 8, 25, 'Kavela Ø8 (uçtan)', i === 0 ? 'sol uç' : 'sağ uç');
+            delik(v.p, 'baglanti', z - v.z0, y - v.y0, 8, 12, `Kavela Ø8 (${ad.toLowerCase()})`, 'iç yüz');
+          }
+        });
+        not(bp, ad === 'Baza önü' ? `Yanların arasında, önden ${tr(gc)} mm geride; üst kenarı alt tablaya köşebentle.` : 'Yanların arasında, arka kenarla aynı hizada.');
+      }
+    } else if (baza.tip === 'panel') {
       const onYok = !!g.bazaCekmece;
       const yanL = Ds - gc - 2 * t;
       const ys = hb < 100 ? [hb / 2] : [hb / 2 - 20, hb / 2 + 20];
@@ -566,7 +599,8 @@
       });
       if (govdeTur === 'konfirmat' && !onYok) not(onArka, 'Ön bazada konfirmat başı görünür: tapa ile kapatın veya bu birleşimde minifix kullanın.');
       not(onArka, 'Çerçeve gövdenin altına 4 köşebentle bağlanır.');
-    } else if (baza.tip === 'ayak') {
+    } else if (baza.tip === 'ayak' || baza.tip === 'ayak_on') {
+      if (baza.tip === 'ayak_on') not(P.yeni('Baza önü (klipsli)', 'Baza önü (klipsli)', W, hb - 3, 'x: soldan · y: alttan (iç yüz)'), 'Delik yok: ön ayaklara baza klipsiyle takılır.');
       const n = W > 1000 ? 6 : 4;
       const xs = n === 4 ? [50, W - 50] : [50, W / 2, W - 50];
       for (const X of xs) for (const z of (g.bazaCekmece ? [Ds - 20] : [gc + 50, Ds - 50])) delik(alt.p, 'vida', alt.yerel(X), z - alt.z0, 3, 0, 'Ayak bağlantı yeri (ayak tabanı şablonu, 4 vida)', 'alt yüz');
@@ -778,7 +812,7 @@
         const p = P.yeni(ad, ad, sp.boy, sp.en, 'x: soldan · y: alttan', { adet: sp.adet });
         not(p, 'L baza çerçevesi köşelerde köşebentle (her köşeye 1, iç yüzden 4 vida Ø3) yerinde birleştirilir; gövdeye 6 köşebentle bağlanır.');
       }
-    } else if (g.baza && g.baza.tip === 'ayak') {
+    } else if (g.baza && (g.baza.tip === 'ayak' || g.baza.tip === 'ayak_on')) {
       const altA = tablalar[0];
       for (const x of [50, tablaA - 50]) for (const y of [50, Ds - 50]) delik(altA, 'vida', x, y, 3, 0, 'Ayak bağlantı yeri (ayak tabanı şablonu)', 'alt yüz');
       const altB = tablalar[1];
@@ -863,6 +897,8 @@
       for (const d of sirali) {
         const uc = /(uç|ucu)$/.test(d.yuz);
         const cakisan = !uc && kalan.find((k) => k.yuz === d.yuz && !/(uç|ucu)$/.test(k.yuz) && Math.hypot(k.x - d.x, k.y - d.y) < (k.cap + d.cap) / 2 + 2);
+        // Birbirine çok yakın iki raf pimi deliği tek delik olarak açılır
+        if (cakisan && d.tur === 'pim' && cakisan.tur === 'pim') continue;
         if (cakisan && (ONCELIK[d.tur] || 0) < (ONCELIK[cakisan.tur] || 0)) {
           atilan[d.ad] = (atilan[d.ad] || 0) + 1;
           continue;

@@ -59,7 +59,12 @@ function rastgeleModul() {
   m.ust = sec(['tam', 'kusak']);
   m.onTipi = rnd() < 0.15 ? 'surgu' : 'normal';
   m.surguAdet = ara(2, 4);
-  m.baza = sec([{ tip: 'yok', yukseklik: 0, geriCekme: 0 }, { tip: 'ayak', yukseklik: 100, geriCekme: 50 }, { tip: 'panel', yukseklik: 80, geriCekme: 40 }]);
+  m.baza = sec([{ tip: 'yok', yukseklik: 0, geriCekme: 0 }, { tip: 'ayak', yukseklik: 100, geriCekme: 50 }, { tip: 'panel', yukseklik: 80, geriCekme: 40 }, { tip: 'ayak_on', yukseklik: 120, geriCekme: 50 }]);
+  // Yapı seçenekleri
+  m.altTablaYok = rnd() < 0.08;
+  m.yanlarYere = rnd() < 0.3;
+  if (rnd() < 0.2) { m.ustTasmaOn = ara(0, 30); m.ustTasmaYan = ara(0, 20); }
+  m.ustKapakUstu = rnd() < 0.15;
   const ns = sec([1, 1, 1, 2, 3]);
   m.sutunlar = [];
   for (let i = 0; i < ns; i++) {
@@ -68,6 +73,7 @@ function rastgeleModul() {
       const tip = sec(['kapak', 'kapak', 'cekmece', 'acik', 'nis']);
       satirlar.push(H.yeniSatir(tip));
       const s = satirlar[satirlar.length - 1];
+      s.altTablaYok = rnd() < 0.12;
       s.yukseklik = rnd() < 0.5 ? null : ara(100, 600);
       if (tip === 'kapak' || tip === 'cekmece') s.adet = ara(1, 3);
       if (tip === 'kapak') { s.kapakTuru = sec(Object.keys(H.KAPAK_TURLERI)); s.acilim = sec(['yana', 'yana', 'yukari', 'asagi']); }
@@ -154,7 +160,7 @@ function denetle(m, A) {
   for (const o of onler) {
     if (o.x2 - o.x1 <= 0 || o.y2 - o.y1 <= 0) { if (!uyarili) ihlal('Uyarısız negatif ön yüz', m, JSON.stringify(o).slice(0, 80)); continue; }
     if (o.x1 < -E || o.x2 > W + E || o.y1 < -E || o.y2 > Hc + E) ihlal('Ön yüz gövde dışına taşıyor', m, `${o.x1.toFixed(1)}..${o.x2.toFixed(1)} / ${o.y1.toFixed(1)}..${o.y2.toFixed(1)} (W ${W}, Hc ${Hc})`);
-    if (icDuzen && (o.x1 < t - E || o.x2 > W - t + E || o.y1 < t - E || o.y2 > Hc - t + E)) ihlal('Gömme ön yüz gövde açıklığına sığmıyor', m, `${o.x1.toFixed(1)}..${o.x2.toFixed(1)}`);
+    if (icDuzen && (o.x1 < t - E || o.x2 > W - t + E || o.y1 < (g.altYok ? 0 : t) - E || o.y2 > Hc - t + E)) ihlal('Gömme ön yüz gövde açıklığına sığmıyor', m, `${o.x1.toFixed(1)}..${o.x2.toFixed(1)}`);
   }
   for (let i = 0; i < onler.length; i++) for (let j = i + 1; j < onler.length; j++) {
     const a = onler[i], b = onler[j];

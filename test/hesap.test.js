@@ -268,7 +268,7 @@ test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
   assert.equal(m.baza.tip, 'yok');
   assert.deepEqual(m.sutunlar[0].satirlar[0], {
     tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false,
-    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null,
+    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null, altTablaYok: false,
   });
   assert.deepEqual(m.malzeme, {});
   assert.equal(p.yerlesim.tip, 'duz');
@@ -1183,4 +1183,70 @@ test('raf yükseklikleri elle girilir: iç tabandan rafın üst yüzüne; sığm
   g.sutunlar[0].satirlar[1].askiUstten = 120;
   const sg = Hesap.modulHesapla(Hesap.projeyiNormallestir({ moduller: [g] }).moduller[0], ayar);
   assert.equal(sg.geo.satirlar[1].askiUstten, 120);
+});
+
+// ---- Yapı seçenekleri: tabansız niş, yanlar bazaya iner, üst tabla taşması, gömme bölücüler, ayak + ön baza ----
+test('buzdolabı kabini tabansız: alt tabla yok, yanlar zemine iner, alt satır zemine açılır', () => {
+  const r = Hesap.modulHesapla(Hesap.yeniModul('buzdolabi_kabin'), ayar);
+  assert.deepEqual(r.uyarilar, []);
+  assert.ok(!r.parcalar.some((p) => p.ad === 'Alt tabla'));
+  const yan = r.parcalar.find((p) => p.ad === 'Yan');
+  assert.equal(yan.boy, 2150); // yanlar boydan, baza yok
+  const alt = r.geo.satirlar[r.geo.satirlar.length - 1];
+  assert.equal(alt.icAlt, 0);
+  assert.equal(r.geo.baza.tip, 'yok');
+});
+
+test('yanlar bazaya iner: baza yanı yok, baza önü/arkası yanların arasında, yan baza kadar uzun', () => {
+  const m = Object.assign(Hesap.yeniModul('gardirop'), { yanlarYere: true });
+  const n = Hesap.projeyiNormallestir({ moduller: [m] }).moduller[0];
+  const r = Hesap.modulHesapla(n, ayar);
+  const t = 18;
+  assert.deepEqual(r.uyarilar, []);
+  assert.ok(!r.parcalar.some((p) => p.ad === 'Baza yanı'));
+  assert.equal(r.parcalar.find((p) => p.ad === 'Baza önü').boy, n.genislik - 2 * t);
+  assert.equal(r.parcalar.find((p) => p.ad === 'Alt tabla').boy, n.genislik - 2 * t);
+  assert.equal(r.parcalar.find((p) => p.ad === 'Yan').boy, n.yukseklik - t); // zeminden üst tablanın altına
+  assert.deepEqual(UK.modulCakismalari(r.geo, {}), []);
+});
+
+test('üst tabla taşması: yanlardan 18 mm, kapak üstünü kapatır; kapaklar tablanın altında', () => {
+  const m = Object.assign(Hesap.yeniModul('komodin'), { ustTasmaYan: 18, ustKapakUstu: true });
+  const n = Hesap.projeyiNormallestir({ moduller: [m] }).moduller[0];
+  const r = Hesap.modulHesapla(n, ayar);
+  assert.deepEqual(r.uyarilar, []);
+  const ust = r.parcalar.find((p) => p.ad === 'Üst tabla');
+  assert.equal(ust.boy, n.genislik + 36);
+  assert.equal(ust.en, n.derinlik + 18); // kapak kalınlığı kadar önde
+  const enUst = Math.max(...r.geo.satirlar.map((s) => s.on.y2));
+  assert.ok(enUst <= r.geo.Hc - 18);
+  assert.deepEqual(UK.modulCakismalari(r.geo, {}), []);
+});
+
+test('gömme kapak: bölme dikmesi ve ara tabla öne kadar gelir; istenirse ön kayıt', () => {
+  const m = Object.assign(Hesap.yeniModul('gardirop4'), { kapakTipi: 'ic' });
+  const n = Hesap.projeyiNormallestir({ moduller: [m] }).moduller[0];
+  const tam = Hesap.modulHesapla(n, ayar);
+  const ara = tam.parcalar.find((p) => p.ad.startsWith('Ara tabla'));
+  assert.equal(ara.en, tam.geo.icDerinlik + 18);
+  const A2 = Object.assign({}, ayar, { gommeAraTabla: 'kayit', gommeKayitEn: 110 });
+  const k = Hesap.modulHesapla(n, A2);
+  assert.equal(k.parcalar.find((p) => p.ad.startsWith('Ara tabla')).en, 110);
+});
+
+test('ayak + önde baza, satır altında ara tabla yok, ray boşluğu ve arkalık listesi ayarı', () => {
+  const r = Hesap.modulHesapla(Hesap.yeniModul('alt'), ayar);
+  assert.ok(r.parcalar.some((p) => p.ad === 'Baza önü (klipsli)'));
+  assert.ok(r.hirdavat.some((h) => h.kod === 'baza_klips'));
+  const m = Hesap.yeniModul('alt');
+  m.sutunlar[0].satirlar[0].altTablaYok = true;
+  const n = Hesap.projeyiNormallestir({ moduller: [m] }).moduller[0];
+  assert.ok(!Hesap.modulHesapla(n, ayar).parcalar.some((p) => p.ad.startsWith('Ara tabla')));
+  const yan = (A) => Hesap.modulHesapla(Hesap.yeniModul('alt_cekmece3'), A).parcalar.find((p) => p.ad.startsWith('Çekmece ön/arka')).boy;
+  assert.equal(yan(ayar) - yan(Object.assign({}, ayar, { cekmeceRayBosluk: 15 })), 4);
+  const p = Hesap.projeyiNormallestir({ ayarlar: Object.assign({}, ayar, { arkalikListede: false }), moduller: [Hesap.yeniModul('alt')] });
+  assert.ok(!Hesap.projeHesapla(p).kesimListesi.some((x) => /^Arkalık/.test(x.ad)));
+  // Baza parçalarında zemine değen kenar bantlı
+  const g = Hesap.modulHesapla(Hesap.yeniModul('gardirop'), ayar);
+  assert.equal(g.parcalar.find((x) => x.ad === 'Baza yanı').bant.u, 1);
 });

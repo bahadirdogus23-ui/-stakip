@@ -60,7 +60,7 @@
   const hazir = (id, ek) => Object.assign(Hesap.yeniModul(id), ek || {});
   /** Gövdeli serbest modül. */
   const govdeli = (ad, ek) => Object.assign(Hesap.yeniModul('alt_kapak'), {
-    ad, yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam', korPanel: 0, onTipi: 'normal', montajYuksekligi: 0, konum: null,
+    ad, yapi: 'yanlar_boydan', ust: 'tam', arkalik: 'kanal', kapakTipi: 'tam', korPanel: 0, onTipi: 'normal', montajYuksekligi: 0, konum: null, yanlarYere: true,
   }, ek);
   const bosluk = (ad, en, boy, ek) => Object.assign(Hesap.yeniModul('bosluk'), { ad, en: Math.round(en), boy: Math.round(boy), montajYuksekligi: 0 }, ek || {});
 
@@ -186,8 +186,8 @@
     const W = o.genislik;
     const D = o.derinlik;
     const hb = 80;
-    // Yan boyu plakaya sığmalı (≤ 2750 gövde); tavana 0–40 mm boşluk bırakılır
-    const H = Math.min(o.yukseklik - R.sec([0, 20, 40]), 2750 + hb);
+    // Yan boyu plakaya sığmalı (plaka 2800 − pay); tavana 0–40 mm boşluk bırakılır
+    const H = Math.min(o.yukseklik - R.sec([0, 20, 40]), 2770); // yanlar bazaya iner: yan = H − t
     const patara = H >= 2250 ? yuvarla(R.ara(Math.max(350, H - 2200), Math.min(650, H - 1750)), 10) : 0;
     const askiOlur = D >= 550;
     const surgu = W >= 1400 && D >= 600 && R.ihtimal(0.35);

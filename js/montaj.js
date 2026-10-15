@@ -105,12 +105,14 @@
 
     // 3. Gövde
     const gov = [];
-    if (tablaBoydan) gov.push(`Yanları (${numara(g.egim ? 'Sol yan' : 'Yan')}${g.egim ? ', ' + numara('Sağ yan') : ''}) alt tablanın (${numara('Alt tabla')}) üstüne oturtup ${govdeB} ile bağlayın.`);
-    else gov.push(`Alt tablayı (${numara('Alt tabla')}) iki yanın (${numara(g.egim ? 'Sol yan' : 'Yan')}${g.egim ? ', ' + numara('Sağ yan') : ''}) arasına ${govdeB} ile bağlayın.`);
-    if (g.dikmeX.length) gov.push(`Boydan bölme dikmelerini (${numara('Bölme dikmesi')}) alt tablaya ${araB} ile bağlayın; aralarını delik planındaki ölçüye göre kontrol edin.`);
+    const yanlar = `${numara(g.egim ? 'Sol yan' : 'Yan')}${g.egim ? ', ' + numara('Sağ yan') : ''}`;
+    if (g.altYok) gov.push(`Alt tabla yok: yanları (${yanlar}) önce üst tablaya bağlayın; gövdeyi yerine koyup yanların alt uçlarını zemine/duvara köşebentle sabitleyin.`);
+    else if (tablaBoydan) gov.push(`Yanları (${yanlar}) alt tablanın (${numara('Alt tabla')}) üstüne oturtup ${govdeB} ile bağlayın.`);
+    else gov.push(`Alt tablayı (${numara('Alt tabla')}) iki yanın (${yanlar}) arasına ${govdeB} ile bağlayın.`);
+    if (g.dikmeX.length) gov.push(g.altYok ? `Boydan bölme dikmelerini (${numara('Bölme dikmesi')}) üst tablaya ${araB} ile bağlayın; alt uçlarını zemine köşebentle sabitleyin.` : `Boydan bölme dikmelerini (${numara('Bölme dikmesi')}) alt tablaya ${araB} ile bağlayın; aralarını delik planındaki ölçüye göre kontrol edin.`);
     if (var_('Ara tabla')) gov.push(`Ara tablaları (${numara('Ara tabla')}) ${araB} ile yerleştirin.`);
     if (var_('Ara dikme')) gov.push(`Satır içi ara dikmeleri (${numara('Ara dikme')}) bağlayın.`);
-    if (g.arkalik === 'kanal') gov.push(`Arkalığı (${numara('Arkalık')}) yanların ve alt tablanın kanalına kaydırın.`);
+    if (g.arkalik === 'kanal') gov.push(g.altYok ? `Arkalığı (${numara('Arkalık')}) yanların kanalına alttan kaydırıp üst tablaya oturtun.` : `Arkalığı (${numara('Arkalık')}) yanların ve alt tablanın kanalına kaydırın.`);
     if (g.egim) gov.push(`Eğimli üst tablayı (${numara('Üst tabla')}) ${g.egim.aci}° açılı uçlarıyla yerleştirip bağlayın.`);
     else if (g.ust === 'kusak') gov.push(`Ön ve arka kuşakları (${numara('Ön kuşak')}, ${numara('Arka kuşak')}) takın.`);
     else gov.push(`Üst tablayı (${numara('Üst tabla')}) takın.`);
@@ -128,7 +130,7 @@
     bolum('Gövde', gov);
 
     // 4. Baza
-    if (g.baza.tip === 'ayak') bolum('Ayaklar', [`Ayarlı ayakları (${hir('ayak_plastik') || hir('ayak_metal')} adet, ${g.baza.yukseklik} mm) alt tablaya, köşelerden yaklaşık 50 mm içeriden vidalayın.`]);
+    if (g.baza.tip === 'ayak' || g.baza.tip === 'ayak_on') bolum('Ayaklar', [`Ayarlı ayakları (${hir('ayak_plastik') || hir('ayak_metal')} adet, ${g.baza.yukseklik} mm) alt tablaya, köşelerden yaklaşık 50 mm içeriden vidalayın.`]);
     else if (g.baza.tip === 'tekerlek') bolum('Tekerlekler', [`Tekerlekleri (${hir('tekerlek')} adet) alt tablaya vidalayın; frenli olanları öne takın.`]);
     else if (g.baza.tip === 'panel') bolum('Baza', [`Baza çerçevesini (${numara('Baza')}) kurun, terazide olduğunu kontrol edip gövdeyi üstüne bağlayın.`]);
     if (g.bazaCekmece) bolum('Baza çekmecesi', [`Taşıyıcıları (${numara('Baza çekmecesi taşıyıcı')}) gövde altına bağlayın, rayları ve bas-aç mekanizmasını takın; çekmece önünü (${numara('Baza çekmecesi önü')}) süpürgelik hizasına ayarlayın.`]);
