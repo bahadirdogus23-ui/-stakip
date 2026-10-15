@@ -20,7 +20,7 @@
     govde: 'Gövde', kapak: 'Kapak / ön', cekmece: 'Çekmece kutusu', arkalik: 'Arkalık / taban',
     cam: 'Kapak camı', camRaf: 'Cam raf', ayna: 'Ayna',
   };
-  const MALZEME_TURLERI = ['Suntalam', 'MDF Lam', 'MDF Lake', 'Ham MDF', 'Akrilik / parlak', 'Kontrplak', 'Masif panel', 'HDF', 'Kompakt laminat', 'Cam', 'Ayna', 'Diğer'];
+  const MALZEME_TURLERI = ['Suntalam', 'MDF Lam', 'MDF Lake', 'Ham MDF', 'Akrilik / parlak', 'Kontrplak', 'Masif panel', 'HDF', 'Kompakt laminat', 'Lambri / çıta', 'Akustik keçe', 'Cam', 'Ayna', 'Diğer'];
   const camMi = (m) => !!m && (m.tur === 'Cam' || m.tur === 'Ayna');
 
   const SATIR_TIPLERI = { kapak: 'Kapak', cekmece: 'Çekmece', acik: 'Açık raf', nis: 'Cihaz nişi' };
@@ -50,6 +50,7 @@
     baza: { ad: 'Baza bandı', aciklama: 'Dolapların altındaki süpürgelik; yerleşimde yer kaplamaz' },
     serbest: { ad: 'Serbest panel', aciklama: 'Herhangi bir düz parça' },
     duvar: { ad: 'Duvar kaplama paneli', aciklama: 'Duvara yaslanan dekor panel (TV arkası, yatak başı)' },
+    lambri: { ad: 'Lambri', aciklama: 'Belirli aralıkla dizilen çıtalar; isteğe bağlı arka panel (keçe, MDF). Çıta malzemesi "Malzeme" seçiminden, arka panel "Arka panel" seçiminden' },
     bosluk: { ad: 'Boşluk', aciklama: 'Buzdolabı, bulaşık makinesi ya da diz boşluğu için yer tutar; parça çıkmaz' },
     nesne: { ad: 'Eşya / dekor', aciklama: 'Beyaz eşya, elektronik, küçük ev aleti ya da dekor: yalnızca 3B ve çizimde görünür, parça ve maliyet çıkmaz, başka modülleri itmez. Duvarda konum ve yükseklikle yerleştirin' },
   };
@@ -318,6 +319,13 @@
       { id: 'sl18k', ad: 'Suntalam Kaşmir 18mm', tur: 'Suntalam', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0.8, damar: false, plakaFiyati: 2400, bantFiyati: 14, islemFiyatiM2: 0 },
       { id: 'lake18y', ad: 'MDF Lake Adaçayı Yeşili 18mm', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 2600, bantFiyati: 0, islemFiyatiM2: 1500 },
       { id: 'lake18l', ad: 'MDF Lake Gece Mavisi 18mm', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 2600, bantFiyati: 0, islemFiyatiM2: 1500 },
+      // Lambri: hazır çıta/profil, plaka yerine boy × en ölçüsünde tek parça olarak alınır (yerleşim çıtaları bunlara dizer)
+      { id: 'cita_mese', ad: 'Lambri çıta Meşe kaplama 2800×40×20', tur: 'Lambri / çıta', kalinlik: 20, plakaUzun: 2800, plakaKisa: 40, bant: 0, damar: true, plakaFiyati: 180, bantFiyati: 0, islemFiyatiM2: 0, renk: '#c9a57a' },
+      { id: 'cita_ceviz', ad: 'Lambri çıta Ceviz kaplama 2800×40×20', tur: 'Lambri / çıta', kalinlik: 20, plakaUzun: 2800, plakaKisa: 40, bant: 0, damar: true, plakaFiyati: 200, bantFiyati: 0, islemFiyatiM2: 0, renk: '#7a5236' },
+      { id: 'cita_siyah', ad: 'Lambri çıta Mat siyah MDF 2800×30×18', tur: 'Lambri / çıta', kalinlik: 18, plakaUzun: 2800, plakaKisa: 30, bant: 0, damar: false, plakaFiyati: 150, bantFiyati: 0, islemFiyatiM2: 0, renk: '#2b2b2b' },
+      { id: 'lambri_profil', ad: 'Lambri profil (dilli) 2800×120×12', tur: 'Lambri / çıta', kalinlik: 12, plakaUzun: 2800, plakaKisa: 120, bant: 0, damar: true, plakaFiyati: 420, bantFiyati: 0, islemFiyatiM2: 0, renk: '#d8b98f' },
+      { id: 'mdfham18', ad: 'Ham MDF 18mm (boyanacak)', tur: 'Ham MDF', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 1700, bantFiyati: 0, islemFiyatiM2: 1300 },
+      { id: 'kece9', ad: 'Akustik keçe 9mm siyah', tur: 'Akustik keçe', kalinlik: 9, plakaUzun: 2800, plakaKisa: 1220, bant: 0, damar: false, plakaFiyati: 1900, bantFiyati: 0, islemFiyatiM2: 0, renk: '#2f2f31' },
       { id: 'hdf8', ad: 'HDF Beyaz 8mm', tur: 'HDF', kalinlik: 8, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 950, bantFiyati: 0, islemFiyatiM2: 0 },
       { id: 'hdf4', ad: 'HDF Beyaz 4mm', tur: 'HDF', kalinlik: 4, plakaUzun: 2800, plakaKisa: 2100, bant: 0, damar: false, plakaFiyati: 650, bantFiyati: 0, islemFiyatiM2: 0 },
       // Cam ve ayna: plakaya yerleştirilmez, m² fiyatıyla (işlem fiyatı alanı) hesaplanır.
@@ -465,6 +473,15 @@
     duvar_rafi: P('Panel', 'Duvar Rafı', 'Gizli taşıyıcılı', 'raf', 800, 250, { panelMalzeme: 'govde', bantU: 1, bantK: 2, montajYuksekligi: 1500 }),
     tabla: P('Panel', 'Masa / Çalışma Tablası', 'Düz tabla', 'tabla', 1200, 600, { panelMalzeme: 'govde', montajYuksekligi: 730 }),
     duvar_paneli: P('Panel', 'Duvar Kaplama Paneli', 'TV arkası, yatak başı', 'duvar', 1200, 1000, { montajYuksekligi: 700, bantU: 2, bantK: 2 }),
+    tabla_oval: P('Panel', 'Oval Masa Tablası', 'Kavisli: tam elips, CNC kesim', 'tabla', 1800, 900, { panelMalzeme: 'govde', montajYuksekligi: 730, sekil: 'oval' }),
+    tabla_yuvarlak: P('Panel', 'Yuvarlak Masa Tablası', 'Kavisli: daire, çap 1000', 'tabla', 1000, 1000, { panelMalzeme: 'govde', montajYuksekligi: 730, sekil: 'daire' }),
+    raf_kavisli: P('Panel', 'Kavisli Uçlu Duvar Rafı', 'Ön iki köşe R60', 'raf', 900, 250, { panelMalzeme: 'govde', montajYuksekligi: 1500, sekil: 'radyus', sekilParam: 60, koseSayisi: 2 }),
+    kemer_panel: P('Panel', 'Kemerli Duvar Paneli', 'Üstü yay kavisli, ayna ya da dekor arkası', 'duvar', 1600, 800, { montajYuksekligi: 600, sekil: 'kemer', sekilParam: 400 }),
+    lambri_dikey: P('Lambri', 'Dikey Çıtalı Lambri', 'Meşe çıta, 40 mm çıta / 20 mm aralık', 'lambri', 2600, 1200, { lambriCitaEn: 40, lambriAralik: 20, malzeme: { kapak: 'cita_mese' } }),
+    lambri_kece: P('Lambri', 'Akustik Lambri (keçe arkalı)', 'Ceviz çıta, siyah keçe arka panel', 'lambri', 2400, 1200, { lambriCitaEn: 40, lambriAralik: 15, lambriArka: 'govde', malzeme: { kapak: 'cita_ceviz', govde: 'kece9' } }),
+    lambri_tv: P('Lambri', 'TV Arkası Lambri', 'Siyah çıta, meşe arka panel', 'lambri', 1800, 2400, { lambriCitaEn: 30, lambriAralik: 30, lambriArka: 'govde', montajYuksekligi: 300, malzeme: { kapak: 'cita_siyah', govde: 'sl18m' } }),
+    lambri_yatay: P('Lambri', 'Yatay Çıtalı Lambri', 'Yatak başı, yatay çıtalar', 'lambri', 1200, 2000, { lambriCitaEn: 40, lambriAralik: 25, lambriYon: 'yatay', montajYuksekligi: 0, malzeme: { kapak: 'cita_mese' } }),
+    lambri_profil: P('Lambri', 'Profil Lambri (dilli, bitişik)', 'Hazır 120 mm dilli profil, aralıksız', 'lambri', 2600, 1200, { lambriCitaEn: 120, lambriAralik: 0, malzeme: { kapak: 'lambri_profil' } }),
     bosluk: P('Panel', 'Boşluk (cihaz / diz)', 'Buzdolabı, bulaşık makinesi, diz boşluğu', 'bosluk', 850, 600, { bantU: 0, bantK: 0 }),
     baza_bandi: P('Panel', 'Baza (Süpürgelik) Bandı', 'Dolap altı süpürgelik', 'baza', 2400, 100, { bantU: 1, bantK: 0 }),
   };
@@ -472,7 +489,7 @@
   for (const [id, n] of Object.entries(NESNELER)) {
     PRESETLER['nesne_' + id] = P(n.grup, n.ad, `${n.W}×${n.H}×${n.D} mm · parça çıkmaz`, 'nesne', n.H, n.W, { nesneTuru: id, nesneD: n.D, montajYuksekligi: n.mt || 0, konum: 0, bantU: 0, bantK: 0 });
   }
-  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Dekor'];
+  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Lambri', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Dekor'];
 
   const kopya = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (x) => Math.round(x * 10) / 10;
@@ -517,7 +534,7 @@
       tur: secenekAl(m && m.tur, MALZEME_TURLERI, 'Diğer'),
       kalinlik: sayiAl(m && m.kalinlik, 18, 1, 100),
       plakaUzun: sayiAl(m && m.plakaUzun, 2800, 100, 10000),
-      plakaKisa: sayiAl(m && m.plakaKisa, 2100, 100, 10000),
+      plakaKisa: sayiAl(m && m.plakaKisa, 2100, 10, 10000),
       bant: sayiAl(m && m.bant, 0, 0, 5),
       damar: !!(m && m.damar),
       plakaFiyati: sayiAl(m && m.plakaFiyati, 0, 0),
@@ -632,6 +649,9 @@
       ustTasmaOn: sayiAl(x.ustTasmaOn, 0, 0, 100),
       ustTasmaYan: sayiAl(x.ustTasmaYan, 0, 0, 100),
       ustKapakUstu: !!x.ustKapakUstu,
+      // Üst tabla köşe kavisi (R, mm) ve hangi ön köşeler
+      ustKavisR: sayiAl(x.ustKavisR, 0, 0, 1000),
+      ustKavisKose: secenekAl(x.ustKavisKose, ['on', 'sol', 'sag'], 'on'),
       egimli: !!x.egimli,
       sagYukseklik: sayiAl(x.sagYukseklik, sayiAl(x.yukseklik, 720, 0, 5000), 0, 5000),
       kulpYon: secenekAl(x.kulpYon, ['proje', ...Object.keys(KULP_YONLERI)], 'proje'),
@@ -644,6 +664,10 @@
       // Panel modül alanları
       panelTuru: secenekAl(x.panelTuru, Object.keys(PANEL_TURLERI), 'serbest'),
       nesneTuru: secenekAl(x.nesneTuru, Object.keys(NESNELER), 'buzdolabi'),
+      lambriCitaEn: sayiAl(x.lambriCitaEn, 40, 10, 400),
+      lambriAralik: sayiAl(x.lambriAralik, 20, 0, 400),
+      lambriYon: secenekAl(x.lambriYon, ['dikey', 'yatay'], 'dikey'),
+      lambriArka: secenekAl(x.lambriArka, ['yok', 'govde', 'kapak'], 'yok'),
       nesneD: sayiAl(x.nesneD, null, 1, 3000),
       duvarMesafe: sayiAl(x.duvarMesafe, 0, 0, 3000), // nesnenin duvardan uzaklığı (ör. raf içinde öne alma)
       panelMalzeme: secenekAl(x.panelMalzeme, ['kapak', 'govde'], 'kapak'),
@@ -1191,7 +1215,21 @@
         else ekle('Alt tabla', 'govde', iw, Ds, 1, { u: 1, k: 0 });
       }
       if (usttam) {
-        ekle('Üst tabla', 'govde', W + 2 * tasmaYan, Ds + tasmaOn, 1, { u: 1, k: 2 }, tasmaOn || tasmaYan ? { not: `Taşma: önden ${r1(tasmaOn)}${kapakUstu ? ' (kapak kalınlığı dahil, kapakların üstünü kapatır)' : ''}, yanlardan ${r1(tasmaYan)} mm` } : undefined);
+        const ustNot = tasmaOn || tasmaYan ? `Taşma: önden ${r1(tasmaOn)}${kapakUstu ? ' (kapak kalınlığı dahil, kapakların üstünü kapatır)' : ''}, yanlardan ${r1(tasmaYan)} mm` : '';
+        const kavR = !egim ? Math.min(say(modul.ustKavisR, 0), (Ds + tasmaOn) / 2, (W + 2 * tasmaYan) / 2) : 0;
+        if (kavR > 0) {
+          // Kavisli ön köşeler: şekilli (CNC/şablon) kesim, bant ön ve yan kenarlar boyunca
+          const ub = W + 2 * tasmaYan;
+          const ue = Ds + tasmaOn;
+          const nK = modul.ustKavisKose === 'on' ? 2 : 1;
+          const sg = sekilGeometrisi('radyus', ue, ub, kavR, nK);
+          const koseAd = { on: 'iki ön köşe', sol: 'sol ön köşe', sag: 'sağ ön köşe' }[modul.ustKavisKose];
+          ekle('Üst tabla – kavisli', 'govde', sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
+            sekil: { tur: 'radyus', alan: sg.alan, cevre: sg.cevre, egri: sg.egri, duz: sg.duz, cnc: sg.cnc },
+            bantUzunluk: sg.cevre - ub,
+            not: [`${koseAd} R${r1(kavR)} mm kavisli (CNC/şablon); arka kenar düz, bantsız`, ustNot].filter(Boolean).join('; '),
+          });
+        } else ekle('Üst tabla', 'govde', W + 2 * tasmaYan, Ds + tasmaOn, 1, { u: 1, k: 2 }, ustNot ? { not: ustNot } : undefined);
         ekle('Yan', 'govde', Hc - t - (altUstte ? t : 0) + hbYan, Ds, 2, { u: 1, k: 0 }, yanNot);
       } else {
         ekle('Yan', 'govde', Hc - (altUstte ? t : 0) + hbYan, Ds, 2, { u: 1, k: 1 }, yanNot);
@@ -1259,6 +1297,10 @@
         uyarilar.push(`${etiket}: açıklık (${r1(acW)} mm) çekmece kutusu için çok dar.`);
         return null;
       }
+      if (HS.ray === 'metal' && kutuH < 68) {
+        uyarilar.push(`${etiket}: metal yanlı çekmece için en az 68 mm kutu yüksekliği gerekir (sığan ${kutuH} mm).`);
+        return null;
+      }
       if (HS.ray === 'metal') {
         // Metal yanlı sistem: yanlar hazır gelir, yalnızca taban ve arkalık kesilir.
         const arkaH = kutuH >= 180 ? 167 : kutuH >= 110 ? 100 : 68;
@@ -1303,7 +1345,8 @@
         const gc = say(baza.geriCekme, 0);
         const onH = hb - 10;
         // Önce kutunun sığdığı doğrulanır; sığmazsa ön ve taşıyıcı da eklenmez
-        const k = cekmeceKutusu('baza çekmecesi', W - 2 * t, hb - 45, hb - 25, null, Ds - gc - 30, null, 1);
+        // Ayaklı bazada arka ayaklara yer kalsın (kutu arkası ayakların önünde)
+        const k = cekmeceKutusu('baza çekmecesi', W - 2 * t, hb - 45, hb - 25, null, Ds - gc - 30 - (baza.tip === 'ayak' ? 40 : 0), null, 1);
         if (k) {
           ekle('Baza çekmecesi önü', 'kapak', onH, W - 2 * db, 1, { u: 2, k: 2 }, { not: 'Süpürgelik hizasında; bas-aç ile açılır' });
           // Taşıyıcılar yanların altında, çekmece önünün arkasından baza arkasına (ya da gövde arkasına) kadar;
@@ -1742,7 +1785,7 @@
         W, H: egim ? hb + egim.max : H, D, Hc, hb, t, ta, Ds, icDerinlik, cekmeceDerinlik, tk, db,
         egim: egim ? { HcL: egim.HcL, HcR: egim.HcR, aci: egim.aciDer } : null,
         kulpTur: HS.kulp, montajYuksekligi: kulpC.montaj,
-        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: usttam ? 'tam' : 'kusak', yapi: modul.yapi, altYok, bolucuD, araTablaD, yanYere, tasmaOn, tasmaYan, kapakUstu,
+        kapakTipi: modul.kapakTipi, arkalik: modul.arkalik, ust: usttam ? 'tam' : 'kusak', yapi: modul.yapi, altYok, kavisR: !egim && tablaBoydan && usttam ? say(modul.ustKavisR, 0) : 0, kavisKose: modul.ustKavisKose, bolucuD, araTablaD, yanYere, tasmaOn, tasmaYan, kapakUstu,
         baza: { tip: baza.tip, yukseklik: hb, geriCekme: say(baza.geriCekme, 0) },
         korPanel,
         sutunlar: geoSutunlar,
@@ -1910,6 +1953,7 @@
       uyarilar.push('Panel ölçüleri çok küçük.');
       return bos;
     }
+    if (tur === 'lambri') return lambriHesapla(modul, T, M, HS, kul, t, boy, en);
     const sekil = modul.sekil && modul.sekil !== 'dikdortgen' ? modul.sekil : null;
     let sg = null;
     if (sekil) {
@@ -1962,6 +2006,40 @@
     };
   }
 
+  /**
+   * Lambri: çıtalar eşit aralıkla dizilir; kenarlarda çıta olur, kalan pay aralıklara paylaştırılır.
+   * Dikeyde çıta boyu = panel boyu, yatayda = panel eni. Arka panel isteğe bağlı (tam ölçü).
+   */
+  function lambriHesapla(modul, T, M, HS, kul, t, boy, en) {
+    const { ekle, hEkle, uyarilar } = T;
+    const ce = say(modul.lambriCitaEn, 40);
+    const ar = say(modul.lambriAralik, 20);
+    const dikey = modul.lambriYon !== 'yatay';
+    const dizi = dikey ? en : boy; // çıtaların dizildiği yön
+    const citaL = dikey ? boy : en; // çıta boyu
+    let n = Math.max(1, Math.floor((dizi + ar) / (ce + ar)));
+    if (n === 1 && dizi > ce * 2) n = 2;
+    const gercekAralik = n > 1 ? (dizi - n * ce) / (n - 1) : 0;
+    const malz = M[kul];
+    const uzun = Math.max(say(malz.plakaUzun, 2800), say(malz.plakaKisa, 0));
+    if (citaL > uzun - 20) uyarilar.push(`Çıta boyu ${r1(citaL)} mm, malzeme boyu ${uzun} mm'yi aşıyor; çıtalar ek yapılarak kullanılmalı.`);
+    if (ce > dizi) uyarilar.push('Çıta eni panel ölçüsünden büyük.');
+    const citaNot = { not: `${n} çıta, eksenler arası ${r1(ce + gercekAralik)} mm, aralık ${r1(gercekAralik)} mm; ${dikey ? 'dikey' : 'yatay'}` };
+    ekle(`Lambri çıtası (${dikey ? 'dikey' : 'yatay'})`, kul, citaL, ce, n, { u: 0, k: 0 }, citaNot);
+    const arkaKul = modul.lambriArka !== 'yok' ? modul.lambriArka : null;
+    const ta = arkaKul ? say(M[arkaKul].kalinlik, 9) : 0;
+    if (arkaKul) {
+      ekle('Lambri arka paneli', arkaKul, boy, en, 1, { u: 0, k: 0 }, { not: 'Duvara yapıştırılır / vidalanır; çıtalar önüne yapıştırılır' });
+      hEkle('aski_rayi', 'Z askı profili (duvar paneli)', (2 * en) / 1000, 'm');
+    }
+    hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', n * Math.max(2, Math.ceil(citaL / 600)));
+    return {
+      parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, malzemeler: M, hirdavatSecimi: HS,
+      geo: { panel: true, tur: 'lambri', boy, en, girilenBoy: boy, girilenEn: en, t, W: en, D: t + ta, H: boy, bant: { u: 0, k: 0 }, kullanim: kul, sekil: null,
+        lambri: { dikey, n, ce, aralik: gercekAralik, ta, arkaKul } },
+    };
+  }
+
   /** Parçanın tek adet net alanı (m²): şekilli parçada gerçek alan. */
   const parcaAlanM2 = (p) => (p.sekil ? p.sekil.alan : p.boy * p.en) / 1e6;
   /** Parçanın tek adet kenar bandı uzunluğu (m). */
@@ -2003,7 +2081,7 @@
     const hacimler = [];
     const cakisan = (k) => hacimler.find((o) => k.x1 < o.x2 - 0.5 && k.x2 > o.x1 + 0.5 && k.z1 < o.z2 - 0.5 && k.z2 > o.z1 + 0.5 && k.y1 < o.y2 - 1 && k.y2 > o.y1 + 1);
     // Ön paneller (dolgu, bulaşık kapağı, serbest) gövdelerin ön düzleminde durur
-    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk', 'duvar', 'nesne'].includes(g.tur);
+    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk', 'duvar', 'nesne', 'lambri'].includes(g.tur);
     const govdeD = {};
     for (const sr of ['zemin', 'duvar']) govdeD[sr] = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === sr).map((m) => sonuclar[m.id].geo.D)) || (sr === 'zemin' ? 560 : 320);
     // Düz yerleşimdeki L köşe dolap B kolu kadar odaya taşar
@@ -2222,7 +2300,7 @@
     const uyarilar = [];
     for (const m of A.malzemeler) {
       if (!(say(m.kalinlik, 0) > 0)) uyarilar.push(`Malzeme "${m.ad}": kalınlık geçersiz (${m.kalinlik}).`);
-      if (!camMi(m) && !(say(m.plakaUzun, 0) >= 100 && say(m.plakaKisa, 0) >= 100)) uyarilar.push(`Malzeme "${m.ad}": plaka ölçüsü geçersiz (${m.plakaUzun}×${m.plakaKisa}).`);
+      if (!camMi(m) && !(say(m.plakaUzun, 0) >= 100 && say(m.plakaKisa, 0) >= 10)) uyarilar.push(`Malzeme "${m.ad}": plaka ölçüsü geçersiz (${m.plakaUzun}×${m.plakaKisa}).`);
     }
     const modulSonuclari = {};
 

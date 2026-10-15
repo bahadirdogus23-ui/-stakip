@@ -241,6 +241,13 @@
       m.sutunlar = [{ genislik: null, satirlar: [] }];
     } else m = Hesap.yeniModul(kart.dataset.preset);
     m.ad = benzersizAd(m.ad);
+    // Hazır modülün kullandığı, projede olmayan malzemeler (ör. lambri çıtası) varsayılanlardan eklenir
+    const varsayilan = Hesap.varsayilanAyarlar().malzemeler;
+    for (const id of Object.values(m.malzeme || {})) {
+      if (proje.ayarlar.malzemeler.some((x) => x.id === id)) continue;
+      const v = varsayilan.find((x) => x.id === id);
+      if (v) { proje.ayarlar.malzemeler.push(JSON.parse(JSON.stringify(v))); bildir(`Malzemelere eklendi: ${esc(v.ad)}`); }
+    }
     proje.moduller.push(m);
     seciliId = m.id;
     $('#katalog').close();
@@ -492,7 +499,11 @@
           <label>Boy (mm)${sayiGir('boy', m.boy, 'min="20"')}</label>
           <label>En (mm)${sayiGir('en', m.en, 'min="20"')}</label>
           <label>Adet${sayiGir('adet', m.adet, 'min="1"')}</label>
-          <label>Şekil${secim('sekil', m.sekil, Object.entries(Hesap.SEKILLER).map(([k, v]) => [k, v.ad]))}</label>
+          ${m.panelTuru === 'lambri' ? `<label title="Çıta eni (lambri profilinde profil eni)">Çıta eni (mm)${sayiGir('lambriCitaEn', m.lambriCitaEn, 'min="10"')}</label>
+          <label title="İki çıta arası boşluk; 0 = bitişik (dilli profil). Kenarlarda çıta olur, artan pay aralıklara paylaştırılır.">Çıta aralığı (mm)${sayiGir('lambriAralik', m.lambriAralik, 'min="0"')}</label>
+          <label>Çıta yönü${secim('lambriYon', m.lambriYon, [['dikey', 'Dikey'], ['yatay', 'Yatay']])}</label>
+          <label title="Çıtaların arkasına tam ölçü panel (keçe, MDF, suntalam). Malzemesi: gövde ya da kapak malzemesi; modüle özel malzemeden değiştirilebilir.">Arka panel${secim('lambriArka', m.lambriArka, [['yok', 'Yok (çıtalar duvara)'], ['govde', 'Var – gövde malzemesi'], ['kapak', 'Var – kapak malzemesi']])}</label>` : ''}
+          ${m.panelTuru === 'lambri' ? '' : `<label>Şekil${secim('sekil', m.sekil, Object.entries(Hesap.SEKILLER).map(([k, v]) => [k, v.ad]))}</label>`}
           ${Hesap.SEKILLER[m.sekil].param ? `<label>${esc(Hesap.SEKILLER[m.sekil].param)}${sayiGir('sekilParam', m.sekilParam, 'min="0"')}</label>` : ''}
           ${Hesap.SEKILLER[m.sekil].kose ? `<label title="Sol üstten saat yönünde">Köşe sayısı${secim('koseSayisi', m.koseSayisi, [[1, '1'], [2, '2 (üst)'], [3, '3'], [4, '4']])}</label>` : ''}
           ${m.sekil === 'dikdortgen'
@@ -552,6 +563,8 @@
         ${surgu ? '' : `<label class="onay" title="Çatı altı / merdiven altı: üst kenar eğimli"><input data-alan="egimli" type="checkbox" ${m.egimli ? 'checked' : ''}> Eğimli üst</label>`}
         ${!surgu && m.yapi === 'tabla_boydan' && m.ust === 'tam' && !m.egimli ? `<label title="Üst tablanın kapak yüzünden öne taşması (mm). 0'dan büyükse kapaklar tablanın altında biter.">Üst tabla ön taşma${sayiGir('ustTasmaOn', m.ustTasmaOn, 'min="0" max="100"')}</label>
         <label title="Üst tablanın her yandan taşması (mm), ör. 18">Üst tabla yan taşma${sayiGir('ustTasmaYan', m.ustTasmaYan, 'min="0" max="100"')}</label>
+        <label title="Üst tablanın ön köşelerini kavisli (yuvarlatılmış) keser; 0 = düz">Üst tabla kavis R (mm)${sayiGir('ustKavisR', m.ustKavisR, 'min="0"')}</label>
+        ${m.ustKavisR > 0 ? `<label>Kavisli köşe${secim('ustKavisKose', m.ustKavisKose, [['on', 'İki ön köşe'], ['sol', 'Sol ön köşe'], ['sag', 'Sağ ön köşe']])}</label>` : ''}
         <label class="onay" title="Üst tabla kapak kalınlığı kadar öne uzar, kapakların üstünü yandan yana kapatır; kapaklar tablanın altında biter"><input data-alan="ustKapakUstu" type="checkbox" ${m.ustKapakUstu ? 'checked' : ''}> Üst tabla kapakların üstünü kapatsın</label>` : ''}
         ${surgu ? '' : `<label class="onay" title="Alt tabla konmaz: yanlar zemine basar, en alt bölme zemine açılır (buzdolabı nişi gibi). Baza kullanılmaz."><input data-alan="altTablaYok" type="checkbox" ${m.altTablaYok ? 'checked' : ''}> Alt tabla yok (zemine açık)</label>`}
         ${m.egimli && !surgu ? `<label title="Sağ kenarın zeminden yüksekliği (sol = Yükseklik)">Sağ yükseklik (mm)${sayiGir('sagYukseklik', m.sagYukseklik, 'min="200"')}</label>` : ''}
@@ -944,7 +957,7 @@
             <td>${secim('tur', m.tur || 'Diğer', Hesap.MALZEME_TURLERI.map((t) => [t, t]))}</td>
             <td><input data-alan="kalinlik" type="number" step="0.5" min="1" value="${m.kalinlik}"></td>
             <td><input data-alan="plakaUzun" type="number" min="100" value="${esc(m.plakaUzun)}" ${Hesap.camMi(m) ? 'disabled title="Cam plakaya yerleştirilmez"' : ''}></td>
-            <td><input data-alan="plakaKisa" type="number" min="100" value="${esc(m.plakaKisa)}" ${Hesap.camMi(m) ? 'disabled' : ''}></td>
+            <td><input data-alan="plakaKisa" type="number" min="10" value="${esc(m.plakaKisa)}" ${Hesap.camMi(m) ? 'disabled' : ''}></td>
             <td><input data-alan="bant" type="number" step="0.1" min="0" value="${esc(m.bant)}" ${Hesap.camMi(m) ? 'disabled' : ''}></td>
             <td><input data-alan="damar" type="checkbox" ${m.damar ? 'checked' : ''} ${Hesap.camMi(m) ? 'disabled' : ''}></td>
             <td><button data-islem="malzSil" class="ikincil kucuk-buton" ${kullanilanlar.has(m.id) ? 'disabled title="Kullanımda"' : 'title="Sil"'}>✕</button></td></tr>`).join('')}</tbody>

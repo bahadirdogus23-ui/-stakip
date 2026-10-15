@@ -55,6 +55,15 @@
   /** Panel modülün görünüşü (orijin sol-alt): duvara bakınca görünen yüz. */
   function panelGovde(geo) {
     if (geo.nesne) return nesneCizim(geo);
+    if (geo.lambri) {
+      const L = geo.lambri;
+      let s = L.arkaKul ? rect(0, 0, geo.W, geo.H, L.arkaKul === 'govde' ? 'govde' : 'kapak') : rect(0, 0, geo.W, geo.H, 'bosluk');
+      for (let i = 0; i < L.n; i++) {
+        const a = i * (L.ce + L.aralik);
+        s += L.dikey ? rect(a, 0, a + L.ce, geo.H, 'kapak') : rect(0, a, geo.W, a + L.ce, 'kapak');
+      }
+      return s;
+    }
     if (geo.bos) return rect(0, 0, geo.W, geo.H, 'bosluk');
     const cls = geo.kullanim === 'govde' ? 'govde' : 'kapak';
     let s = geo.sekil && geo.tur !== 'raf' && geo.tur !== 'tabla' && geo.tur !== 'yan_kapama' ? sekilYolu(geo.sekil, cls) : rect(0, 0, geo.W, geo.H, cls);

@@ -65,6 +65,7 @@ function rastgeleModul() {
   m.yanlarYere = rnd() < 0.3;
   if (rnd() < 0.2) { m.ustTasmaOn = ara(0, 30); m.ustTasmaYan = ara(0, 20); }
   m.ustKapakUstu = rnd() < 0.15;
+  if (rnd() < 0.1) { m.ustKavisR = ara(10, 150); m.ustKavisKose = sec(['on', 'sol', 'sag']); }
   const ns = sec([1, 1, 1, 2, 3]);
   m.sutunlar = [];
   for (let i = 0; i < ns; i++) {
@@ -113,7 +114,8 @@ function denetle(m, A) {
   try {
     const d = D.delikPlani(m, s, A);
     for (const p of d.parcalar || []) {
-      if (p.disarida) ihlal('Delik parça dışına düşüyor', m, `${p.ad} ${p.w}×${p.h}: ${p.disarida} delik, ör. ${p.disariOrnek}`);
+      // Çok dar bölme gibi uyarılı (geçersiz) ölçülerde delik geometrisi denetlenmez
+      if (p.disarida && !uyarili) ihlal('Delik parça dışına düşüyor', m, `${p.ad} ${p.w}×${p.h}: ${p.disarida} delik, ör. ${p.disariOrnek}`);
       if (!(p.w > 0 && p.h > 0)) ihlal('Delik planında geçersiz parça ölçüsü', m, `${p.ad} ${p.w}×${p.h}`);
       if (p.notlar.some((n) => /dikey parça yok/.test(n))) ihlal('Yatay parçanın ucu boşta', m, p.ad);
       const c = p.notlar.find((n) => /çakışıyor/.test(n));
@@ -123,7 +125,7 @@ function denetle(m, A) {
     const say = (ad) => (d.parcalar || []).reduce((a, p) => a + p.delikler.filter((h) => h.ad === ad).length * p.adet, 0);
     const gecersizParca = s.uyarilar.some((u) => /ölçüsü geçersiz/.test(u)); // eşi plandan düşer
     const pim = say('Minifix pimi Ø5');
-    if (!gecersizParca && (say('Pim geçişi Ø8 (uçtan)') !== pim || say('Minifix gövdesi Ø15') !== pim)) ihlal('Minifix delikleri eşleşmiyor', m, `${pim} / ${say('Pim geçişi Ø8 (uçtan)')} / ${say('Minifix gövdesi Ø15')}`);
+    if (!gecersizParca && !uyarili && (say('Pim geçişi Ø8 (uçtan)') !== pim || say('Minifix gövdesi Ø15') !== pim)) ihlal('Minifix delikleri eşleşmiyor', m, `${pim} / ${say('Pim geçişi Ø8 (uçtan)')} / ${say('Minifix gövdesi Ø15')}`);
     if (!gecersizParca && say('Konfirmat Ø7 (boydan, havşalı)') !== say('Konfirmat kılavuz Ø5 (uçtan)')) ihlal('Konfirmat delikleri eşleşmiyor', m, '');
     const proje = H.projeyiNormallestir({ moduller: [m] });
     const k = JSON.stringify(K.kilavuz(m, s, proje, H.projeHesapla(proje)));

@@ -920,7 +920,7 @@
     // Parçalar plakaya sığmalı
     for (const p of r.kesimListesi) {
       const malz = Hesap.malzemeBul(proje.ayarlar, p.malzeme);
-      if (!malz || Hesap.camMi(malz)) continue;
+      if (!malz || Hesap.camMi(malz) || malz.tur === 'Lambri / çıta') continue;
       const u = Math.max(p.kesimBoy, p.kesimEn);
       const k = Math.min(p.kesimBoy, p.kesimEn);
       if (u > Math.max(malz.plakaUzun, malz.plakaKisa) - 20 || k > Math.min(malz.plakaUzun, malz.plakaKisa) - 20) return `${p.ad} plakaya sığmıyor`;

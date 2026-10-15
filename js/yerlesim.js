@@ -166,7 +166,8 @@
         .map((a) => ({ id: a.id, uzun: Number(a.boy), kisa: Number(a.en), adet: Number(a.adet) }));
       const y = yerlestir(g.parcalar, plaka, {
         testere: Number(ayarlar.testereKalinligi) || 0,
-        kenarPayi: Number(ayarlar.plakaKenarPayi) || 0,
+        // Hazır çıta/profil boy halinde gelir: kenar kırpılmaz
+        kenarPayi: g.malzeme.tur === 'Lambri / çıta' ? 0 : Number(ayarlar.plakaKenarPayi) || 0,
         artikMin: Number(ayarlar.artikMin) || 250,
         artiklar,
       });

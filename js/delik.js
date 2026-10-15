@@ -260,7 +260,8 @@
       // Taşmalı üst tabla: yanlardan ve önden taşar (x ve y taşan kenardan ölçülür)
       const tY = g.tasmaYan || 0;
       const tOn = g.tasmaOn || 0;
-      yatay({ p: P.yeni('Üst tabla', 'Üst tabla', tablaGenis + 2 * tY, Ds + tOn, tablaEksen('alt yüz')), x0: tablaX0 - tY, genis: tablaGenis + 2 * tY, yAlt: Hc - t, z0: -tOn, z1: Ds, tur: govdeTur, govde: true, ust: true, ustte: ustUstte });
+      const ustAd = g.kavisR > 0 ? 'Üst tabla – kavisli' : 'Üst tabla';
+      yatay({ p: P.yeni(ustAd, ustAd, tablaGenis + 2 * tY, Ds + tOn, tablaEksen('alt yüz')), x0: tablaX0 - tY, genis: tablaGenis + 2 * tY, yAlt: Hc - t, z0: -tOn, z1: Ds, tur: govdeTur, govde: true, ust: true, ustte: ustUstte });
     }
     g.sutunlar.forEach((c, si) => {
       const cw = c.x2 - c.x1;
@@ -870,6 +871,7 @@
     [/^(Raf|Cam raf)\b/, 'Raf pimlerine oturur; delik gerekmez.'],
     [/– (cam|ayna|profil camı|çerçeve camı)$|^Sürgü kapak – (cam|ayna)$/, 'Cam/ayna: camcıda kesilir; gerekiyorsa delik camcıda açılır.'],
     [/^Serbest panel/, 'Serbest panel: delik tanımı yok; gerekiyorsa elle işaretleyin.'],
+    [/^Lambri/, 'Lambri: çıtalar arka panele / duvara montaj yapıştırıcısı ve gizli vidayla (yandan, çıta aralığından) tutturulur; ön yüzde delik yok.'],
     [/^Duvar kaplama paneli/, 'Duvara Z askı profiliyle (arkadan vidalı) ya da montaj yapıştırıcısıyla; ön yüzde delik yok.'],
   ];
 

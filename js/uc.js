@@ -444,6 +444,17 @@
   function panelParcalari(g, onZ) {
     const tur = g.kullanim === 'govde' ? 'govde' : 'kapak';
     if (g.nesne) return nesneParcalari(g);
+    if (g.lambri) {
+      // Arka panel duvarda, çıtalar önünde eşit aralıklı
+      const L = g.lambri;
+      const P = [];
+      if (L.arkaKul) P.push(kutu(0, g.W, 0, g.H, 0, L.ta, L.arkaKul === 'govde' ? 'govde' : 'kapak'));
+      for (let i = 0; i < L.n; i++) {
+        const a = i * (L.ce + L.aralik);
+        P.push(L.dikey ? kutu(a, a + L.ce, 0, g.H, L.ta, L.ta + g.t, tur) : kutu(0, g.W, a, a + L.ce, L.ta, L.ta + g.t, tur));
+      }
+      return P;
+    }
     if (g.tur === 'bosluk') return [];
     if (g.tur === 'duvar') return [kutu(0, g.W, 0, g.H, 0, g.t, tur)];
     if (g.tur === 'yan_kapama') return [kutu(0, g.t, 0, g.boy, 0, g.en, tur)];
@@ -460,7 +471,7 @@
     for (const y of yer.yerler) {
       let yerel;
       if (y.geo && y.geo.nesne) yerel = nesneParcalari(y.geo);
-      else if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza'].includes(y.geo.tur)) {
+      else if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'lambri', 'duvar'].includes(y.geo.tur)) {
         // Ön panel: aynı duvar ve sıradaki en yakın gövdenin ön yüzüne hizalanır
         const komsu = yer.yerler.filter((x) => x !== y && x.geo && !x.geo.panel && x.sira === y.sira && (x.duvar === y.duvar || x.duvar === 'kose'))
           .sort((a, b) => Math.abs(a.bas - y.bas) - Math.abs(b.bas - y.bas))[0];

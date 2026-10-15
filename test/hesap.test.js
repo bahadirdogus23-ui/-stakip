@@ -1265,3 +1265,21 @@ test('maliyet: işçilik m² esaslı (ön yüz alanı), kapatılan alan raporlan
   assert.equal(atolye.tutar, 2.4 * 1200);
   assert.ok(Math.abs(r.dagitimFarki) < 0.05);
 });
+
+test('lambri: çıta adedi ve aralık, arka panel, çıta stoğuna dizilim; kavisli üst tabla', () => {
+  const m = Object.assign(Hesap.yeniModul('lambri_dikey'), { en: 1200, boy: 2600, lambriCitaEn: 40, lambriAralik: 20 });
+  const p = Hesap.projeyiNormallestir({ moduller: [m] });
+  const r = Hesap.projeHesapla(p);
+  const c = r.kesimListesi.find((x) => x.ad.startsWith('Lambri çıtası'));
+  assert.equal(c.adet, 20); // (1200 + 20) / 60 = 20
+  assert.equal(c.malzeme, 'cita_mese');
+  const g = Yerlesim.projeYerlesimi(r.kesimListesi, p.ayarlar, null).find((x) => x.malzemeId === 'cita_mese');
+  assert.equal(g.tamPlaka, 20); // her 2800 mm çıtaya bir 2600 mm parça
+  const k = Hesap.projeHesapla(Hesap.projeyiNormallestir({ moduller: [Hesap.yeniModul('lambri_kece')] }));
+  assert.ok(k.kesimListesi.some((x) => x.ad === 'Lambri arka paneli' && x.malzeme === 'kece9'));
+  // Kavisli üst tabla
+  const d = Object.assign(Hesap.yeniModul('komodin'), { ustKavisR: 40 });
+  const s = Hesap.modulHesapla(Hesap.projeyiNormallestir({ moduller: [d] }).moduller[0], ayar);
+  const ust = s.parcalar.find((x) => x.ad === 'Üst tabla – kavisli');
+  assert.ok(ust && ust.sekil && ust.sekil.egri > 0);
+});
