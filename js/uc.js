@@ -441,6 +441,104 @@
         k(0, 180, ot, H * 0.72, D * 0.25, D, koyu(r, 0.95)); k(W - 180, W, ot, H * 0.72, D * 0.25, D, koyu(r, 0.95));
         break;
       }
+      case 'giysi': {
+        // Askıdaki giysiler: farklı kalınlık ve boyda, askı borusundan sarkar
+        const RENKLER = ['#5d6d7e', '#a04040', '#e8e2d6', '#2f3a44', '#7a8f5a', '#c9a57a', '#34465f', '#d8b4a0', '#4b4d50'];
+        let x = 15;
+        let i = 0;
+        while (x < W - 30) {
+          const w = Math.min(W - 15 - x, [45, 60, 38, 52, 70, 42][i % 6]);
+          const h = H * [1, 0.62, 0.85, 0.55, 0.95, 0.7, 0.78][i % 7];
+          const d = D * [0.9, 0.95, 0.85, 1][i % 4];
+          k(x, x + w - 3, H - h, H - 25, (D - d) / 2, (D + d) / 2, RENKLER[(i * 5 + Math.round(W)) % RENKLER.length]);
+          k(x + w / 2 - 4, x + w / 2 + 1, H - 25, H, D / 2 - 2, D / 2 + 2, '#8a8f96'); // askı kancası
+          x += w + [6, 14, 4, 20][i % 4];
+          i++;
+        }
+        break;
+      }
+      case 'mont': {
+        const RENKLER = ['#6b4f3a', '#2f3a44', '#8a2f2f', '#56624a', '#b59a7a', '#1f2a36'];
+        const n = Math.max(1, Math.floor(W / 230));
+        const bw = W / n;
+        for (let i = 0; i < n; i++) {
+          const canta = i % 3 === 2;
+          const h = canta ? H * 0.42 : H * [1, 0.85, 0.92][i % 3];
+          const d = canta ? D * 0.6 : D * 0.85;
+          k(i * bw + 8, (i + 1) * bw - 8, H - h, H, 0, d, RENKLER[(i + Math.round(W / 7)) % RENKLER.length]);
+        }
+        break;
+      }
+      case 'ayakkabi': {
+        const RENKLER = ['#3b3b3b', '#7a4b2a', '#e6e2da', '#5b6b7a', '#9a3b3b', '#c9a57a'];
+        const n = Math.max(1, Math.floor(W / 210));
+        const pw = W / n;
+        for (let i = 0; i < n; i++) {
+          const h = H * [1, 0.7, 0.85, 0.6][i % 4];
+          const L = D * [1, 0.92, 0.85][i % 3];
+          const sw = Math.min(85, (pw - 30) / 2);
+          for (const j of [0, 1]) {
+            const x = i * pw + 10 + j * (sw + 8);
+            k(x, x + sw, 0, h, D - L, D, RENKLER[(i * 3 + Math.round(W / 9)) % RENKLER.length]);
+          }
+        }
+        break;
+      }
+      case 'katli': case 'havlu': {
+        const RENKLER = g.nesne === 'havlu' ? ['#e9e4da', '#9db09a', '#e9e4da', '#c9d6df', '#d8b4a0'] : ['#b9a68f', '#34465f', '#e8e2d6', '#7a8f5a', '#a04040', '#5d6d7e', '#d8b4a0'];
+        const kat = g.nesne === 'havlu' ? 55 : 38;
+        let y = 0;
+        let i = 0;
+        while (y < H - 10) {
+          const h = Math.min(H - y, kat);
+          const ic = [0, 8, 3, 12][i % 4];
+          k(ic, W - ic / 2, y, y + h - 0.5, ic / 2, D - ic / 3, RENKLER[(i + Math.round(W / 11)) % RENKLER.length]);
+          y += h; i++;
+        }
+        break;
+      }
+      case 'tabak': {
+        k(W * 0.15, W * 0.85, 0, 12, D * 0.15, D * 0.85, koyu(r, 0.95));
+        k(0, W, 12, H, 0, D, r);
+        break;
+      }
+      case 'bardak': case 'kavanoz': case 'sise': {
+        const n = Math.max(1, Math.floor(W / (g.nesne === 'bardak' ? 75 : 95)));
+        const bw = W / n;
+        const RENKLER = g.nesne === 'sise' ? ['#6f8f6a', '#8a2f2f', '#c9a57a', '#4b6b8a'] : g.nesne === 'kavanoz' ? ['#d9c9a3', '#b0763f', '#e3dccf', '#8a5a3c'] : ['#cfe3ea'];
+        for (let i = 0; i < n; i++) {
+          const x = i * bw;
+          const w = bw - 14;
+          const h = H * (g.nesne === 'bardak' ? 1 : [1, 0.75, 0.88][i % 3]);
+          const d = Math.min(D, w);
+          const z1 = (D - d) / 2;
+          if (g.nesne === 'sise') {
+            k(x + 4, x + 4 + w, 0, h * 0.68, z1, z1 + d, RENKLER[i % RENKLER.length]);
+            k(x + 4 + w * 0.35, x + 4 + w * 0.65, h * 0.68, h, z1 + d * 0.35, z1 + d * 0.65, RENKLER[i % RENKLER.length]);
+          } else if (g.nesne === 'kavanoz') {
+            k(x + 4, x + 4 + w, 0, h * 0.86, z1, z1 + d, RENKLER[i % RENKLER.length], { saydam: 0.8 });
+            k(x + 4 + 3, x + 4 + w - 3, h * 0.86, h, z1 + 3, z1 + d - 3, '#6b5a4a');
+          } else k(x + 4, x + 4 + w, 0, h, z1, z1 + d, RENKLER[0], { saydam: 0.55 });
+        }
+        break;
+      }
+      case 'kase': {
+        k(W * 0.3, W * 0.7, 0, H * 0.15, D * 0.3, D * 0.7, koyu(r, 0.9));
+        k(0, W, H * 0.15, H * 0.55, 0, D, r);
+        const M = ['#d23c2c', '#f0b429', '#6aa84f', '#e8742e'];
+        for (let i = 0; i < 4; i++) { const x = W * (0.12 + 0.2 * i); k(x, x + W * 0.18, H * 0.55, H * (0.85 + 0.05 * (i % 2)), D * (0.25 + 0.1 * (i % 2)), D * (0.65 + 0.1 * (i % 2)), M[i]); }
+        break;
+      }
+      case 'kupa': {
+        k(0, W * 0.78, 0, H, 0, D, r);
+        k(W * 0.78, W, H * 0.25, H * 0.75, D * 0.4, D * 0.6, koyu(r, 0.9));
+        break;
+      }
+      case 'laptop': {
+        k(0, W, 0, 18, 0, D, r);
+        k(0, W, 18, H, 0, 12, '#2a2b2e');
+        break;
+      }
       case 'lamba': {
         k(W * 0.25, W * 0.75, 0, H * 0.06, D * 0.25, D * 0.75, '#444444');
         k(W * 0.46, W * 0.54, H * 0.06, H * 0.55, D * 0.46, D * 0.54, '#555555');

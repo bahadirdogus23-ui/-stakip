@@ -98,6 +98,22 @@
     yatak_cift: { grup: 'Dekor', ad: 'Çift kişilik yatak', W: 1600, H: 500, D: 2000, renk: '#e8e2d6' },
     yatak_tek: { grup: 'Dekor', ad: 'Tek kişilik yatak', W: 900, H: 450, D: 2000, renk: '#e8e2d6' },
     kanepe: { grup: 'Dekor', ad: 'Kanepe (3 kişilik)', W: 2100, H: 850, D: 900, renk: '#8f9aa6' },
+    // Giyim (dolap içi)
+    giysi: { grup: 'Giyim', ad: 'Askıda giysiler', W: 800, H: 1000, D: 480, renk: '#5d6d7e' },
+    mont: { grup: 'Giyim', ad: 'Kancada mont ve çanta', W: 800, H: 850, D: 250, renk: '#6b4f3a' },
+    ayakkabi: { grup: 'Giyim', ad: 'Ayakkabı sırası', W: 800, H: 130, D: 300, renk: '#3b3b3b' },
+    katli: { grup: 'Giyim', ad: 'Katlanmış giysiler', W: 300, H: 250, D: 350, renk: '#b9a68f' },
+    havlu: { grup: 'Giyim', ad: 'Havlular', W: 300, H: 180, D: 250, renk: '#e9e4da' },
+    // Mutfak eşyası
+    tabak: { grup: 'Mutfak eşyası', ad: 'Tabak yığını', W: 260, H: 110, D: 260, renk: '#f4f3ef' },
+    bardak: { grup: 'Mutfak eşyası', ad: 'Bardak sırası', W: 300, H: 120, D: 80, renk: '#cfe3ea' },
+    kavanoz: { grup: 'Mutfak eşyası', ad: 'Kavanozlar', W: 300, H: 180, D: 100, renk: '#d9c9a3' },
+    kase: { grup: 'Mutfak eşyası', ad: 'Meyve kasesi', W: 280, H: 120, D: 280, renk: '#c8763a' },
+    tahta: { grup: 'Mutfak eşyası', ad: 'Kesme tahtası', W: 350, H: 250, D: 25, renk: '#b8875a' },
+    sise: { grup: 'Mutfak eşyası', ad: 'Şişeler', W: 200, H: 260, D: 70, renk: '#6f8f6a' },
+    kupa: { grup: 'Mutfak eşyası', ad: 'Kupa', W: 90, H: 100, D: 90, renk: '#d8573f' },
+    laptop: { grup: 'Elektronik', ad: 'Dizüstü bilgisayar', W: 330, H: 230, D: 240, renk: '#9aa0a6' },
+    saat: { grup: 'Dekor', ad: 'Masa saati', W: 120, H: 120, D: 60, renk: '#2f3a44' },
     // Dekor ve eşya
     kitap: { grup: 'Dekor', ad: 'Kitap sırası', W: 300, H: 240, D: 180, renk: '#8a5a3c' },
     kitap_yatay: { grup: 'Dekor', ad: 'Üst üste kitaplar', W: 260, H: 120, D: 190, renk: '#34465f' },
@@ -205,13 +221,14 @@
         konfirmat: { ad: 'Konfirmat vida' },
         kavela: { ad: 'Kavela + tutkal' },
         seffaf_kose: { ad: 'Şeffaf köşe bağlantı (tek parça köşe takozu)' },
+        seffaf_t: { ad: 'Şeffaf T bağlantı (iki parçalı, ortası çektirme vidalı)' },
       },
     },
     araBaglanti: {
       baslik: 'Ara bağlantı (sabit raf, dikme)',
       secenekler: {
         ayni: { ad: 'Gövde bağlantısıyla aynı' },
-        seffaf_t: { ad: 'Şeffaf açılı T bağlantı (çektirme, 2 parça)' },
+        seffaf_t: { ad: 'Şeffaf T bağlantı (iki parçalı, ortası çektirme vidalı)' },
         minifix: { ad: 'Minifix + kavela' },
         konfirmat: { ad: 'Konfirmat vida' },
         kavela: { ad: 'Kavela + tutkal' },
@@ -262,7 +279,7 @@
     konfirmat: { ad: 'Konfirmat vida 7×50', birim: 'adet', fiyat: 1.5 },
     tutkal: { ad: 'Ahşap tutkalı', birim: 'birleşim', fiyat: 2 },
     seffaf_kose: { ad: 'Şeffaf köşe bağlantı (köşe takozu)', birim: 'adet', fiyat: 3 },
-    seffaf_t: { ad: 'Şeffaf açılı T bağlantı (çektirme takımı)', birim: 'takım', fiyat: 4 },
+    seffaf_t: { ad: 'Şeffaf T bağlantı (iki parça + çektirme vidası)', birim: 'takım', fiyat: 6 },
     sunta_vidasi: { ad: 'Sunta vidası 3,5×16', birim: 'adet', fiyat: 0.3 },
     mentese_standart: { ad: 'Menteşe standart', birim: 'adet', fiyat: 35 },
     mentese_frenli: { ad: 'Menteşe frenli', birim: 'adet', fiyat: 85 },
@@ -387,6 +404,8 @@
     rafOnGeriCekme: 20,       // hareketli raf önden geri çekme
     gommeAraTabla: 'tam',     // gömme kapakta satırlar arası tabla: 'tam' derin | 'kayit' (yalnız önde kayıt)
     gommeKayitEn: 110,        // gömme kapakta ön kayıt derinliği (mm)
+    seffafVidaAralik: 32,     // iki parçalı şeffaf T bağlantıda bir yarımın iki kulak vidası arası (mm)
+    seffafKenar: 12,          // kulak vidasının birleşim çizgisine (karşı panel yüzeyine) uzaklığı (mm)
     cekmeceRayBosluk: 0,      // çekmece kutusu–gövde yan boşluğu (ray başına, mm); 0 = ray kataloğu değeri
     arkalikListede: true,     // arkalık parçaları kesim listesine ve maliyete girsin mi
     rafYanBosluk: 1,          // hareketli raf her yandan boşluk
@@ -498,7 +517,7 @@
   for (const [id, n] of Object.entries(NESNELER)) {
     PRESETLER['nesne_' + id] = P(n.grup, n.ad, `${n.W}×${n.H}×${n.D} mm · parça çıkmaz`, 'nesne', n.H, n.W, { nesneTuru: id, nesneD: n.D, montajYuksekligi: n.mt || 0, konum: 0, bantU: 0, bantK: 0 });
   }
-  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Lambri', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Dekor'];
+  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Lambri', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Mutfak eşyası', 'Giyim', 'Dekor'];
 
   const kopya = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (x) => Math.round(x * 10) / 10;
@@ -1026,7 +1045,7 @@
     } else if (tur === 'seffaf_kose' || tur === 'seffaf_t') {
       // Köşe takozu: tek parça, her panele 2 vida (4 vida). Açılı T (çektirme): iki yarım parça, her biri
       // kendi paneline 2 vidayla; yarımlar pakete dahil çektirme cıvatasıyla birbirine sıkılır (4 vida + 1 cıvata).
-      const ad = tur === 'seffaf_t' ? 'Şeffaf açılı T bağlantı (çektirme, 2 parça + cıvata)' : 'Şeffaf köşe bağlantı (köşe takozu)';
+      const ad = tur === 'seffaf_t' ? 'Şeffaf T bağlantı (iki parça + çektirme vidası)' : 'Şeffaf köşe bağlantı (köşe takozu)';
       T.hEkle(tur, ad, nokta, tur === 'seffaf_t' ? 'takım' : 'adet');
       T.hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', 4 * nokta);
     } else {

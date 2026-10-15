@@ -68,6 +68,10 @@
           <div class="arac-satir uc-arac">
             <select id="ucKapsam" aria-label="Kapsam"><option value="modul">Seçili modül</option><option value="proje">Tüm proje (yerleşim)</option></select>
             <label class="onay"><input type="checkbox" id="ucKapaksiz"> Kapakları gizle</label>
+            <label class="onay" title="Raflara, askılara, tezgaha ve duvara bağlama uygun eşya ve dekor (yalnız görsel; projeye eklenmez)"><input type="checkbox" id="ucSus" checked> Süsler</label>
+            <select id="ucSusYogun" aria-label="Süs yoğunluğu" title="Süs yoğunluğu"><option value="az">Az süs</option><option value="normal" selected>Normal süs</option><option value="bol">Bol süs</option></select>
+            <button id="ucSusKaristir" class="ikincil" title="Süsleri yeniden dağıt">🎲 Karıştır</button>
+            <button id="ucSusEkle" class="ikincil" title="Görünen süsleri projeye eşya olarak ekle (sonra tek tek düzenlenebilir)">Süsleri projeye ekle</button>
             <button data-uc="on" class="ikincil">Önden</button>
             <button data-uc="izo" class="ikincil">Köşeden</button>
             <button data-uc="ust" class="ikincil">Üstten</button>
@@ -233,6 +237,7 @@
   <div id="yazdirAlan" aria-hidden="true"></div>
 
   <script src="js/hesap.js"></script>
+  <script src="js/dekor.js"></script>
   <script src="js/tasarim.js"></script>
   <script src="js/maliyet.js"></script>
   <script src="js/yerlesim.js"></script>

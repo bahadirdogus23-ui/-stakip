@@ -32,10 +32,12 @@
     // Köşe: tek parça köşe takozu (~20×20×33 mm), her panele 2 vida. T: iki yarım parçalı açılı T (çektirme),
     // biri her panele 2 vidayla, iki yarım çektirme cıvatasıyla birbirine sıkılır.
     seffaf_kose: { isaret: 'Şeffaf köşe bağlantı yeri', vida: 'Şeffaf köşe takozu vidası Ø2,5 kılavuz (3,5×16)' },
-    seffaf_t: { isaret: 'Şeffaf T bağlantı yeri', vida: 'Şeffaf T (çektirme) yarım parça vidası Ø2,5 kılavuz (3,5×16)' },
+    seffaf_t: { isaret: 'Şeffaf T bağlantı yeri', vida: 'Şeffaf T bağlantı kulak vidası Ø2,5 kılavuz (3,5×16)' },
   };
-  const SEFFAF_KENAR = 10; // vida ekseninin bağlanan panelin yüzeyinden uzaklığı (blok ~20 mm)
-  const SEFFAF_ARALIK = 8; // bir blok üzerindeki iki vidanın blok ortasına uzaklığı (derinlik yönünde)
+  // Ölçüler: köşe takozu sabit; iki parçalı T (ARON/MRD tipi) ayarlardan (kulak vida aralığı, kenar mesafesi)
+  let SEFFAF_T = { aralik: 32, kenar: 12 };
+  const seffafOlcu = (tur) => (tur === 'seffaf_t' ? SEFFAF_T : { aralik: 16, kenar: 10 });
+  const SEFFAF_KENAR = 10;
   /** Şeffaf bloklar ön ve arka kenardan en az 50 mm içeride (blok boyu ~33 mm); derin parçada ortada da. */
   function seffafKonumlari(z0, z1) {
     const d = z1 - z0;
@@ -126,8 +128,10 @@
   function yuzUcBagla(tur, konumlar, zMax, yuzN, ucN, canakN, seffafN) {
     const b = BAGLANTI[tur] || BAGLANTI.minifix;
     if (b.isaret && seffafN) {
-      // Gerçek blok geometrisi: her blokta iki panelin her birine 2 vida
-      for (const z of konumlar) for (const dz of [-SEFFAF_ARALIK, SEFFAF_ARALIK]) for (const d of seffafN(z, dz)) if (d) delik(d.p, 'vida', d.x, d.y, 2.5, 10, b.vida, d.yuz);
+      // Gerçek geometri: her bağlantıda iki panelin her birine 2 vida. Köşe takozunda vidalar yan yana (±8),
+      // iki parçalı T'de kulak uçlarında (vida aralığı / 2), birleşim çizgisinden kenar mesafesi kadar içeride
+      const g2 = seffafOlcu(tur);
+      for (const z of konumlar) for (const dz of [-g2.aralik / 2, g2.aralik / 2]) for (const d of seffafN(z, dz, g2.kenar)) if (d) delik(d.p, 'vida', d.x, d.y, 2.5, 10, b.vida, d.yuz);
       return;
     }
     for (const z of konumlar) {
@@ -318,9 +322,9 @@
           (z) => ({ p: f.v.p, x: z - f.v.z0, y: Y - f.v.y0, yuz: f.yuz }),
           (z) => ({ p: h.p, x: ucX, y: z - h.z0, yuz: taraf === 'sol' ? 'sol uç' : 'sağ uç' }),
           (z, m) => ({ p: h.p, x: taraf === 'sol' ? m : h.p.w - m, y: z - h.z0, yuz: h.alt ? 'alt yüz' : h.ust ? 'alt yüz' : 'alt yüz' }),
-          (z, dz) => [
-            { p: f.v.p, x: z + dz - f.v.z0, y: Y + s * (t / 2 + SEFFAF_KENAR) - f.v.y0, yuz: f.yuz },
-            { p: h.p, x: taraf === 'sol' ? SEFFAF_KENAR : h.p.w - SEFFAF_KENAR, y: z + dz - h.z0, yuz: s > 0 ? 'üst yüz' : 'alt yüz' },
+          (z, dz, k) => [
+            { p: f.v.p, x: z + dz - f.v.z0, y: Y + s * (t / 2 + k) - f.v.y0, yuz: f.yuz },
+            { p: h.p, x: taraf === 'sol' ? k : h.p.w - k, y: z + dz - h.z0, yuz: s > 0 ? 'üst yüz' : 'alt yüz' },
           ]);
         if (seffaf && h.alt) {
           // Alt tablanın üstündeki blok, alttaki çekmecenin rayıyla aynı hatta kalabilir
@@ -356,9 +360,9 @@
             (z) => ({ p: h.p, x: h.yerel(Xc), y: z - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' }),
             (z) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? 0 : v.p.h, yuz: ucta === 'alt' ? 'alt uç' : 'üst uç' }),
             (z, m) => ({ p: v.p, x: z - v.z0, y: ucta === 'alt' ? m : v.p.h - m, yuz: camYuz }),
-            (z, dz) => [
-              { p: h.p, x: h.yerel(Xc + sx * (t / 2 + SEFFAF_KENAR)), y: z + dz - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' },
-              { p: v.p, x: z + dz - v.z0, y: ucta === 'alt' ? SEFFAF_KENAR : v.p.h - SEFFAF_KENAR, yuz: sx > 0 ? (v.yuzSag || camYuz) : (v.yuzSol || camYuz) },
+            (z, dz, k) => [
+              { p: h.p, x: h.yerel(Xc + sx * (t / 2 + k)), y: z + dz - h.z0, yuz: ucta === 'alt' ? 'üst yüz' : 'alt yüz' },
+              { p: v.p, x: z + dz - v.z0, y: ucta === 'alt' ? k : v.p.h - k, yuz: sx > 0 ? (v.yuzSag || camYuz) : (v.yuzSol || camYuz) },
             ]);
         }
       }
@@ -636,9 +640,9 @@
           (y) => (u == null ? null : { p: yanP, x: u, y, yuz: u === 0 ? 'ön uç' : 'arka uç' }),
           (y, m) => (u == null ? null : { p: yanP, x: u === 0 ? m : yanL - m, y, yuz: 'iç yüz' }),
           // Şeffaf blok çerçeve köşesinin içinde, dik konumda (vidalar yükseklik boyunca)
-          (y, dy) => [
-            { p: onArka, x: X + sx * (t / 2 + SEFFAF_KENAR), y: y + dy, yuz: 'iç yüz' },
-            u == null ? null : { p: yanP, x: u === 0 ? SEFFAF_KENAR : yanL - SEFFAF_KENAR, y: y + dy, yuz: 'iç yüz' },
+          (y, dy, k) => [
+            { p: onArka, x: X + sx * (t / 2 + k), y: y + dy, yuz: 'iç yüz' },
+            u == null ? null : { p: yanP, x: u === 0 ? k : yanL - k, y: y + dy, yuz: 'iç yüz' },
           ]);
       });
       if (govdeTur === 'konfirmat' && !onYok) not(onArka, 'Ön bazada konfirmat başı görünür: tapa ile kapatın veya bu birleşimde minifix kullanın.');
@@ -928,6 +932,7 @@
     const g = sonuc && sonuc.geo;
     if (!g) return { destek: false, mesaj: 'Geçerli ölçü yok.', parcalar: [], deliksiz: [] };
     const A = ayar || Hesap.varsayilanAyarlar();
+    SEFFAF_T = { aralik: say(A.seffafVidaAralik, 32), kenar: say(A.seffafKenar, 12) };
     const P = planKur();
     if (g.lkose) lKosePlani(P, g, modul, sonuc, A);
     else if (g.panel) panelPlani(P, g, modul, sonuc, A);

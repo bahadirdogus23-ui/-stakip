@@ -284,7 +284,7 @@
     $('#tasarimDurum').textContent = 'Hesaplanıyor…';
     // Arayüz güncellensin diye hesap bir sonraki karede
     setTimeout(() => {
-      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3, null, { stil: $('#tasarimStil').value, dekor: $('#tasarimDekor').checked });
+      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3, null, { stil: $('#tasarimStil').value, dekor: $('#tasarimDekor').checked, yogunluk: $('#ucSusYogun').value });
       const not = duzeltilen.length ? `Sınır dışı ölçü düzeltildi: ${duzeltilen.map((a) => `${a.etiket} ${sinir[a.ad]}`).join(', ')}. ` : '';
       $('#tasarimDurum').textContent = not + (tasarimOnerileri.length
         ? `${tasarimOnerileri.length} öneri. Beğenmediyseniz "Öneri üret"e tekrar basın.`
@@ -319,7 +319,8 @@
   function tasarimUygula(i, yeni) {
     const t = tasarimOnerileri[i];
     if (!t) return;
-    const moduller = JSON.parse(JSON.stringify(t.moduller));
+    // Otomatik süsler projeye taşınmaz: 3B görünüşte "Süsler" açıkken aynı akıllı süsleme yapılır
+    const moduller = JSON.parse(JSON.stringify(t.moduller.filter((m) => !(m.panelTuru === 'nesne' && /^Dekor – /.test(m.ad)))));
     if (!yeni && t.yerlesim.tip === 'L' && proje.moduller.length) { alert('L mutfak önerisi köşeden başladığı için yalnızca yeni proje olarak açılabilir.'); return; }
     if (yeni && proje.moduller.length && !confirm('Mevcut modüller kaldırılıp bu tasarım yeni proje olarak açılsın mı? (Malzeme, hırdavat ve fiyat ayarları korunur.)')) return;
     // Stilin kullandığı, projede olmayan renkler malzeme listesine eklenir
@@ -964,6 +965,8 @@
     ['rafOnGeriCekme', 'Raf önden geri çekme (mm)'],
     ['gommeKayitEn', 'Gömme kapakta ön kayıt derinliği (mm)'],
     ['cekmeceRayBosluk', 'Çekmece kutusu yan boşluğu, ray başına (mm, 0 = ray kataloğu)'],
+    ['seffafVidaAralik', 'Şeffaf T bağlantı: kulak vidaları arası (mm)'],
+    ['seffafKenar', 'Şeffaf T bağlantı: vidanın birleşim çizgisine uzaklığı (mm)'],
     ['rafYanBosluk', 'Raf yan boşluğu (mm)'],
     ['kusakGenisligi', 'Kuşak eni (mm)'],
   ];
@@ -1411,16 +1414,55 @@
   // ---------------- 3D görünüm ----------------
   const ucGorus = { yaw: -35, pitch: 22, yakin: 1 };
   let ucBekleyen = false;
+  const YOGUNLUKLAR = ['az', 'normal', 'bol'];
+  // ---- 3B süsleme (yalnız görsel): ayarlar tarayıcıda hatırlanır ----
+  const susAyar = (() => { try { return JSON.parse(localStorage.getItem('mobilyaOlcuSus')) || {}; } catch (e) { return {}; } })();
+  if (susAyar.acik === false) $('#ucSus').checked = false;
+  if (YOGUNLUKLAR.includes(susAyar.yogunluk)) $('#ucSusYogun').value = susAyar.yogunluk;
+  let susTohum = susAyar.tohum || 1;
+  const susKaydet = () => { try { localStorage.setItem('mobilyaOlcuSus', JSON.stringify({ acik: $('#ucSus').checked, yogunluk: $('#ucSusYogun').value, tohum: susTohum })); } catch (e) { /* özel pencere */ } };
+  let susOnbellek = { anahtar: null, sonuc: null };
+  /** Görünen yerleşime süsleri ekler (önbellekli; yerleşim ya da ayar değişince yenilenir). */
+  function susluYerlesim(yer, kapsamProje) {
+    const anahtar = JSON.stringify([kapsamProje, yer.yerler.map((y) => [y.modul.id, y.bas, y.montaj, y.duvar]), proje.moduller.length, $('#ucSusYogun').value, susTohum, sonuc === susOnbellek.sonucRef]);
+    if (susOnbellek.anahtar === anahtar && susOnbellek.sonucRef === sonuc) return susOnbellek.deger;
+    const deger = Dekor.susle(proje, Object.assign({}, sonuc, { yerlesim: yer }), { yogunluk: $('#ucSusYogun').value, tohum: susTohum });
+    susOnbellek = { anahtar, sonucRef: sonuc, deger };
+    return deger;
+  }
   function ucCiz() {
     const kapaksiz = $('#ucKapaksiz').checked;
+    const sus = $('#ucSus').checked;
+    const renkFn = (x) => Hesap.modulRenkleri(x, proje.ayarlar);
     let P;
-    if ($('#ucKapsam').value === 'proje') P = Uc.projeParcalari(sonuc.yerlesim, { kapaksiz, renkFn: (x) => Hesap.modulRenkleri(x, proje.ayarlar) });
-    else {
+    if ($('#ucKapsam').value === 'proje') {
+      const yer = sus ? susluYerlesim(sonuc.yerlesim, true).yerlesim : sonuc.yerlesim;
+      P = Uc.projeParcalari(yer, { kapaksiz, renkFn });
+    } else {
       const m = seciliModul();
-      P = m && sonuc.modulSonuclari[m.id] ? Uc.modulParcalari(sonuc.modulSonuclari[m.id].geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) }) : [];
+      const s = m && sonuc.modulSonuclari[m.id];
+      if (!s || !s.geo) P = [];
+      else if (sus && !s.geo.panel) {
+        // Tek modül: kendi başına küçük bir yerleşim gibi süslenir
+        const yer = { tip: 'duz', duvarA: s.geo.W, duvarB: 0, tavan: 0, yerler: [{ modul: m, kaynak: m, duvar: 'A', sira: 'zemin', bas: 0, W: s.geo.W, D: s.geo.D, montaj: 0, geo: s.geo }] };
+        P = Uc.projeParcalari(susluYerlesim(yer, false).yerlesim, { kapaksiz, renkFn });
+      } else P = Uc.modulParcalari(s.geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) });
     }
     $('#ucAlan').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
   }
+  for (const id of ['#ucSus', '#ucSusYogun']) $(id).addEventListener('change', () => { susKaydet(); ucCiz(); });
+  $('#ucSusKaristir').addEventListener('click', () => { susTohum = (Math.random() * 1e9) >>> 0; $('#ucSus').checked = true; susKaydet(); ucCiz(); });
+  $('#ucSusEkle').addEventListener('click', () => {
+    if ($('#ucKapsam').value !== 'proje') $('#ucKapsam').value = 'proje';
+    const { moduller } = susluYerlesim(sonuc.yerlesim, true);
+    if (!moduller.length) { bildir('Eklenecek süs yok.'); return; }
+    for (const m of moduller) { const k = JSON.parse(JSON.stringify(m)); k.id = Hesap.yeniModul('alt').id; k.ad = benzersizAd(k.ad); proje.moduller.push(k); }
+    // Projeye eklenen süsler artık eşya olarak çizilir; otomatik süsleme kapatılır (çift görünmesin)
+    $('#ucSus').checked = false;
+    susKaydet();
+    bildir(`${moduller.length} eşya projeye eklendi (parça ve maliyet çıkmaz).`, true);
+    tumunuCiz(true);
+  });
   const ucIste = () => {
     if (ucBekleyen) return;
     ucBekleyen = true;

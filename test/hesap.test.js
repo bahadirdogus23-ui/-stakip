@@ -1327,9 +1327,18 @@ test('şeffaf bağlantılar: köşe takozu ve açılı T (çektirme) her blokta 
   // Gövde: 4 köşe × 3 takoz, baza: 4 köşe × 1 takoz; her takoz 4 vida
   assert.equal(blok('seffaf_kose'), 16);
   assert.equal(say(/köşe takozu/), 4 * blok('seffaf_kose'));
-  assert.equal(say(/çektirme/), 4 * blok('seffaf_t'));
+  assert.equal(say(/T bağlantı kulak/), 4 * blok('seffaf_t'));
   assert.equal((s.hirdavat.find((h) => h.kod === 'sunta_vidasi') || {}).adet, 4 * (blok('seffaf_kose') + blok('seffaf_t')));
   // Bloklar kenardan en az 50 mm içeride (vida 42 / 58)
   const yan = d.parcalar.find((x) => x.ad === 'Yan (sol)');
-  assert.ok(yan.delikler.filter((h) => /Şeffaf/.test(h.ad)).every((h) => h.x >= 40 && h.x <= yan.w - 40));
+  assert.ok(yan.delikler.filter((h) => /Şeffaf/.test(h.ad)).every((h) => h.x >= 30 && h.x <= yan.w - 30));
+  // İki parçalı T gövde bağlantısı: kulak vidaları ayarlanan aralıkta (32) ve birleşim çizgisinden 12 mm
+  const A2 = Hesap.varsayilanAyarlar();
+  A2.hirdavat.baglanti = 'seffaf_t';
+  const p2 = Hesap.projeyiNormallestir({ ayarlar: A2, moduller: [Hesap.yeniModul('komodin')] });
+  const s2 = Hesap.modulHesapla(p2.moduller[0], p2.ayarlar);
+  const alt = Delik2.delikPlani(p2.moduller[0], s2, p2.ayarlar).parcalar.find((x) => x.ad === 'Alt tabla');
+  const h2 = alt.delikler.filter((h) => /T bağlantı kulak/.test(h.ad) && h.x < 50).map((h) => h.y).sort((a, b) => a - b);
+  assert.equal(h2[1] - h2[0], 32);
+  assert.ok(alt.delikler.filter((h) => /T bağlantı kulak/.test(h.ad) && h.x < 50).every((h) => h.x === 18 + 12)); // yan iç yüzü + 12
 });
