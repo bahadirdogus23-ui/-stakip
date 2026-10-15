@@ -133,8 +133,12 @@
   /** Parça türünden malzeme rengine (verilmişse). */
   const TUR_RENK = { govde: 'govde', panel: 'govde', baza: 'govde', kapak: 'kapak', cekmece: 'kapak', ic: 'cekmece', arkalik: 'arkalik' };
   function renklendir(P, renk) {
-    if (!renk) return P;
-    for (const p of P) { const k = TUR_RENK[p.tur]; if (k && renk[k]) p.renk = renk[k]; }
+    for (const p of P) {
+      const k = TUR_RENK[p.tur];
+      if (k && !p.kul) p.kul = k === 'ic' ? 'cekmece' : k; // boyamada hangi kullanıma gider
+      if (renk && k && renk[k]) p.renk = renk[k];
+      if (p.satirRenk) p.renk = p.satirRenk; // satıra özel ön yüz rengi
+    }
     return P;
   }
   function modulParcalari(geo, secenek) {
@@ -336,6 +340,7 @@
     for (const s of geo.satirlar) {
       // Sürgü kapaklı dolapta çekmece önleri gövde içinde gömme
       const z1 = geo.surgu ? D - tk : zOn1;
+      const ilk = P.length;
       for (const o of s.onler) {
         const tur = s.tip === 'kapak' ? 'kapak' : 'cekmece';
         const y2Sol = hb + (o.y2sol != null ? o.y2sol : s.on.y2);
@@ -352,6 +357,11 @@
           const y2 = Math.max(...ys) + (yatay ? 6 : 10);
           P.push(kutu(x1, x2, y1, y2, z1 + tk + 18, z1 + tk + 28, 'kulp'));
         }
+      }
+      // Ön yüz parçaları satırına bağlanır (3B'de tıklayınca satır düzenlenir / boyanır)
+      for (let i = ilk; i < P.length; i++) {
+        P[i].satir = [s.sutun, s.no != null ? s.no : 0];
+        if (s.onRenk && (P[i].tur === 'kapak' || P[i].tur === 'cekmece')) P[i].satirRenk = s.onRenk;
       }
     }
     return P;
@@ -693,7 +703,8 @@
         // B duvarı: modül +X yönüne bakar; yerel sol (x=0) köşeden uzakta
         return [p[2], y.montaj + p[1], y.bas + y.W - p[0]];
       };
-      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}));
+      const kaynak = y.kaynak || y.modul;
+      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad, modulId: kaynak.id }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}));
     }
     return P;
   }

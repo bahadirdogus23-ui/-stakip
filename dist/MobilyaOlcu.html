@@ -362,6 +362,31 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 .uc-alan:active { cursor: grabbing; }
 .uc-alan:focus { outline: 2px solid var(--vurgu); outline-offset: 2px; }
 .uc-svg { width: 100%; height: 100%; }
+.uc-alan { position: relative; overflow: hidden; }
+.uc-tuval { width: 100%; height: 100%; display: block; }
+.uc-svgkap { width: 100%; height: 100%; display: flex; }
+.uc-alan.boya-modu { cursor: crosshair; }
+.uc-arac2 { margin-top: -4px; }
+.boya-cubuk { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 2px 6px; border: 1px solid var(--cizgi); border-radius: 8px; background: #fff; }
+.boya-cubuk input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--cizgi); border-radius: 6px; background: none; }
+.boya-cubuk select { max-width: 210px; }
+#ucBoya.aktif { background: var(--vurgu); color: #fff; }
+.palet { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.palet button, .renk-kare { width: 22px; height: 22px; min-width: 0; padding: 0; border-radius: 50%; border: 2px solid rgba(0,0,0,.12); cursor: pointer; }
+.palet button.secili, .renk-kare.secili { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+.uc-menu { position: absolute; z-index: 5; top: 8px; right: 8px; width: min(320px, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; background: rgba(255,255,255,.97); border: 1px solid var(--cizgi); border-radius: 10px; box-shadow: 0 8px 28px rgba(40,30,20,.22); padding: 10px 12px; font-size: 13px; cursor: default; user-select: text; }
+.uc-menu h4 { margin: 0 0 2px; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.uc-menu h4 button { padding: 0 6px; }
+.uc-menu .alt { color: var(--soluk, #7a7266); font-size: 12px; margin-bottom: 6px; }
+.uc-menu fieldset { border: 0; border-top: 1px solid var(--cizgi); margin: 6px 0 0; padding: 6px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.uc-menu legend { font-weight: 600; padding: 0 4px 0 0; font-size: 12px; }
+.uc-menu label { display: flex; flex-direction: column; font-size: 12px; gap: 2px; }
+.uc-menu label.onay { flex-direction: row; align-items: center; }
+.uc-menu .tam { grid-column: 1 / -1; }
+.uc-menu .paletler { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.uc-menu .dugmeler { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.uc-menu input, .uc-menu select { width: 100%; }
+.uc-ipucu { position: absolute; z-index: 4; pointer-events: none; background: rgba(40,32,22,.85); color: #fff; font-size: 12px; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
 /* Atölye */
 .atolye { align-items: start; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
 .kucuk-tablo td:not(:first-child), .kucuk-tablo th { white-space: nowrap; }
@@ -411,6 +436,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   .m-arac { gap: 6px; }
   input[type="checkbox"] { width: 20px; height: 20px; }
   .uc-alan { touch-action: pan-y; height: 60vh; }
+  .uc-menu { top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 55%; border-radius: 12px 12px 0 0; }
   /* Kesim listesinde testereciye gereken sütunlar öne: net ölçüler gizli, notlar kısaltılır */
   .liste.kesim .net { display: none; }
   .liste.kesim .parca-not { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -594,9 +620,25 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
             <button data-uc="ust" class="ikincil">Üstten</button>
             <button data-uc="yak" class="ikincil" title="Yakınlaştır">＋</button>
             <button data-uc="uzak" class="ikincil" title="Uzaklaştır">－</button>
-            <span class="not">Döndürmek için sürükleyin; yakınlaştırmak için fare tekerleği veya iki parmak.</span>
           </div>
-          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"></div>
+          <div class="arac-satir uc-arac uc-arac2">
+            <label class="onay" title="WebGL: gerçek derinlik, gölge, LED ışığı; kapalıysa çizim görünüşü"><input type="checkbox" id="ucGercek" checked> Gerçekçi</label>
+            <label class="onay"><input type="checkbox" id="ucPersp" checked> Perspektif</label>
+            <label class="onay"><input type="checkbox" id="ucOda" checked> Zemin + duvar</label>
+            <span class="boya-cubuk" role="group" aria-label="Boya">
+              <button id="ucBoya" class="ikincil" title="Boya modu: renk seçin, sonra 3B'de parçalara tıklayın">🎨 Boya</button>
+              <span id="ucPalet" class="palet"></span>
+              <input type="color" id="ucOzelRenk" value="#8a5a3c" title="Özel renk">
+              <select id="ucBoyaKapsam" aria-label="Boyama kapsamı" title="Tıklanan parçada neyin boyanacağı">
+                <option value="akilli">Akıllı: ön yüzde satır, gövdede modül</option>
+                <option value="satir">Yalnız bu ön yüz satırı</option>
+                <option value="modul">Bu modülün tamamı (o kullanım)</option>
+                <option value="proje">Tüm proje (o kullanım)</option>
+              </select>
+            </span>
+            <span class="not">Sürükle: döndür · sağ tuş / Shift / iki parmak: kaydır · tekerlek: yakınlaştır · tıkla: düzenle</span>
+          </div>
+          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"><canvas id="ucTuval" class="uc-tuval"></canvas><div id="ucSvg" class="uc-svgkap"></div><div id="ucMenu" class="uc-menu" hidden></div><div id="ucIpucu" class="uc-ipucu" hidden></div></div>
         </div>
 
         <div class="sekme" id="sekme-atolye">
@@ -1328,6 +1370,9 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
       islemFiyatiM2: sayiAl(m && m.islemFiyatiM2, 0, 0),
       // Görünüş rengi (3B ve önizleme); verilmemişse addan tahmin edilir
       renk: typeof (m && m.renk) === 'string' && /^#[0-9a-f]{6}$/i.test(m.renk) ? m.renk.toLowerCase() : varsayilanRenk(m && m.ad, m && m.tur),
+      // Boyamayla anında oluşan renk tabakası: kaynak malzemenin aynısı, yalnız rengi farklı
+      oto: !!(m && m.oto),
+      kaynak: m && m.oto && typeof m.kaynak === 'string' ? m.kaynak.slice(0, 40) : null,
     };
   }
   /** Malzeme adından görünüş rengi (ceviz, meşe, antrasit, lake renkleri...). */
@@ -1372,6 +1417,8 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
       altTablaYok: !!s.altTablaYok, // satırın altında sabit tabla olmasın
       // Askı: boru (duvara paralel, derin dolap), kanca (portmanto), önden (derinlemesine çekilir ray, sığ dolap)
       askiTuru: secenekAl(s.askiTuru, ['boru', 'kanca', 'onden'], 'boru'),
+      // Bu satırın ön yüzlerine (kapak/çekmece önü) özel malzeme ya da renk tabakası
+      onMalzeme: typeof s.onMalzeme === 'string' && s.onMalzeme ? s.onMalzeme.slice(0, 40) : null,
     };
   }
   /** "300, 650" ya da [300, 650] → sıralı, tekrarsız, en fazla 20 pozitif sayı. */
@@ -1607,6 +1654,47 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     return R2;
   }
 
+  /** Boyama paleti: güncel mobilya renkleri (ad, renk). */
+  const RENK_PALETI = [
+    ['Beyaz', '#f2efe8'], ['Krem', '#ece4d4'], ['Kaşmir', '#d8ccb8'], ['Taş bej', '#c8b9a2'], ['Vizon', '#a39382'],
+    ['Mat gri', '#9a9a96'], ['Füme', '#5f6163'], ['Antrasit', '#4b4d50'], ['Mat siyah', '#2d2d2f'],
+    ['Açık meşe', '#d9bf98'], ['Doğal meşe', '#c9a57a'], ['Ceviz', '#8a5a3c'], ['Moka', '#6b5545'],
+    ['Adaçayı', '#9db09a'], ['Petrol yeşili', '#3f5a55'], ['Gece mavisi', '#34465f'], ['Pudra', '#d9b8b0'], ['Mermer beyaz', '#ebe8e2'],
+  ];
+  const RENK_KELIME = /\s*\b(beyaz|krem|kaşmir|kasmir|taş bej|bej|vizon|mat gri|gri|füme|fume|antrasit|mat siyah|siyah|açık meşe|doğal meşe|meşe|ceviz|moka|adaçayı yeşili|adaçayı|petrol yeşili|yeşil|gece mavisi|mavi|pudra|mermer beyaz)\b/giu;
+  /**
+   * Renk tabakası: kaynak malzemenin (kalınlık, plaka, fiyat aynı) istenen renkteki eşi. Varsa yeniden
+   * kullanılır, yoksa anında oluşturulur (oto). Kesim ve plaka listesi malzemeye göre ayrıldığı için her
+   * renk kendi tabakasında çıkar. Dönüş: malzeme id.
+   */
+  function renkTabakasi(ayar, kaynakId, renk, renkAd) {
+    const r = String(renk || '').toLowerCase();
+    if (!/^#[0-9a-f]{6}$/.test(r)) return kaynakId;
+    const k0 = malzemeBul(ayar, kaynakId) || ayar.malzemeler[0];
+    const kaynak = (k0.oto && malzemeBul(ayar, k0.kaynak)) || k0;
+    if ((kaynak.renk || '').toLowerCase() === r) return kaynak.id;
+    const ayni = ayar.malzemeler.find((m) => m.renk === r && m.kalinlik === kaynak.kalinlik && m.tur === kaynak.tur && (m.kaynak === kaynak.id || !m.oto));
+    if (ayni) return ayni.id;
+    const ad = (kaynak.ad.replace(RENK_KELIME, '').replace(/\s{2,}/g, ' ').trim() + ' – ' + (renkAd || r)).slice(0, 80);
+    const m = Object.assign({}, kaynak, { id: yeniId('mz'), ad, renk: r, oto: true, kaynak: kaynak.id });
+    if (ayar.malzemeler.length >= 100) return kaynak.id;
+    ayar.malzemeler.push(m);
+    return m.id;
+  }
+  /** Projede hiçbir yerde kullanılmayan otomatik renk tabakalarını siler. Dönüş: silinen sayısı. */
+  function otoTabakalariTemizle(proje) {
+    const A = proje.ayarlar;
+    const kul = new Set(Object.values(A.kullanim || {}));
+    for (const m of proje.moduller) {
+      for (const v of Object.values(m.malzeme || {})) kul.add(v);
+      for (const c of m.sutunlar || []) for (const r of c.satirlar || []) if (r.onMalzeme) kul.add(r.onMalzeme);
+    }
+    for (const sc of (proje.teklif && proje.teklif.secenekler) || []) for (const v of Object.values(sc.kullanim || {})) kul.add(v);
+    const once = A.malzemeler.length;
+    A.malzemeler = A.malzemeler.filter((m) => !m.oto || kul.has(m.id));
+    return once - A.malzemeler.length;
+  }
+
   /** Modülün hırdavat seçimleri (modül seçimi > proje varsayılanı). */
   function hirdavatCoz(modul, ayar) {
     const sonuc = {};
@@ -1755,15 +1843,17 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     const parcalar = [];
     const hirdavat = [];
     const uyarilar = [];
+    let onMalz = null; // satıra özel ön yüz malzemesi (kapak kullanımının yerine geçer)
     return {
       parcalar, hirdavat, uyarilar,
+      onMalzemeAyarla(m) { onMalz = m || null; },
       ekle(ad, kullanim, boy, en, adet, bant, ek) {
         if (adet <= 0) return null;
         if (!(boy > 0) || !(en > 0)) {
           uyarilar.push(`"${ad}" parçasının ölçüsü geçersiz çıktı (${r1(boy)} x ${r1(en)}).`);
           return null;
         }
-        const m = M[kullanim];
+        const m = kullanim === 'kapak' && onMalz ? onMalz : M[kullanim];
         const cam = camMi(m);
         const p = Object.assign({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: cam ? { u: 0, k: 0 } : bant || { u: 0, k: 0 }, damar: !cam && !!m.damar, cam }, ek || {});
         // Atölye notlarında Türkçe ondalık virgül
@@ -2278,6 +2368,11 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
         for (let i = 0; i < satirlar.length; i++) {
           const s = satirlar[i];
           const on = onlar[i];
+          // Satıra özel ön yüz malzemesi (boyama): aynı kalınlıkta, cam olmayan malzeme
+          const onM = s.onMalzeme ? malzemeBul(A, s.onMalzeme) : null;
+          const onGecerli = onM && !camMi(onM) && Math.abs(say(onM.kalinlik, 0) - tk) < 0.01;
+          if (onM && !onGecerli) uyarilar.push(`${ek(i + 1)}: ön yüz malzemesi "${onM.ad}" kapak kalınlığından (${tk} mm) farklı ya da cam; proje kapak malzemesi kullanıldı.`);
+          T.onMalzemeAyarla(onGecerli ? onM : null);
           const icUst = i === 0 ? Hc - t : sinirlar[i - 1].panel ? sinirlar[i - 1].y - t / 2 : sinirlar[i - 1].y;
           const icAlt = i === satirlar.length - 1 ? (altYok ? 0 : t) : sinirlar[i].panel ? sinirlar[i].y + t / 2 : sinirlar[i].y;
           const icH = icUst - icAlt;
@@ -2498,6 +2593,9 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
               cekmeceIciEkle(s.cekmeceIc, bolum, k.kutuW - 2 * tc);
             }
           }
+          T.onMalzemeAyarla(null);
+          geo.no = i;
+          if (onGecerli) geo.onRenk = onM.renk || varsayilanRenk(onM.ad, onM.tur);
           geoSatirlar.push(geo);
           tumSatirlar.push(geo);
         }
@@ -3207,6 +3305,9 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     kulpDelikleri,
     hirdavatGecerli,
     modulRenkleri,
+    renkTabakasi,
+    otoTabakalariTemizle,
+    RENK_PALETI,
     varsayilanRenk,
     rafListesi,
     kulpBaglami,
@@ -7168,8 +7269,12 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
   /** Parça türünden malzeme rengine (verilmişse). */
   const TUR_RENK = { govde: 'govde', panel: 'govde', baza: 'govde', kapak: 'kapak', cekmece: 'kapak', ic: 'cekmece', arkalik: 'arkalik' };
   function renklendir(P, renk) {
-    if (!renk) return P;
-    for (const p of P) { const k = TUR_RENK[p.tur]; if (k && renk[k]) p.renk = renk[k]; }
+    for (const p of P) {
+      const k = TUR_RENK[p.tur];
+      if (k && !p.kul) p.kul = k === 'ic' ? 'cekmece' : k; // boyamada hangi kullanıma gider
+      if (renk && k && renk[k]) p.renk = renk[k];
+      if (p.satirRenk) p.renk = p.satirRenk; // satıra özel ön yüz rengi
+    }
     return P;
   }
   function modulParcalari(geo, secenek) {
@@ -7371,6 +7476,7 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     for (const s of geo.satirlar) {
       // Sürgü kapaklı dolapta çekmece önleri gövde içinde gömme
       const z1 = geo.surgu ? D - tk : zOn1;
+      const ilk = P.length;
       for (const o of s.onler) {
         const tur = s.tip === 'kapak' ? 'kapak' : 'cekmece';
         const y2Sol = hb + (o.y2sol != null ? o.y2sol : s.on.y2);
@@ -7387,6 +7493,11 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
           const y2 = Math.max(...ys) + (yatay ? 6 : 10);
           P.push(kutu(x1, x2, y1, y2, z1 + tk + 18, z1 + tk + 28, 'kulp'));
         }
+      }
+      // Ön yüz parçaları satırına bağlanır (3B'de tıklayınca satır düzenlenir / boyanır)
+      for (let i = ilk; i < P.length; i++) {
+        P[i].satir = [s.sutun, s.no != null ? s.no : 0];
+        if (s.onRenk && (P[i].tur === 'kapak' || P[i].tur === 'cekmece')) P[i].satirRenk = s.onRenk;
       }
     }
     return P;
@@ -7728,7 +7839,8 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
         // B duvarı: modül +X yönüne bakar; yerel sol (x=0) köşeden uzakta
         return [p[2], y.montaj + p[1], y.bas + y.W - p[0]];
       };
-      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}));
+      const kaynak = y.kaynak || y.modul;
+      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad, modulId: kaynak.id }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}));
     }
     return P;
   }
@@ -7899,6 +8011,543 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
   }
 
   return { modulParcalari, projeParcalari, ciz, kutu, prizma, yolNoktalari, yuvarlakDikdortgen, newell, siraBul, zarf, cokgenOrtusur, RENK };
+});
+
+</script>
+  <script>
+/*
+ * WebGL2 3B görüntüleyici (etkileşimli 3B sekmesi için). Uc.modulParcalari / Uc.projeParcalari'nın
+ * parça listesini çizer: derinlik tamponu (üst üste binme hatası olmaz), gölge haritası, LED şeritlerin
+ * yüzeylere sıcak ışık vurması, zemin ve duvar, keskin kenar çizgileri, saydam cam, tıklayarak seçim.
+ * WebGL2 yoksa olustur() null döner; uygulama SVG çizimine (Uc.ciz) geri düşer. Baskı/PDF SVG ile kalır.
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Sahne = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const YUZLER = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]];
+  const RENK = {
+    govde: '#efe6d6', ic: '#e4d9c4', panel: '#d6c3a3', kapak: '#e7cfa8', cekmece: '#dcc19a',
+    cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', ayak: '#555555', kulp: '#6f6658', led: '#ffd27a', baza: '#c9bba3', nesne: '#cccccc',
+  };
+  const LED_MAX = 32;
+
+  const hexRgb = (h) => {
+    const x = /^#[0-9a-f]{3}$/i.test(h) ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h;
+    return [1, 3, 5].map((i) => (parseInt(String(x).slice(i, i + 2), 16) || 0) / 255);
+  };
+  const alt = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const capraz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const nokta = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const birim = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  function newell(pts) {
+    const n = [0, 0, 0];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      n[0] += (a[1] - b[1]) * (a[2] + b[2]);
+      n[1] += (a[2] - b[2]) * (a[0] + b[0]);
+      n[2] += (a[0] - b[0]) * (a[1] + b[1]);
+    }
+    return n;
+  }
+
+  // ---------- 4×4 matris (sütun öncelikli) ----------
+  const carp = (a, b) => {
+    const o = new Float32Array(16);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+      let s = 0;
+      for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k];
+      o[i * 4 + j] = s;
+    }
+    return o;
+  };
+  const orto = (l, r, b, t, n, f) => new Float32Array([2 / (r - l), 0, 0, 0, 0, 2 / (t - b), 0, 0, 0, 0, -2 / (f - n), 0, -(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1]);
+  const perspektif = (fy, asp, n, f) => { const t = 1 / Math.tan(fy / 2); return new Float32Array([t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, (2 * f * n) / (n - f), 0]); };
+  /** Satırları x, y, z eksenleri olan dönüş + öteleme (dünya → göz). */
+  const bakisMatrisi = (X, Y, Z, goz) => new Float32Array([
+    X[0], Y[0], Z[0], 0, X[1], Y[1], Z[1], 0, X[2], Y[2], Z[2], 0,
+    -nokta(X, goz), -nokta(Y, goz), -nokta(Z, goz), 1,
+  ]);
+
+  // ---------- Gölgelendiriciler ----------
+  const VS = `#version 300 es
+in vec3 aPos; in vec3 aNor; in vec4 aRenk;
+uniform mat4 uVP; uniform mat4 uIsikVP;
+out vec3 vPos; out vec3 vNor; out vec4 vRenk; out vec4 vIsik;
+void main() { vPos = aPos; vNor = aNor; vRenk = aRenk; vIsik = uIsikVP * vec4(aPos, 1.0); gl_Position = uVP * vec4(aPos, 1.0); }`;
+  const FS = `#version 300 es
+precision highp float;
+precision highp sampler2DShadow;
+in vec3 vPos; in vec3 vNor; in vec4 vRenk; in vec4 vIsik;
+uniform sampler2DShadow uGolge; uniform float uGolgeVar; uniform vec2 uGolgeAdim;
+uniform vec3 uIsikYon; uniform vec3 uGoz; uniform float uOrto; uniform vec3 uBakis;
+uniform int uLedN; uniform vec3 uLedA[${LED_MAX}]; uniform vec3 uLedB[${LED_MAX}];
+uniform vec4 uVurgu; uniform float uAlfaCarpan;
+out vec4 renk;
+void main() {
+  vec3 n = normalize(vNor);
+  vec3 v = uOrto > 0.5 ? uBakis : normalize(uGoz - vPos);
+  if (dot(n, v) < 0.0) n = -n;
+  if (vRenk.a > 1.5) { renk = vec4(mix(vRenk.rgb * 1.15, uVurgu.rgb, uVurgu.a), 1.0); return; } // LED: kendinden ışıklı
+  float g = 1.0;
+  if (uGolgeVar > 0.5) {
+    vec3 p = vIsik.xyz / vIsik.w * 0.5 + 0.5;
+    if (p.x > 0.0 && p.x < 1.0 && p.y > 0.0 && p.y < 1.0 && p.z < 1.0) {
+      float s = 0.0;
+      for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) s += texture(uGolge, vec3(p.xy + vec2(float(i), float(j)) * uGolgeAdim, p.z - 0.0015));
+      g = s / 9.0;
+    }
+  }
+  float d = max(dot(n, uIsikYon), 0.0);
+  vec3 gok = mix(vec3(0.80, 0.79, 0.77), vec3(1.0, 0.995, 0.98), n.y * 0.5 + 0.5);
+  // Gölge tam karanlık değil (oda ışığı): doğrudan ışığın %35'i kalır
+  vec3 c = vRenk.rgb * (0.64 * gok + 0.50 * d * mix(0.35, 1.0, g) * vec3(1.0, 0.97, 0.92));
+  vec3 h = normalize(uIsikYon + v);
+  c += vec3(0.10) * pow(max(dot(n, h), 0.0), 48.0) * g;
+  // LED şeritler: en yakın şerit noktasından sıcak ışık
+  for (int i = 0; i < ${LED_MAX}; i++) {
+    if (i >= uLedN) break;
+    vec3 a = uLedA[i]; vec3 b = uLedB[i]; vec3 ab = b - a;
+    float t = clamp(dot(vPos - a, ab) / max(dot(ab, ab), 1e-3), 0.0, 1.0);
+    vec3 l = a + ab * t - vPos;
+    float r = length(l);
+    float k = max(dot(n, l / max(r, 1e-3)), 0.0) / (1.0 + (r / 160.0) * (r / 160.0));
+    c += vRenk.rgb * vec3(1.0, 0.72, 0.38) * k * 0.95;
+  }
+  c = mix(c, uVurgu.rgb, uVurgu.a);
+  renk = vec4(c, min(vRenk.a, 1.0) * uAlfaCarpan);
+}`;
+  const VS_DUZ = `#version 300 es
+in vec3 aPos; uniform mat4 uVP;
+void main() { gl_Position = uVP * vec4(aPos, 1.0); }`;
+  const FS_DUZ = `#version 300 es
+precision highp float; uniform vec4 uRenk; out vec4 renk;
+void main() { renk = uRenk; }`;
+
+  function program(gl, vs, fs) {
+    const yap = (tur, kaynak) => {
+      const s = gl.createShader(tur);
+      gl.shaderSource(s, kaynak);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    };
+    const p = gl.createProgram();
+    gl.attachShader(p, yap(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, yap(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {};
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); const ad = a.name.replace(/\[0\]$/, ''); u[ad] = gl.getUniformLocation(p, a.name); }
+    return { p, u, a: (ad) => gl.getAttribLocation(p, ad) };
+  }
+
+  /** Parça listesinden üçgen, kenar ve LED verisi. */
+  function agOlustur(P) {
+    const opak = [];
+    const saydam = [];
+    P.forEach((p, i) => { if (p.saydam && p.tur !== 'led') saydam.push(i); else opak.push(i); });
+    const sira = opak.concat(saydam);
+    const V = [];
+    const C = [];
+    const N = [];
+    const K = [];
+    const araliklar = new Array(P.length);
+    const kenarAraliklari = new Array(P.length);
+    const merkezler = new Array(P.length);
+    const ledler = [];
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (const i of sira) {
+      const p = P[i];
+      const v = p.sk ? p.sk.v : p.k;
+      const F = p.sk ? p.sk.f : YUZLER;
+      const m = [0, 1, 2].map((k) => v.reduce((s, q) => s + q[k], 0) / v.length);
+      merkezler[i] = m;
+      for (const q of v) for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k], q[k]); max[k] = Math.max(max[k], q[k]); }
+      const rgb = hexRgb(p.renk || RENK[p.tur] || RENK.govde);
+      const a = p.tur === 'led' ? 2 : p.saydam || 1;
+      const bas = V.length / 3;
+      const yuzN = [];
+      for (const f of F) {
+        const pts = f.map((j) => v[j]);
+        let n = newell(pts);
+        if (Math.hypot(n[0], n[1], n[2]) < 1e-9) { yuzN.push(null); continue; }
+        n = birim(n);
+        const fm = [0, 1, 2].map((k) => pts.reduce((s, q) => s + q[k], 0) / pts.length);
+        if (nokta(n, alt(fm, m)) < 0) n = n.map((x) => -x);
+        yuzN.push(n);
+        for (let t = 1; t + 1 < pts.length; t++) {
+          for (const q of [pts[0], pts[t], pts[t + 1]]) { V.push(q[0], q[1], q[2]); N.push(n[0], n[1], n[2]); C.push(rgb[0], rgb[1], rgb[2], a); }
+        }
+      }
+      araliklar[i] = [bas, V.length / 3 - bas];
+      // Keskin kenarlar: tek yüze ait ya da yüz normalleri 30°'den fazla ayrılan kenarlar
+      const kBas = K.length / 3;
+      if (p.tur !== 'led') {
+        const kenar = new Map();
+        F.forEach((f, fi) => {
+          if (!yuzN[fi]) return;
+          for (let j = 0; j < f.length; j++) {
+            const a1 = f[j];
+            const b1 = f[(j + 1) % f.length];
+            const key = a1 < b1 ? a1 + ',' + b1 : b1 + ',' + a1;
+            if (!kenar.has(key)) kenar.set(key, { a: a1, b: b1, n: [] });
+            kenar.get(key).n.push(yuzN[fi]);
+          }
+        });
+        for (const e of kenar.values()) {
+          if (e.n.length === 2 && nokta(e.n[0], e.n[1]) > 0.87) continue;
+          const q1 = v[e.a];
+          const q2 = v[e.b];
+          K.push(q1[0], q1[1], q1[2], q2[0], q2[1], q2[2]);
+        }
+      } else {
+        // LED şeridi: kutunun en uzun ekseni boyunca bir doğru parçası
+        const b = [0, 1, 2].map((k) => [Math.min(...v.map((q) => q[k])), Math.max(...v.map((q) => q[k]))]);
+        const ax = [0, 1, 2].reduce((e, k) => (b[k][1] - b[k][0] > b[e][1] - b[e][0] ? k : e), 0);
+        const A = m.slice();
+        const B = m.slice();
+        A[ax] = b[ax][0];
+        B[ax] = b[ax][1];
+        A[1] -= 8; B[1] -= 8; // şeridin hemen altından yayılır
+        ledler.push([A, B]);
+      }
+      kenarAraliklari[i] = [kBas, K.length / 3 - kBas];
+    }
+    return { V: new Float32Array(V), N: new Float32Array(N), C: new Float32Array(C), K: new Float32Array(K), araliklar, kenarAraliklari, merkezler, opakSayi: opak.length, opak, saydam, ledler, min, max };
+  }
+
+  function olustur(canvas) {
+    let gl = null;
+    try { gl = canvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true, alpha: false }); } catch (e) { gl = null; }
+    if (!gl) return null;
+    let pr, prDuz;
+    try {
+      pr = program(gl, VS, FS);
+      prDuz = program(gl, VS_DUZ, FS_DUZ);
+    } catch (e) {
+      if (typeof console !== 'undefined') console.warn('3B gölgelendirici derlenemedi:', e.message);
+      return null;
+    }
+    const tampon = () => gl.createBuffer();
+    const b = { V: tampon(), N: tampon(), C: tampon(), K: tampon(), O: tampon() };
+    // Gölge haritası
+    const GB = 2048;
+    const golgeTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, golgeTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, GB, GB);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+    const golgeFB = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, golgeFB);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, golgeTex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // Seçim tamponu (parça kimliği renk olarak)
+    const secFB = gl.createFramebuffer();
+    const secRenk = gl.createRenderbuffer();
+    const secDerin = gl.createRenderbuffer();
+    let secBoyut = [0, 0];
+
+    let ag = null;
+    let ortam = null; // zemin + duvarlar: [baslangic, sayi]
+    let P = [];
+    let golgeGuncel = false;
+    let isikVP = null;
+    const IS = birim([-0.32, 1, 0.78]); // ışık yönü (yüzeyden ışığa)
+    const S = {
+      gorus: { yaw: -35, pitch: 22, yakin: 1, kx: 0, ky: 0, perspektif: true },
+      vurgular: new Map(), // parça indisi → [r, g, b, a]
+    };
+
+    function boyutla() {
+      const dpr = Math.min(2, (typeof devicePixelRatio !== 'undefined' && devicePixelRatio) || 1);
+      const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    }
+
+    /**
+     * Parçaları yükler. secenek: { zemin, arkaDuvar, solDuvar, tavan, golge }
+     */
+    function yukle(parcalar, secenek) {
+      const o = secenek || {};
+      P = parcalar || [];
+      ag = agOlustur(P);
+      // Ortam: zemin ve duvarlar (tek yüzlü; arkadan bakınca görünmez)
+      const E = [];
+      const EN = [];
+      const EC = [];
+      if (P.length) {
+        const [x1, y1, z1] = ag.min;
+        const [x2, y2, z2] = ag.max;
+        const pay = Math.max(600, (x2 - x1) * 0.35, (z2 - z1) * 0.8);
+        const zy = Math.min(0, y1) - 0.5;
+        const dortgen = (q, n, renk) => {
+          for (const j of [0, 1, 2, 0, 2, 3]) { E.push(...q[j]); EN.push(...n); EC.push(...renk, 1); }
+        };
+        const zRenk = hexRgb(o.zeminRenk || '#e9e3d8');
+        const dRenk = hexRgb(o.duvarRenk || '#f3efe8');
+        const zx1 = o.solDuvar ? x1 : x1 - pay;
+        const zz1 = o.arkaDuvar ? z1 : z1 - pay;
+        if (o.zemin !== false) dortgen([[zx1, zy, z2 + pay], [x2 + pay, zy, z2 + pay], [x2 + pay, zy, zz1], [zx1, zy, zz1]], [0, 1, 0], zRenk);
+        const dh = Math.max(o.tavan || 0, y2 + 350);
+        if (o.arkaDuvar) dortgen([[zx1, zy, z1 - 0.5], [x2 + pay, zy, z1 - 0.5], [x2 + pay, dh, z1 - 0.5], [zx1, dh, z1 - 0.5]], [0, 0, 1], dRenk);
+        if (o.solDuvar) dortgen([[x1 - 0.5, zy, z2 + pay], [x1 - 0.5, zy, zz1], [x1 - 0.5, dh, zz1], [x1 - 0.5, dh, z2 + pay]], [1, 0, 0], dRenk.map((c) => c * 0.97));
+      }
+      const tum = (a, e) => { const o2 = new Float32Array(a.length + e.length); o2.set(a); o2.set(e, a.length); return o2; };
+      const n0 = ag.V.length / 3;
+      ortam = [n0, E.length / 3];
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.V); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.V, E), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.N); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.N, EN), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.C); gl.bufferData(gl.ARRAY_BUFFER, tum(ag.C, EC), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.K); gl.bufferData(gl.ARRAY_BUFFER, ag.K, gl.STATIC_DRAW);
+      S.golgeVar = o.golge !== false;
+      golgeGuncel = false;
+    }
+
+    /** Görünüşe göre kamera: { VP, goz, bakis, orto } */
+    function kamera() {
+      boyutla();
+      const g = S.gorus;
+      const yaw = (g.yaw * Math.PI) / 180;
+      const pitch = (g.pitch * Math.PI) / 180;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+      // Uc.ciz ile aynı dönüş: göz eksenleri dünya koordinatında
+      const X = [cy, 0, sy];
+      const Y = [sp * sy, cp, -sp * cy];
+      const Z = [-cp * sy, sp, cp * cy];
+      const asp = canvas.width / canvas.height;
+      const mn = ag ? ag.min : [-500, 0, -500];
+      const mx = ag ? ag.max : [500, 1000, 500];
+      const M = [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2];
+      // Sınır kutusu köşelerinin göz eksenlerindeki yayılımı
+      let ax1 = Infinity, ax2 = -Infinity, ay1 = Infinity, ay2 = -Infinity, az1 = Infinity, az2 = -Infinity;
+      for (const x of [mn[0], mx[0]]) for (const y of [mn[1], mx[1]]) for (const z of [mn[2], mx[2]]) {
+        const q = [x - M[0], y - M[1], z - M[2]];
+        const a = nokta(q, X), bb = nokta(q, Y), c = nokta(q, Z);
+        ax1 = Math.min(ax1, a); ax2 = Math.max(ax2, a); ay1 = Math.min(ay1, bb); ay2 = Math.max(ay2, bb); az1 = Math.min(az1, c); az2 = Math.max(az2, c);
+      }
+      const yarimY = Math.max((ay2 - ay1) / 2, (ax2 - ax1) / 2 / asp) * 1.08 / Math.max(0.2, g.yakin || 1);
+      const merkez = [M[0] + X[0] * ((ax1 + ax2) / 2 + g.kx) + Y[0] * ((ay1 + ay2) / 2 + g.ky), M[1] + X[1] * ((ax1 + ax2) / 2 + g.kx) + Y[1] * ((ay1 + ay2) / 2 + g.ky), M[2] + X[2] * ((ax1 + ax2) / 2 + g.kx) + Y[2] * ((ay1 + ay2) / 2 + g.ky)];
+      const R = Math.max(1, Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]));
+      let VP, goz;
+      if (g.perspektif) {
+        const fov = (34 * Math.PI) / 180;
+        const uzak = yarimY / Math.tan(fov / 2) + az2;
+        goz = merkez.map((c, k) => c + Z[k] * uzak);
+        VP = carp(perspektif(fov, asp, Math.max(10, uzak - R * 1.5), uzak + R * 3), bakisMatrisi(X, Y, Z, goz));
+      } else {
+        goz = merkez.map((c, k) => c + Z[k] * R * 2);
+        VP = carp(orto(-yarimY * asp, yarimY * asp, -yarimY, yarimY, R * 0.2, R * 5), bakisMatrisi(X, Y, Z, goz));
+      }
+      return { VP, goz, bakis: Z, orto: !g.perspektif, X, Y, yarimY };
+    }
+
+    function golgeCiz() {
+      if (!ag || !ag.opakSayi) return;
+      const [x1, y1, z1] = ag.min;
+      const [x2, y2, z2] = ag.max;
+      const M = [(x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2];
+      const R = Math.max(1, Math.hypot(x2 - x1, y2 - y1, z2 - z1)) * 0.75;
+      const Z = IS;
+      const X = birim(capraz([0, 1, 0], Z));
+      const Y = capraz(Z, X);
+      const goz = M.map((c, k) => c + Z[k] * R * 2);
+      isikVP = carp(orto(-R, R, -R, R, R * 0.5, R * 3.5), bakisMatrisi(X, Y, Z, goz));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, golgeFB);
+      gl.viewport(0, 0, GB, GB);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+      gl.useProgram(prDuz.p);
+      gl.uniformMatrix4fv(prDuz.u.uVP, false, isikVP);
+      gl.colorMask(false, false, false, false);
+      gl.enable(gl.POLYGON_OFFSET_FILL);
+      gl.polygonOffset(2, 4);
+      baglaKonum(prDuz);
+      // Opak parçalar (LED hariç) gölge düşürür
+      for (const i of ag.opak) if (P[i].tur !== 'led') gl.drawArrays(gl.TRIANGLES, ag.araliklar[i][0], ag.araliklar[i][1]);
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+      gl.colorMask(true, true, true, true);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      golgeGuncel = true;
+    }
+
+    function baglaKonum(pg) {
+      const a = pg.a('aPos');
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.V);
+      gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 0, 0);
+    }
+    function baglaHepsi() {
+      for (const [ad, buf, n] of [['aPos', b.V, 3], ['aNor', b.N, 3], ['aRenk', b.C, 4]]) {
+        const a = pr.a(ad);
+        if (a < 0) continue;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.enableVertexAttribArray(a);
+        gl.vertexAttribPointer(a, n, gl.FLOAT, false, 0, 0);
+      }
+    }
+
+    function ciz() {
+      boyutla();
+      const arka = hexRgb('#f6f3ee');
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(arka[0], arka[1], arka[2], 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      if (!ag || !P.length) return;
+      if (S.golgeVar && !golgeGuncel) golgeCiz();
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      const k = kamera();
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      gl.useProgram(pr.p);
+      baglaHepsi();
+      const u = pr.u;
+      gl.uniformMatrix4fv(u.uVP, false, k.VP);
+      gl.uniformMatrix4fv(u.uIsikVP, false, isikVP || new Float32Array(16));
+      gl.uniform3fv(u.uIsikYon, IS);
+      gl.uniform3fv(u.uGoz, k.goz);
+      gl.uniform3fv(u.uBakis, k.bakis);
+      gl.uniform1f(u.uOrto, k.orto ? 1 : 0);
+      gl.uniform1f(u.uGolgeVar, S.golgeVar && isikVP ? 1 : 0);
+      gl.uniform2f(u.uGolgeAdim, 1 / GB, 1 / GB);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, golgeTex);
+      gl.uniform1i(u.uGolge, 0);
+      const L = ag.ledler.slice(0, LED_MAX);
+      gl.uniform1i(u.uLedN, L.length);
+      if (L.length) {
+        const A = new Float32Array(LED_MAX * 3);
+        const B = new Float32Array(LED_MAX * 3);
+        L.forEach(([a, bb], i) => { A.set(a, i * 3); B.set(bb, i * 3); });
+        gl.uniform3fv(u.uLedA, A);
+        gl.uniform3fv(u.uLedB, B);
+      }
+      gl.uniform1f(u.uAlfaCarpan, 1);
+      const vurgusuz = () => gl.uniform4f(u.uVurgu, 0, 0, 0, 0);
+      vurgusuz();
+      // Ortam (tek yüzlü)
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.BACK);
+      if (ortam[1]) gl.drawArrays(gl.TRIANGLES, ortam[0], ortam[1]);
+      gl.disable(gl.CULL_FACE);
+      // Opak parçalar (kenar çizgileri üste çıksın diye biraz geride)
+      gl.enable(gl.POLYGON_OFFSET_FILL);
+      gl.polygonOffset(1, 1);
+      if (ag.opakSayi) {
+        const ilk = ag.araliklar[ag.opak[0]][0];
+        const son = ag.araliklar[ag.opak[ag.opak.length - 1]];
+        gl.drawArrays(gl.TRIANGLES, ilk, son[0] + son[1] - ilk);
+      }
+      for (const [i, r] of S.vurgular) {
+        if (!ag.araliklar[i] || P[i].saydam) continue;
+        gl.uniform4f(u.uVurgu, r[0], r[1], r[2], r[3]);
+        gl.drawArrays(gl.TRIANGLES, ag.araliklar[i][0], ag.araliklar[i][1]);
+      }
+      vurgusuz();
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+      // Kenar çizgileri
+      gl.useProgram(prDuz.p);
+      gl.uniformMatrix4fv(prDuz.u.uVP, false, k.VP);
+      gl.uniform4f(prDuz.u.uRenk, 0.16, 0.13, 0.09, 0.55);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.disableVertexAttribArray(pr.a('aNor'));
+      gl.disableVertexAttribArray(pr.a('aRenk'));
+      const ka = prDuz.a('aPos');
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.K);
+      gl.enableVertexAttribArray(ka);
+      gl.vertexAttribPointer(ka, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINES, 0, ag.K.length / 3);
+      // Seçili parçaların kenarları turuncu
+      if (S.vurgular.size) {
+        gl.depthFunc(gl.ALWAYS);
+        for (const [i, r] of S.vurgular) {
+          const a = ag.kenarAraliklari[i];
+          if (!a || !a[1]) continue;
+          gl.uniform4f(prDuz.u.uRenk, 0.93, 0.45, 0.08, r[3] > 0.2 ? 0.95 : 0.45);
+          gl.drawArrays(gl.LINES, a[0], a[1]);
+        }
+        gl.depthFunc(gl.LEQUAL);
+      }
+      // Saydam parçalar: arkadan öne, derinlik yazmadan
+      gl.useProgram(pr.p);
+      baglaHepsi();
+      gl.depthMask(false);
+      const sirali = ag.saydam.slice().sort((a, c) => nokta(ag.merkezler[a], k.bakis) - nokta(ag.merkezler[c], k.bakis));
+      for (const i of sirali) {
+        const r = S.vurgular.get(i);
+        if (r) gl.uniform4f(u.uVurgu, r[0], r[1], r[2], r[3]); else vurgusuz();
+        gl.drawArrays(gl.TRIANGLES, ag.araliklar[i][0], ag.araliklar[i][1]);
+      }
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+
+    /** Ekran noktasındaki (canvas'a göre CSS piksel) parçanın indisi; yoksa -1. */
+    function sec(x, y) {
+      if (!ag || !P.length) return -1;
+      boyutla();
+      const w = canvas.width;
+      const h = canvas.height;
+      if (secBoyut[0] !== w || secBoyut[1] !== h) {
+        gl.bindRenderbuffer(gl.RENDERBUFFER, secRenk);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, w, h);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, secDerin);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, w, h);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, secFB);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, secRenk);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, secDerin);
+        secBoyut = [w, h];
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, secFB);
+      gl.viewport(0, 0, w, h);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+      gl.disable(gl.BLEND);
+      const k = kamera();
+      gl.useProgram(prDuz.p);
+      gl.uniformMatrix4fv(prDuz.u.uVP, false, k.VP);
+      baglaKonum(prDuz);
+      // Saydam parçalar da seçilebilir (önce opaklar, sonra camlar en önde olanı kazanır)
+      P.forEach((p, i) => {
+        const id = i + 1;
+        gl.uniform4f(prDuz.u.uRenk, (id & 255) / 255, ((id >> 8) & 255) / 255, ((id >> 16) & 255) / 255, 1);
+        gl.drawArrays(gl.TRIANGLES, ag.araliklar[i][0], ag.araliklar[i][1]);
+      });
+      const dpr = w / Math.max(1, canvas.clientWidth);
+      const px = new Uint8Array(4);
+      gl.readPixels(Math.round(x * dpr), Math.round(h - y * dpr), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      const id = px[0] + (px[1] << 8) + (px[2] << 16);
+      return id ? id - 1 : -1;
+    }
+
+    /** Ekranda sürükleme miktarını (CSS piksel) kaydırma birimine çevirir. */
+    function pikselOlcek() {
+      const k = kamera();
+      return (2 * k.yarimY) / Math.max(1, canvas.clientHeight);
+    }
+
+    return Object.assign(S, { yukle, ciz, sec, boyutla, pikselOlcek, canvas, parcalar: () => P });
+  }
+
+  const destekli = () => {
+    try { const c = typeof document !== 'undefined' && document.createElement('canvas'); return !!(c && c.getContext('webgl2')); } catch (e) { return false; }
+  };
+
+  return { olustur, destekli, agOlustur, newell };
 });
 
 </script>
@@ -9438,26 +10087,289 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     susOnbellek = { anahtar, sonucRef: sonuc, deger };
     return deger;
   }
-  function ucCiz() {
+  // ---- Gerçekçi 3B (WebGL) ya da çizim (SVG) ----
+  const ucAyar = (() => { try { return JSON.parse(localStorage.getItem('mobilyaOlcu3b')) || {}; } catch (e) { return {}; } })();
+  for (const [id, k] of [['#ucGercek', 'gercek'], ['#ucPersp', 'persp'], ['#ucOda', 'oda']]) if (ucAyar[k] === false) $(id).checked = false;
+  const ucAyarKaydet = () => { try { localStorage.setItem('mobilyaOlcu3b', JSON.stringify({ gercek: $('#ucGercek').checked, persp: $('#ucPersp').checked, oda: $('#ucOda').checked })); } catch (e) { /* özel pencere */ } };
+  let sahne = null;
+  let sahneDenendi = false;
+  const sahneAl = () => {
+    if (!sahneDenendi) { sahneDenendi = true; sahne = typeof Sahne !== 'undefined' ? Sahne.olustur($('#ucTuval')) : null; }
+    return sahne;
+  };
+  let ucParcalar = [];
+  let ucSecim = null; // { modulId, satir: [sutun, no] | null, kul, tur, parca }
+  const glAcik = () => $('#ucGercek').checked && !!sahneAl();
+
+  /** Görünen parçalar (seçenekler ve süslerle) */
+  function ucParcalariHazirla() {
     const kapaksiz = $('#ucKapaksiz').checked;
     const sus = $('#ucSus').checked;
     const renkFn = (x) => Hesap.modulRenkleri(x, proje.ayarlar);
-    let P;
     if ($('#ucKapsam').value === 'proje') {
       const yer = sus ? susluYerlesim(sonuc.yerlesim, true).yerlesim : sonuc.yerlesim;
-      P = Uc.projeParcalari(yer, { kapaksiz, renkFn });
-    } else {
-      const m = seciliModul();
-      const s = m && sonuc.modulSonuclari[m.id];
-      if (!s || !s.geo) P = [];
-      else if (sus && !s.geo.panel) {
-        // Tek modül: kendi başına küçük bir yerleşim gibi süslenir
-        const yer = { tip: 'duz', duvarA: s.geo.W, duvarB: 0, tavan: 0, yerler: [{ modul: m, kaynak: m, duvar: 'A', sira: 'zemin', bas: 0, W: s.geo.W, D: s.geo.D, montaj: 0, geo: s.geo }] };
-        P = Uc.projeParcalari(susluYerlesim(yer, false).yerlesim, { kapaksiz, renkFn });
-      } else P = Uc.modulParcalari(s.geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) });
+      return { P: Uc.projeParcalari(yer, { kapaksiz, renkFn }), L: yer.tip === 'L', tavan: yer.tavan };
     }
-    $('#ucAlan').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
+    const m = seciliModul();
+    const s = m && sonuc.modulSonuclari[m.id];
+    if (!s || !s.geo) return { P: [] };
+    let P;
+    if (sus && !s.geo.panel) {
+      // Tek modül: kendi başına küçük bir yerleşim gibi süslenir
+      const yer = { tip: 'duz', duvarA: s.geo.W, duvarB: 0, tavan: 0, yerler: [{ modul: m, kaynak: m, duvar: 'A', sira: 'zemin', bas: 0, W: s.geo.W, D: s.geo.D, montaj: 0, geo: s.geo }] };
+      P = Uc.projeParcalari(susluYerlesim(yer, false).yerlesim, { kapaksiz, renkFn });
+    } else P = Uc.modulParcalari(s.geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) }).map((p) => Object.assign(p, { modulId: m.id }));
+    // Tek modül montaj yüksekliğinde gösterilir (asma dolap havada, raf duvarda)
+    const my = Number(m.montajYuksekligi) || 0;
+    if (my > 0 && $('#ucOda').checked) P = P.map((p) => Object.assign({}, p, { k: p.k.map((q) => [q[0], q[1] + my, q[2]]) }, p.sk ? { sk: { v: p.sk.v.map((q) => [q[0], q[1] + my, q[2]]), f: p.sk.f } } : {}));
+    return { P };
   }
+  function ucVurgula() {
+    if (!sahne) return;
+    sahne.vurgular = new Map();
+    if (!ucSecim) return;
+    ucParcalar.forEach((p, i) => {
+      if (p.modulId !== ucSecim.modulId) return;
+      const ayniSatir = ucSecim.satir && p.satir && p.satir[0] === ucSecim.satir[0] && p.satir[1] === ucSecim.satir[1];
+      sahne.vurgular.set(i, ayniSatir || !ucSecim.satir ? [1, 0.62, 0.2, 0.22] : [1, 0.65, 0.25, 0.07]);
+    });
+  }
+  function ucCiz() {
+    const { P, L, tavan } = ucParcalariHazirla();
+    ucParcalar = P;
+    const gl = glAcik();
+    $('#ucTuval').hidden = !gl;
+    $('#ucSvg').hidden = gl;
+    $('#ucPersp').disabled = !gl;
+    if (gl) {
+      const proj = $('#ucKapsam').value === 'proje';
+      sahne.yukle(P, { zemin: $('#ucOda').checked, arkaDuvar: $('#ucOda').checked, solDuvar: $('#ucOda').checked && proj && L, tavan });
+      sahne.gorus = Object.assign(sahne.gorus, { yaw: ucGorus.yaw, pitch: ucGorus.pitch, yakin: ucGorus.yakin, kx: ucGorus.kx || 0, ky: ucGorus.ky || 0, perspektif: $('#ucPersp').checked });
+      ucVurgula();
+      sahne.ciz();
+      $('#ucSvg').innerHTML = '';
+    } else {
+      $('#ucSvg').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
+    }
+    if (ucSecim) ucMenuCiz();
+  }
+  /** Yalnız kamerayı güncelleyip yeniden çizer (sürükleme sırasında hızlı yol). */
+  function ucKameraCiz() {
+    if (glAcik()) {
+      Object.assign(sahne.gorus, { yaw: ucGorus.yaw, pitch: ucGorus.pitch, yakin: ucGorus.yakin, kx: ucGorus.kx || 0, ky: ucGorus.ky || 0 });
+      sahne.ciz();
+    } else ucCiz();
+  }
+  for (const id of ['#ucGercek', '#ucPersp', '#ucOda']) $(id).addEventListener('change', () => { ucAyarKaydet(); ucCiz(); });
+  window.addEventListener('resize', () => { if (aktifSekme === 'uc') ucKameraCiz(); });
+
+  // ---- Boyama ----
+  let boyaRenk = null; // { renk, ad } ya da { malzeme: id }
+  let boyaModu = false;
+  $('#ucPalet').innerHTML = Hesap.RENK_PALETI.map(([ad, r]) => `<button type="button" data-boya="${r}" data-ad="${esc(ad)}" title="${esc(ad)}" style="background:${r}"></button>`).join('');
+  const boyaSec = (r, ad) => {
+    boyaRenk = { renk: r, ad };
+    document.querySelectorAll('#ucPalet button').forEach((b) => b.classList.toggle('secili', b.dataset.boya === r));
+    boyaModuAyarla(true);
+  };
+  const boyaModuAyarla = (acik) => {
+    boyaModu = acik && !!boyaRenk;
+    $('#ucBoya').classList.toggle('aktif', boyaModu);
+    $('#ucAlan').classList.toggle('boya-modu', boyaModu);
+    if (boyaModu && !glAcik()) bildir('Boyamak için "Gerçekçi" görünümü açın (WebGL).');
+  };
+  $('#ucPalet').addEventListener('click', (e) => { const b = e.target.closest('[data-boya]'); if (b) boyaSec(b.dataset.boya, b.dataset.ad); });
+  $('#ucOzelRenk').addEventListener('input', (e) => boyaSec(e.target.value, null));
+  $('#ucBoya').addEventListener('click', () => {
+    if (!boyaRenk) boyaSec(Hesap.RENK_PALETI[2][1], Hesap.RENK_PALETI[2][0]);
+    else boyaModuAyarla(!boyaModu);
+  });
+  const PALET_AD = new Map(Hesap.RENK_PALETI.map(([ad, r]) => [r, ad]));
+  const KUL_AD = { govde: 'gövde', kapak: 'ön yüz (kapak/çekmece önü)', cekmece: 'çekmece kutusu', arkalik: 'arkalık' };
+  /**
+   * Seçili parça grubunu boyar. boya: { renk, ad } (renk tabakası anında oluşur) ya da { malzeme: id }.
+   * kapsam: satir | modul | proje | akilli
+   */
+  function boya(sec, b, kapsam) {
+    const m = proje.moduller.find((x) => x.id === sec.modulId);
+    if (!m) { bildir('Bu süs yalnız görsel; boyanamaz. "Süsleri projeye ekle" ile eşyaya çevirebilirsiniz.'); return; }
+    const A = proje.ayarlar;
+    let kul = sec.kul;
+    if (m.tip === 'panel') kul = m.panelMalzeme === 'govde' ? 'govde' : 'kapak';
+    if (!kul) { bildir('Bu parça (cam, ayna, kulp, ayak, eşya) boyanmaz.'); return; }
+    let k = kapsam === 'akilli' ? (sec.satir && kul === 'kapak' ? 'satir' : 'modul') : kapsam;
+    if (k === 'satir' && !(sec.satir && kul === 'kapak')) k = 'modul';
+    const satirVeri = k === 'satir' ? m.sutunlar[sec.satir[0]] && m.sutunlar[sec.satir[0]].satirlar[sec.satir[1]] : null;
+    const simdiki = Hesap.malzemeCoz(m, A)[kul];
+    const tabanId = satirVeri && satirVeri.onMalzeme ? satirVeri.onMalzeme : simdiki.id;
+    const id = b.malzeme || Hesap.renkTabakasi(A, tabanId, b.renk, b.ad || PALET_AD.get(b.renk) || null);
+    if (k === 'satir' && satirVeri) satirVeri.onMalzeme = id === simdiki.id ? null : id;
+    else if (k === 'modul') {
+      m.malzeme = Object.assign({}, m.malzeme, { [kul]: id === A.kullanim[kul] ? null : id });
+      if (kul === 'kapak') for (const c of m.sutunlar || []) for (const r of c.satirlar) r.onMalzeme = null;
+    } else {
+      A.kullanim[kul] = id;
+      for (const x of proje.moduller) {
+        if (x.malzeme && x.malzeme[kul]) x.malzeme = Object.assign({}, x.malzeme, { [kul]: null });
+        if (kul === 'kapak') for (const c of x.sutunlar || []) for (const r of c.satirlar) r.onMalzeme = null;
+      }
+    }
+    const silinen = Hesap.otoTabakalariTemizle(proje);
+    const malz = Hesap.malzemeBul(A, id);
+    const yer = k === 'satir' ? 'Bu satırın ön yüzü' : k === 'modul' ? `"${m.ad}" ${KUL_AD[kul] || kul}` : `Tüm projede ${KUL_AD[kul] || kul}`;
+    bildir(`${yer}: ${malz ? malz.ad : ''}${malz && malz.oto ? ' (kesimde ayrı renk tabakası)' : ''}${silinen ? ` · kullanılmayan ${silinen} renk tabakası silindi` : ''}`, true);
+    tumunuCiz(true);
+  }
+
+  // ---- Nesne menüsü (tıklanan parça) ----
+  const TUR_AD = { govde: 'Gövde', panel: 'İç bölücü / raf', kapak: 'Kapak', cekmece: 'Çekmece önü', ic: 'Çekmece kutusu', arkalik: 'Arkalık', baza: 'Baza', ayak: 'Ayak / profil', kulp: 'Kulp / askı', cam: 'Cam', ayna: 'Ayna', led: 'LED şerit', nesne: 'Eşya' };
+  function ucMenuCiz() {
+    const kutu = $('#ucMenu');
+    if (!ucSecim) { kutu.hidden = true; return; }
+    const m = proje.moduller.find((x) => x.id === ucSecim.modulId);
+    const A = proje.ayarlar;
+    const sec = ucSecim;
+    if (!m) {
+      kutu.innerHTML = `<h4>Süs / eşya (otomatik) <button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4><div class="alt">Yalnız görsel; projede değil.</div><div class="dugmeler"><button data-um="karistir" class="ikincil kucuk-buton">🎲 Süsleri karıştır</button><button data-um="susEkle" class="ikincil kucuk-buton">Projeye ekle</button><button data-um="susKapat" class="ikincil kucuk-buton">Süsleri kapat</button></div>`;
+      kutu.hidden = false;
+      return;
+    }
+    const satir = sec.satir && m.sutunlar && m.sutunlar[sec.satir[0]] ? m.sutunlar[sec.satir[0]].satirlar[sec.satir[1]] : null;
+    const kul = m.tip === 'panel' ? (m.panelMalzeme === 'govde' ? 'govde' : 'kapak') : sec.kul;
+    const M = Hesap.malzemeCoz(m, A);
+    const simdiMalz = kul ? (satir && kul === 'kapak' && satir.onMalzeme ? Hesap.malzemeBul(A, satir.onMalzeme) || M.kapak : M[kul]) : null;
+    const secenek = (L, v) => L.map(([k, ad]) => `<option value="${esc(k)}"${String(k) === String(v) ? ' selected' : ''}>${esc(ad)}</option>`).join('');
+    const sayiAlan = (ad, alan, v, ek) => `<label>${ad}<input type="number" inputmode="decimal" data-um-alan="${alan}" value="${esc(v == null ? '' : v)}"${ek || ''}></label>`;
+    let h = `<h4><span>${esc(m.ad)}</span><button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4>`;
+    h += `<div class="alt">${esc(TUR_AD[sec.tur] || sec.tur)}${satir ? ` · ${m.sutunlar.length > 1 ? `bölme ${sec.satir[0] + 1}, ` : ''}satır ${sec.satir[1] + 1}` : ''}${simdiMalz ? ` · ${esc(simdiMalz.ad)}` : ''}</div>`;
+    if (kul && simdiMalz) {
+      const ayni = A.malzemeler.filter((x) => !Hesap.camMi(x) && x.kalinlik === simdiMalz.kalinlik);
+      h += `<fieldset><legend>Renk / malzeme</legend>
+        <div class="paletler">${Hesap.RENK_PALETI.map(([ad, r]) => `<button type="button" class="renk-kare${simdiMalz.renk === r ? ' secili' : ''}" data-um-boya="${r}" data-ad="${esc(ad)}" title="${esc(ad)}" style="background:${r}"></button>`).join('')}<input type="color" data-um-ozel value="${esc(simdiMalz.renk || '#cccccc')}" title="Özel renk"></div>
+        <label class="tam">Malzeme<select data-um-malz>${ayni.map((x) => `<option value="${esc(x.id)}"${x.id === simdiMalz.id ? ' selected' : ''}>${esc(x.ad)}${x.oto ? ' (renk tabakası)' : ''}</option>`).join('')}</select></label>
+        <label class="tam">Uygula<select data-um-kapsam>${secenek([...(satir && kul === 'kapak' ? [['satir', 'Yalnız bu satırın ön yüzü']] : []), ['modul', `Bu modülün ${KUL_AD[kul] || kul}`], ['proje', `Tüm projede ${KUL_AD[kul] || kul}`]], ucMenuKapsam && (ucMenuKapsam !== 'satir' || (satir && kul === 'kapak')) ? ucMenuKapsam : satir && kul === 'kapak' ? 'satir' : 'modul')}</select></label>
+      </fieldset>`;
+    }
+    if (m.tip === 'panel') {
+      h += `<fieldset><legend>Ölçü</legend>${sayiAlan('Boy', 'boy', m.boy)}${sayiAlan('En', 'en', m.en)}${sayiAlan('Montaj yüksekliği', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
+    } else if (m.tip !== 'lkose') {
+      h += `<fieldset><legend>Modül ölçüsü</legend>${sayiAlan('Genişlik', 'genislik', m.genislik)}${sayiAlan('Yükseklik', 'yukseklik', m.yukseklik)}${sayiAlan('Derinlik', 'derinlik', m.derinlik)}${sayiAlan('Montaj yüks.', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
+    }
+    if (satir) {
+      h += `<fieldset><legend>Bu satır</legend>
+        <label>Tip<select data-um-satir="tip">${secenek(Object.entries(Hesap.SATIR_TIPLERI), satir.tip)}</select></label>
+        ${sayiAlan(satir.tip === 'cekmece' ? 'Çekmece sayısı' : 'Kapak sayısı', 'satir:adet', satir.adet, ' min="1" max="8"')}
+        ${satir.tip === 'kapak' ? `<label class="tam">Kapak türü<select data-um-satir="kapakTuru">${secenek(Object.entries(Hesap.KAPAK_TURLERI), satir.kapakTuru)}</select></label>` : ''}
+        ${satir.tip !== 'cekmece' ? sayiAlan('Raf sayısı', 'satir:raf', satir.raf, ' min="0" max="20"') : ''}
+        ${sayiAlan('Yükseklik (boş = eşit)', 'satir:yukseklik', satir.yukseklik)}
+        ${satir.tip !== 'cekmece' ? `<label class="onay"><input type="checkbox" data-um-satir="led"${satir.led ? ' checked' : ''}> LED</label>` : ''}
+        ${satir.tip === 'kapak' ? `<label class="onay"><input type="checkbox" data-um-satir="aski"${satir.aski ? ' checked' : ''}> Askı</label>` : ''}
+      </fieldset>`;
+    }
+    h += `<fieldset><legend>İşlem</legend><div class="dugmeler">
+      <button data-um="form" class="kucuk-buton">✎ Formda aç</button>
+      <button data-um="kopya" class="ikincil kucuk-buton">⧉ Çoğalt</button>
+      ${satir ? '<button data-um="satirKopya" class="ikincil kucuk-buton">+ Satırı çoğalt</button><button data-um="satirSil" class="ikincil kucuk-buton">− Satırı sil</button>' : ''}
+      <button data-um="kapaksiz" class="ikincil kucuk-buton">${$('#ucKapaksiz').checked ? 'Kapakları göster' : 'İçini göster'}</button>
+      <button data-um="sil" class="ikincil kucuk-buton">✕ Modülü sil</button>
+    </div></fieldset>`;
+    kutu.innerHTML = h;
+    kutu.hidden = false;
+  }
+  let ucMenuKapsam = null;
+  // Menü 3B alanının sağ üstüne (dar ekranda alta) yerleşir; modeli tıklanan yerde kapatmaz
+  function ucMenuKonumla() { $('#ucMenu').scrollTop = 0; }
+  function ucTikla(x, y) {
+    if (!glAcik()) { bildir('Parçaya tıklayarak düzenlemek için "Gerçekçi" görünümü açın.'); return; }
+    const i = sahne.sec(x, y);
+    const p = i >= 0 ? ucParcalar[i] : null;
+    if (!p || p.modulId == null) { ucSecim = null; ucMenuCiz(); ucVurgula(); sahne.ciz(); return; }
+    const sec = { modulId: p.modulId, satir: p.satir || null, kul: p.kul || null, tur: p.tur };
+    if (boyaModu && boyaRenk) { ucSecim = sec; boya(sec, boyaRenk, $('#ucBoyaKapsam').value); return; }
+    ucSecim = sec;
+    if (proje.moduller.some((m) => m.id === p.modulId)) seciliId = p.modulId;
+    modulListesiCiz();
+    ucMenuCiz();
+    ucMenuKonumla(x, y);
+    ucVurgula();
+    sahne.ciz();
+  }
+  /** Menüden gelen değişikliği uygular ve her şeyi yeniden hesaplar. */
+  function ucMenuDegis(f) {
+    const m = proje.moduller.find((x) => x.id === (ucSecim && ucSecim.modulId));
+    if (!m) return;
+    f(m);
+    tumunuCiz(true);
+  }
+  $('#ucMenu').addEventListener('pointerdown', (e) => e.stopPropagation());
+  $('#ucMenu').addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
+  $('#ucMenu').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-um], [data-um-boya]');
+    if (!b) return;
+    if (b.dataset.umBoya) { boya(ucSecim, { renk: b.dataset.umBoya, ad: b.dataset.ad }, $('#ucMenu [data-um-kapsam]').value); return; }
+    const islem = b.dataset.um;
+    const m = proje.moduller.find((x) => x.id === (ucSecim && ucSecim.modulId));
+    if (islem === 'kapat') { ucSecim = null; ucMenuCiz(); ucKameraCiz2(); return; }
+    if (islem === 'karistir') { $('#ucSusKaristir').click(); return; }
+    if (islem === 'susEkle') { ucSecim = null; $('#ucSusEkle').click(); return; }
+    if (islem === 'susKapat') { ucSecim = null; $('#ucSus').checked = false; susKaydet(); ucCiz(); ucMenuCiz(); return; }
+    if (islem === 'kapaksiz') { $('#ucKapaksiz').checked = !$('#ucKapaksiz').checked; ucCiz(); return; }
+    if (!m) return;
+    if (islem === 'form') {
+      seciliId = m.id;
+      document.querySelector('.sekmeler button[data-sekme="cizim"]').click();
+      tumunuCiz(true);
+      $('#modulForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (islem === 'kopya') {
+      const k = JSON.parse(JSON.stringify(m));
+      k.id = Hesap.yeniModul('alt').id;
+      k.ad = benzersizAd(m.ad);
+      proje.moduller.splice(proje.moduller.indexOf(m) + 1, 0, k);
+      ucSecim = Object.assign({}, ucSecim, { modulId: k.id });
+      seciliId = k.id;
+      bildir(`"${k.ad}" eklendi.`, true);
+      tumunuCiz(true);
+      return;
+    }
+    if (islem === 'sil') {
+      if (!confirm(`"${m.ad}" silinsin mi?`)) return;
+      proje.moduller.splice(proje.moduller.indexOf(m), 1);
+      ucSecim = null;
+      if (seciliId === m.id) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
+      tumunuCiz(true);
+      return;
+    }
+    if ((islem === 'satirKopya' || islem === 'satirSil') && ucSecim.satir) {
+      const S = m.sutunlar[ucSecim.satir[0]].satirlar;
+      const i = ucSecim.satir[1];
+      if (islem === 'satirKopya') { S.splice(i + 1, 0, JSON.parse(JSON.stringify(S[i]))); ucSecim.satir = [ucSecim.satir[0], i + 1]; }
+      else { if (S.length < 2) { bildir('Bölmede tek satır var; silinemez.'); return; } S.splice(i, 1); ucSecim.satir = null; }
+      tumunuCiz(true);
+    }
+  });
+  function ucKameraCiz2() { ucVurgula(); ucKameraCiz(); }
+  $('#ucMenu').addEventListener('change', (e) => {
+    const el = e.target;
+    if (el.matches('[data-um-kapsam]')) { ucMenuKapsam = el.value; return; }
+    if (el.matches('[data-um-ozel]')) { boya(ucSecim, { renk: el.value, ad: null }, $('#ucMenu [data-um-kapsam]').value); return; }
+    if (el.matches('[data-um-malz]')) { boya(ucSecim, { malzeme: el.value }, $('#ucMenu [data-um-kapsam]').value); return; }
+    const alan = el.dataset.umAlan;
+    const sa = el.dataset.umSatir;
+    ucMenuDegis((m) => {
+      const satir = ucSecim.satir ? m.sutunlar[ucSecim.satir[0]].satirlar[ucSecim.satir[1]] : null;
+      const sayi = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
+      if (alan && alan.startsWith('satir:') && satir) satir[alan.slice(6)] = sayi(el.value);
+      else if (alan) { const v = sayi(el.value); if (v != null && Number.isFinite(v)) m[alan] = v; }
+      else if (sa && satir) satir[sa] = el.type === 'checkbox' ? el.checked : el.value;
+      // Normalleştirme (sınırlar) için proje baştan geçirilir
+      const N = Hesap.projeyiNormallestir(proje);
+      const n = N.moduller.find((x) => x.id === m.id);
+      if (n) Object.assign(m, n);
+    });
+  });
+
   for (const id of ['#ucSus', '#ucSusYogun']) $(id).addEventListener('change', () => { susKaydet(); ucCiz(); });
   $('#ucSusKaristir').addEventListener('click', () => { susTohum = (Math.random() * 1e9) >>> 0; $('#ucSus').checked = true; susKaydet(); ucCiz(); });
   $('#ucSusEkle').addEventListener('click', () => {
@@ -9474,35 +10386,83 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
   const ucIste = () => {
     if (ucBekleyen) return;
     ucBekleyen = true;
-    requestAnimationFrame(() => { ucBekleyen = false; ucCiz(); });
+    requestAnimationFrame(() => { ucBekleyen = false; ucKameraCiz(); });
   };
   let surukle = null;
-  // İki parmakla yakınlaştırma: etkin dokunuşlar izlenir
+  // Dokunuşlar: tek parmak döndürür, iki parmak yakınlaştırır ve kaydırır
   const dokunuslar = new Map();
   let kiskac = null;
-  const mesafe = () => { const [a, b] = [...dokunuslar.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  const ikiNokta = () => { const [a, b] = [...dokunuslar.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+  const kaydir = (dx, dy) => {
+    const o = glAcik() ? sahne.pikselOlcek() : 0;
+    if (!o) return;
+    ucGorus.kx = (ucGorus.kx || 0) - dx * o;
+    ucGorus.ky = (ucGorus.ky || 0) + dy * o;
+  };
+  $('#ucAlan').addEventListener('contextmenu', (e) => e.preventDefault());
   $('#ucAlan').addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#ucMenu')) return;
     dokunuslar.set(e.pointerId, { x: e.clientX, y: e.clientY });
     $('#ucAlan').setPointerCapture(e.pointerId);
-    if (dokunuslar.size === 2) { surukle = null; kiskac = { d: mesafe(), yakin: ucGorus.yakin }; return; }
-    surukle = { x: e.clientX, y: e.clientY, yaw: ucGorus.yaw, pitch: ucGorus.pitch };
+    $('#ucIpucu').hidden = true;
+    if (dokunuslar.size === 2) { surukle = null; const n = ikiNokta(); kiskac = { d: n.d, x: n.x, y: n.y, yakin: ucGorus.yakin }; return; }
+    surukle = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, yaw: ucGorus.yaw, pitch: ucGorus.pitch, kaydir: e.button === 2 || e.button === 1 || e.shiftKey, hareket: 0 };
   });
+  let hoverBekle = false;
   $('#ucAlan').addEventListener('pointermove', (e) => {
     if (dokunuslar.has(e.pointerId)) dokunuslar.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (kiskac && dokunuslar.size === 2) {
-      ucGorus.yakin = Math.max(0.3, Math.min(6, kiskac.yakin * (mesafe() / (kiskac.d || 1))));
+      const n = ikiNokta();
+      ucGorus.yakin = Math.max(0.3, Math.min(8, kiskac.yakin * (n.d / (kiskac.d || 1))));
+      kaydir(n.x - kiskac.x, n.y - kiskac.y);
+      kiskac.x = n.x; kiskac.y = n.y;
       ucIste();
       return;
     }
-    if (!surukle) return;
-    ucGorus.yaw = surukle.yaw + (e.clientX - surukle.x) * 0.4;
-    ucGorus.pitch = Math.max(-10, Math.min(89, surukle.pitch + (e.clientY - surukle.y) * 0.3));
-    ucIste();
+    if (!surukle) {
+      // Fareyle üzerine gelince parça adı (gerçekçi görünümde)
+      if (e.pointerType === 'mouse' && glAcik() && !hoverBekle) {
+        hoverBekle = true;
+        requestAnimationFrame(() => {
+          hoverBekle = false;
+          const r = $('#ucAlan').getBoundingClientRect();
+          const i = sahne.sec(e.clientX - r.left, e.clientY - r.top);
+          const p = i >= 0 ? ucParcalar[i] : null;
+          const ip = $('#ucIpucu');
+          if (!p || p.modulId == null) { ip.hidden = true; return; }
+          const m = proje.moduller.find((x) => x.id === p.modulId);
+          ip.textContent = `${m ? m.ad : 'Süs'} · ${TUR_AD[p.tur] || p.tur}${boyaModu ? ' · tıkla: boya' : ''}`;
+          ip.style.left = (e.clientX - r.left + 14) + 'px';
+          ip.style.top = (e.clientY - r.top + 12) + 'px';
+          ip.hidden = false;
+        });
+      }
+      return;
+    }
+    surukle.hareket = Math.max(surukle.hareket, Math.hypot(e.clientX - surukle.sx, e.clientY - surukle.sy));
+    if (surukle.kaydir) {
+      kaydir(e.clientX - surukle.x, e.clientY - surukle.y);
+      surukle.x = e.clientX; surukle.y = e.clientY;
+    } else {
+      ucGorus.yaw = surukle.yaw + (e.clientX - surukle.sx) * 0.4;
+      ucGorus.pitch = Math.max(-10, Math.min(89, surukle.pitch + (e.clientY - surukle.sy) * 0.3));
+    }
+    if (surukle.hareket > 4) ucIste();
   });
-  const surukleBitir = (e) => { dokunuslar.delete(e.pointerId); if (dokunuslar.size < 2) kiskac = null; surukle = null; };
+  const surukleBitir = (e) => {
+    const s0 = surukle;
+    dokunuslar.delete(e.pointerId);
+    if (dokunuslar.size < 2) kiskac = null;
+    surukle = null;
+    if (s0 && e.type === 'pointerup' && s0.hareket <= 4 && !s0.kaydir) {
+      const r = $('#ucAlan').getBoundingClientRect();
+      ucTikla(e.clientX - r.left, e.clientY - r.top);
+    }
+  };
   $('#ucAlan').addEventListener('pointerup', surukleBitir);
   $('#ucAlan').addEventListener('pointercancel', surukleBitir);
-  $('#ucAlan').addEventListener('wheel', (e) => { e.preventDefault(); ucGorus.yakin = Math.max(0.3, Math.min(6, ucGorus.yakin * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); ucIste(); }, { passive: false });
+  $('#ucAlan').addEventListener('pointerleave', () => { $('#ucIpucu').hidden = true; });
+  $('#ucAlan').addEventListener('wheel', (e) => { if (e.target.closest('#ucMenu')) return; e.preventDefault(); ucGorus.yakin = Math.max(0.3, Math.min(8, ucGorus.yakin * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); ucIste(); }, { passive: false });
   $('#ucAlan').addEventListener('keydown', (e) => {
     const adim = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, -5], ArrowDown: [0, 5] }[e.key];
     if (!adim) return;
@@ -9514,14 +10474,14 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
   document.querySelector('.uc-arac').addEventListener('click', (e) => {
     const k = e.target.dataset.uc;
     if (!k) return;
-    if (k === 'on') Object.assign(ucGorus, { yaw: 0, pitch: 0 });
-    else if (k === 'izo') Object.assign(ucGorus, { yaw: -35, pitch: 22 });
-    else if (k === 'ust') Object.assign(ucGorus, { yaw: 0, pitch: 85 });
+    if (k === 'on') Object.assign(ucGorus, { yaw: 0, pitch: 0, kx: 0, ky: 0, yakin: 1 });
+    else if (k === 'izo') Object.assign(ucGorus, { yaw: -35, pitch: 22, kx: 0, ky: 0, yakin: 1 });
+    else if (k === 'ust') Object.assign(ucGorus, { yaw: 0, pitch: 85, kx: 0, ky: 0, yakin: 1 });
     else if (k === 'yak') ucGorus.yakin = Math.min(6, ucGorus.yakin * 1.25);
     else if (k === 'uzak') ucGorus.yakin = Math.max(0.3, ucGorus.yakin / 1.25);
     ucCiz();
   });
-  $('#ucKapsam').addEventListener('change', ucCiz);
+  $('#ucKapsam').addEventListener('change', () => { ucSecim = null; ucMenuCiz(); ucCiz(); });
   $('#ucKapaksiz').addEventListener('change', ucCiz);
 
   // Dar ekranda çizim ile ölçü formu arasında hızlı geçiş

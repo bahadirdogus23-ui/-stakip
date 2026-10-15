@@ -572,6 +572,9 @@
       islemFiyatiM2: sayiAl(m && m.islemFiyatiM2, 0, 0),
       // Görünüş rengi (3B ve önizleme); verilmemişse addan tahmin edilir
       renk: typeof (m && m.renk) === 'string' && /^#[0-9a-f]{6}$/i.test(m.renk) ? m.renk.toLowerCase() : varsayilanRenk(m && m.ad, m && m.tur),
+      // Boyamayla anında oluşan renk tabakası: kaynak malzemenin aynısı, yalnız rengi farklı
+      oto: !!(m && m.oto),
+      kaynak: m && m.oto && typeof m.kaynak === 'string' ? m.kaynak.slice(0, 40) : null,
     };
   }
   /** Malzeme adından görünüş rengi (ceviz, meşe, antrasit, lake renkleri...). */
@@ -616,6 +619,8 @@
       altTablaYok: !!s.altTablaYok, // satırın altında sabit tabla olmasın
       // Askı: boru (duvara paralel, derin dolap), kanca (portmanto), önden (derinlemesine çekilir ray, sığ dolap)
       askiTuru: secenekAl(s.askiTuru, ['boru', 'kanca', 'onden'], 'boru'),
+      // Bu satırın ön yüzlerine (kapak/çekmece önü) özel malzeme ya da renk tabakası
+      onMalzeme: typeof s.onMalzeme === 'string' && s.onMalzeme ? s.onMalzeme.slice(0, 40) : null,
     };
   }
   /** "300, 650" ya da [300, 650] → sıralı, tekrarsız, en fazla 20 pozitif sayı. */
@@ -851,6 +856,47 @@
     return R2;
   }
 
+  /** Boyama paleti: güncel mobilya renkleri (ad, renk). */
+  const RENK_PALETI = [
+    ['Beyaz', '#f2efe8'], ['Krem', '#ece4d4'], ['Kaşmir', '#d8ccb8'], ['Taş bej', '#c8b9a2'], ['Vizon', '#a39382'],
+    ['Mat gri', '#9a9a96'], ['Füme', '#5f6163'], ['Antrasit', '#4b4d50'], ['Mat siyah', '#2d2d2f'],
+    ['Açık meşe', '#d9bf98'], ['Doğal meşe', '#c9a57a'], ['Ceviz', '#8a5a3c'], ['Moka', '#6b5545'],
+    ['Adaçayı', '#9db09a'], ['Petrol yeşili', '#3f5a55'], ['Gece mavisi', '#34465f'], ['Pudra', '#d9b8b0'], ['Mermer beyaz', '#ebe8e2'],
+  ];
+  const RENK_KELIME = /\s*\b(beyaz|krem|kaşmir|kasmir|taş bej|bej|vizon|mat gri|gri|füme|fume|antrasit|mat siyah|siyah|açık meşe|doğal meşe|meşe|ceviz|moka|adaçayı yeşili|adaçayı|petrol yeşili|yeşil|gece mavisi|mavi|pudra|mermer beyaz)\b/giu;
+  /**
+   * Renk tabakası: kaynak malzemenin (kalınlık, plaka, fiyat aynı) istenen renkteki eşi. Varsa yeniden
+   * kullanılır, yoksa anında oluşturulur (oto). Kesim ve plaka listesi malzemeye göre ayrıldığı için her
+   * renk kendi tabakasında çıkar. Dönüş: malzeme id.
+   */
+  function renkTabakasi(ayar, kaynakId, renk, renkAd) {
+    const r = String(renk || '').toLowerCase();
+    if (!/^#[0-9a-f]{6}$/.test(r)) return kaynakId;
+    const k0 = malzemeBul(ayar, kaynakId) || ayar.malzemeler[0];
+    const kaynak = (k0.oto && malzemeBul(ayar, k0.kaynak)) || k0;
+    if ((kaynak.renk || '').toLowerCase() === r) return kaynak.id;
+    const ayni = ayar.malzemeler.find((m) => m.renk === r && m.kalinlik === kaynak.kalinlik && m.tur === kaynak.tur && (m.kaynak === kaynak.id || !m.oto));
+    if (ayni) return ayni.id;
+    const ad = (kaynak.ad.replace(RENK_KELIME, '').replace(/\s{2,}/g, ' ').trim() + ' – ' + (renkAd || r)).slice(0, 80);
+    const m = Object.assign({}, kaynak, { id: yeniId('mz'), ad, renk: r, oto: true, kaynak: kaynak.id });
+    if (ayar.malzemeler.length >= 100) return kaynak.id;
+    ayar.malzemeler.push(m);
+    return m.id;
+  }
+  /** Projede hiçbir yerde kullanılmayan otomatik renk tabakalarını siler. Dönüş: silinen sayısı. */
+  function otoTabakalariTemizle(proje) {
+    const A = proje.ayarlar;
+    const kul = new Set(Object.values(A.kullanim || {}));
+    for (const m of proje.moduller) {
+      for (const v of Object.values(m.malzeme || {})) kul.add(v);
+      for (const c of m.sutunlar || []) for (const r of c.satirlar || []) if (r.onMalzeme) kul.add(r.onMalzeme);
+    }
+    for (const sc of (proje.teklif && proje.teklif.secenekler) || []) for (const v of Object.values(sc.kullanim || {})) kul.add(v);
+    const once = A.malzemeler.length;
+    A.malzemeler = A.malzemeler.filter((m) => !m.oto || kul.has(m.id));
+    return once - A.malzemeler.length;
+  }
+
   /** Modülün hırdavat seçimleri (modül seçimi > proje varsayılanı). */
   function hirdavatCoz(modul, ayar) {
     const sonuc = {};
@@ -999,15 +1045,17 @@
     const parcalar = [];
     const hirdavat = [];
     const uyarilar = [];
+    let onMalz = null; // satıra özel ön yüz malzemesi (kapak kullanımının yerine geçer)
     return {
       parcalar, hirdavat, uyarilar,
+      onMalzemeAyarla(m) { onMalz = m || null; },
       ekle(ad, kullanim, boy, en, adet, bant, ek) {
         if (adet <= 0) return null;
         if (!(boy > 0) || !(en > 0)) {
           uyarilar.push(`"${ad}" parçasının ölçüsü geçersiz çıktı (${r1(boy)} x ${r1(en)}).`);
           return null;
         }
-        const m = M[kullanim];
+        const m = kullanim === 'kapak' && onMalz ? onMalz : M[kullanim];
         const cam = camMi(m);
         const p = Object.assign({ ad, kullanim, malzeme: m.id, boy: r1(boy), en: r1(en), adet, bant: cam ? { u: 0, k: 0 } : bant || { u: 0, k: 0 }, damar: !cam && !!m.damar, cam }, ek || {});
         // Atölye notlarında Türkçe ondalık virgül
@@ -1522,6 +1570,11 @@
         for (let i = 0; i < satirlar.length; i++) {
           const s = satirlar[i];
           const on = onlar[i];
+          // Satıra özel ön yüz malzemesi (boyama): aynı kalınlıkta, cam olmayan malzeme
+          const onM = s.onMalzeme ? malzemeBul(A, s.onMalzeme) : null;
+          const onGecerli = onM && !camMi(onM) && Math.abs(say(onM.kalinlik, 0) - tk) < 0.01;
+          if (onM && !onGecerli) uyarilar.push(`${ek(i + 1)}: ön yüz malzemesi "${onM.ad}" kapak kalınlığından (${tk} mm) farklı ya da cam; proje kapak malzemesi kullanıldı.`);
+          T.onMalzemeAyarla(onGecerli ? onM : null);
           const icUst = i === 0 ? Hc - t : sinirlar[i - 1].panel ? sinirlar[i - 1].y - t / 2 : sinirlar[i - 1].y;
           const icAlt = i === satirlar.length - 1 ? (altYok ? 0 : t) : sinirlar[i].panel ? sinirlar[i].y + t / 2 : sinirlar[i].y;
           const icH = icUst - icAlt;
@@ -1742,6 +1795,9 @@
               cekmeceIciEkle(s.cekmeceIc, bolum, k.kutuW - 2 * tc);
             }
           }
+          T.onMalzemeAyarla(null);
+          geo.no = i;
+          if (onGecerli) geo.onRenk = onM.renk || varsayilanRenk(onM.ad, onM.tur);
           geoSatirlar.push(geo);
           tumSatirlar.push(geo);
         }
@@ -2451,6 +2507,9 @@
     kulpDelikleri,
     hirdavatGecerli,
     modulRenkleri,
+    renkTabakasi,
+    otoTabakalariTemizle,
+    RENK_PALETI,
     varsayilanRenk,
     rafListesi,
     kulpBaglami,

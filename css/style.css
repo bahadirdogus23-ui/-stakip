@@ -355,6 +355,31 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
 .uc-alan:active { cursor: grabbing; }
 .uc-alan:focus { outline: 2px solid var(--vurgu); outline-offset: 2px; }
 .uc-svg { width: 100%; height: 100%; }
+.uc-alan { position: relative; overflow: hidden; }
+.uc-tuval { width: 100%; height: 100%; display: block; }
+.uc-svgkap { width: 100%; height: 100%; display: flex; }
+.uc-alan.boya-modu { cursor: crosshair; }
+.uc-arac2 { margin-top: -4px; }
+.boya-cubuk { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 2px 6px; border: 1px solid var(--cizgi); border-radius: 8px; background: #fff; }
+.boya-cubuk input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--cizgi); border-radius: 6px; background: none; }
+.boya-cubuk select { max-width: 210px; }
+#ucBoya.aktif { background: var(--vurgu); color: #fff; }
+.palet { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.palet button, .renk-kare { width: 22px; height: 22px; min-width: 0; padding: 0; border-radius: 50%; border: 2px solid rgba(0,0,0,.12); cursor: pointer; }
+.palet button.secili, .renk-kare.secili { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+.uc-menu { position: absolute; z-index: 5; top: 8px; right: 8px; width: min(320px, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; background: rgba(255,255,255,.97); border: 1px solid var(--cizgi); border-radius: 10px; box-shadow: 0 8px 28px rgba(40,30,20,.22); padding: 10px 12px; font-size: 13px; cursor: default; user-select: text; }
+.uc-menu h4 { margin: 0 0 2px; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.uc-menu h4 button { padding: 0 6px; }
+.uc-menu .alt { color: var(--soluk, #7a7266); font-size: 12px; margin-bottom: 6px; }
+.uc-menu fieldset { border: 0; border-top: 1px solid var(--cizgi); margin: 6px 0 0; padding: 6px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.uc-menu legend { font-weight: 600; padding: 0 4px 0 0; font-size: 12px; }
+.uc-menu label { display: flex; flex-direction: column; font-size: 12px; gap: 2px; }
+.uc-menu label.onay { flex-direction: row; align-items: center; }
+.uc-menu .tam { grid-column: 1 / -1; }
+.uc-menu .paletler { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.uc-menu .dugmeler { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.uc-menu input, .uc-menu select { width: 100%; }
+.uc-ipucu { position: absolute; z-index: 4; pointer-events: none; background: rgba(40,32,22,.85); color: #fff; font-size: 12px; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
 /* Atölye */
 .atolye { align-items: start; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
 .kucuk-tablo td:not(:first-child), .kucuk-tablo th { white-space: nowrap; }
@@ -404,6 +429,7 @@ textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--cizgi); bord
   .m-arac { gap: 6px; }
   input[type="checkbox"] { width: 20px; height: 20px; }
   .uc-alan { touch-action: pan-y; height: 60vh; }
+  .uc-menu { top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 55%; border-radius: 12px 12px 0 0; }
   /* Kesim listesinde testereciye gereken sütunlar öne: net ölçüler gizli, notlar kısaltılır */
   .liste.kesim .net { display: none; }
   .liste.kesim .parca-not { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

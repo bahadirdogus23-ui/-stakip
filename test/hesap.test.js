@@ -270,7 +270,7 @@ test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
   assert.equal(m.baza.tip, 'yok');
   assert.deepEqual(m.sutunlar[0].satirlar[0], {
     tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false,
-    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null, altTablaYok: false, askiTuru: 'boru',
+    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null, altTablaYok: false, askiTuru: 'boru', onMalzeme: null,
   });
   assert.deepEqual(m.malzeme, {});
   assert.equal(p.yerlesim.tip, 'duz');
@@ -1370,4 +1370,30 @@ test('3B: şekilli paneller ve kavisli üst tabla gerçek biçimiyle çizilir', 
   const xs = on.map((q) => q[0]);
   assert.ok(xs.some((x) => x > 1 && x < 100)); // sol köşede yay noktaları
   assert.ok(on.some((q) => Math.abs(q[0] - Math.max(...xs)) < 0.01 && Math.abs(q[2] - Math.max(...on.map((r) => r[2]))) < 0.01)); // sağ ön köşe keskin
+});
+
+test('boyama: renk tabakası anında oluşur, satır ön yüzüne uygulanır, kesimde ayrı malzeme, kullanılmayan silinir', () => {
+  const P = Hesap.yeniProje();
+  const A = P.ayarlar;
+  const kaynak = A.kullanim.kapak;
+  const id = Hesap.renkTabakasi(A, kaynak, '#3f5a55', 'Petrol yeşili');
+  const m = Hesap.malzemeBul(A, id);
+  assert.ok(m.oto && m.kaynak === kaynak && m.renk === '#3f5a55' && / – Petrol yeşili$/.test(m.ad));
+  assert.equal(Hesap.renkTabakasi(A, kaynak, '#3f5a55', 'Petrol yeşili'), id); // yeniden kullanılır
+  assert.equal(Hesap.renkTabakasi(A, id, '#3f5a55'), id); // tabakadan boyamak kaynağa döner
+  P.moduller[0].sutunlar[0].satirlar[0].onMalzeme = id;
+  const N = Hesap.projeyiNormallestir(P);
+  const s = Hesap.projeHesapla(N);
+  const r = s.modulSonuclari[N.moduller[0].id];
+  assert.equal(r.parcalar.find((p) => p.ad.startsWith('Çekmece önü')).malzeme, id);
+  assert.equal(r.parcalar.find((p) => p.ad.startsWith('Kapak')).malzeme, kaynak);
+  assert.equal(r.geo.satirlar[0].onRenk, '#3f5a55');
+  assert.ok(s.kesimListesi.some((p) => p.malzeme === id) && s.kesimListesi.some((p) => p.malzeme === kaynak));
+  // 3B: ön yüz satır rengini ve satır etiketini taşır
+  const on = Uc.modulParcalari(r.geo, {}).filter((p) => p.satir && p.satir[1] === 0 && p.tur === 'cekmece');
+  assert.ok(on.length && on.every((p) => p.renk === '#3f5a55' && p.kul === 'kapak'));
+  // Kullanılmayan tabaka silinir
+  const id2 = Hesap.renkTabakasi(N.ayarlar, kaynak, '#d9b8b0', 'Pudra');
+  assert.equal(Hesap.otoTabakalariTemizle(N), 1);
+  assert.ok(!Hesap.malzemeBul(N.ayarlar, id2) && Hesap.malzemeBul(N.ayarlar, id));
 });

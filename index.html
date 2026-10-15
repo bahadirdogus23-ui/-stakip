@@ -77,9 +77,25 @@
             <button data-uc="ust" class="ikincil">Üstten</button>
             <button data-uc="yak" class="ikincil" title="Yakınlaştır">＋</button>
             <button data-uc="uzak" class="ikincil" title="Uzaklaştır">－</button>
-            <span class="not">Döndürmek için sürükleyin; yakınlaştırmak için fare tekerleği veya iki parmak.</span>
           </div>
-          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"></div>
+          <div class="arac-satir uc-arac uc-arac2">
+            <label class="onay" title="WebGL: gerçek derinlik, gölge, LED ışığı; kapalıysa çizim görünüşü"><input type="checkbox" id="ucGercek" checked> Gerçekçi</label>
+            <label class="onay"><input type="checkbox" id="ucPersp" checked> Perspektif</label>
+            <label class="onay"><input type="checkbox" id="ucOda" checked> Zemin + duvar</label>
+            <span class="boya-cubuk" role="group" aria-label="Boya">
+              <button id="ucBoya" class="ikincil" title="Boya modu: renk seçin, sonra 3B'de parçalara tıklayın">🎨 Boya</button>
+              <span id="ucPalet" class="palet"></span>
+              <input type="color" id="ucOzelRenk" value="#8a5a3c" title="Özel renk">
+              <select id="ucBoyaKapsam" aria-label="Boyama kapsamı" title="Tıklanan parçada neyin boyanacağı">
+                <option value="akilli">Akıllı: ön yüzde satır, gövdede modül</option>
+                <option value="satir">Yalnız bu ön yüz satırı</option>
+                <option value="modul">Bu modülün tamamı (o kullanım)</option>
+                <option value="proje">Tüm proje (o kullanım)</option>
+              </select>
+            </span>
+            <span class="not">Sürükle: döndür · sağ tuş / Shift / iki parmak: kaydır · tekerlek: yakınlaştır · tıkla: düzenle</span>
+          </div>
+          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"><canvas id="ucTuval" class="uc-tuval"></canvas><div id="ucSvg" class="uc-svgkap"></div><div id="ucMenu" class="uc-menu" hidden></div><div id="ucIpucu" class="uc-ipucu" hidden></div></div>
         </div>
 
         <div class="sekme" id="sekme-atolye">
@@ -245,6 +261,7 @@
   <script src="js/delik.js"></script>
   <script src="js/montaj.js"></script>
   <script src="js/uc.js"></script>
+  <script src="js/sahne.js"></script>
   <script src="js/kurulum.js"></script>
   <script src="js/app.js"></script>
 </body>
