@@ -406,7 +406,9 @@
     gommeKayitEn: 110,        // gömme kapakta ön kayıt derinliği (mm)
     seffafVidaAralik: 32,     // iki parçalı şeffaf T bağlantıda bir yarımın iki kulak vidası arası (mm)
     seffafKenar: 12,          // kulak vidasının birleşim çizgisine (karşı panel yüzeyine) uzaklığı (mm)
-    cekmeceRayBosluk: 0,      // çekmece kutusu–gövde yan boşluğu (ray başına, mm); 0 = ray kataloğu değeri
+    cekmeceRayBosluk: 0,
+    cekmeceEkBosluk: 1.8,     // çekmece kutusu ile ray arasında her yandan ek boşluk (sağ + sol = 3,6 mm)
+    arkalikDerinlikte: false, // çakma arkalık girilen derinliğe dahil mi (kapalı: yanlar tam derinlik, arkalık arkaya eklenir)      // çekmece kutusu–gövde yan boşluğu (ray başına, mm); 0 = ray kataloğu değeri
     arkalikListede: true,     // arkalık parçaları kesim listesine ve maliyete girsin mi
     rafYanBosluk: 1,          // hareketli raf her yandan boşluk
     kusakGenisligi: 100,      // üst kuşak eni
@@ -1206,7 +1208,8 @@
     const kulpVar = HS.kulp === 'kulp';
 
     // Yan derinliği: çakma arkalık gövdenin arkasına çakıldığı için yanlardan düşülür.
-    const Ds = modul.arkalik === 'cakma' ? D - ta : D;
+    // Girilen derinlik gövde (yan) derinliğidir; arkaya çakılan arkalık ayar açıksa bu derinliğe dahil edilir
+    const Ds = modul.arkalik === 'cakma' && A.arkalikDerinlikte ? D - ta : D;
     // Ara tabla, dikme ve raflar için kullanılabilir derinlik
     let icDerinlik = Ds;
     if (modul.arkalik === 'kanal') icDerinlik = Ds - say(A.arkalikGeriPay, 10) - ta;
@@ -1323,7 +1326,9 @@
         uyarilar.push(`${etiket}: çekmece kutusu yüksekliği ${kutuH} mm, çok düşük (en az 50 mm).`);
         return null;
       }
-      const icGenislik = HS.ray === 'metal' ? acW - ray.arkaFark : acW - 2 * ray.yanBosluk - 2 * tc;
+      // Kutu eni = açıklık − 2 × (ray yan boşluğu + ek kutu boşluğu)
+      const ekB = HS.ray === 'metal' ? 0 : say(A.cekmeceEkBosluk, 0);
+      const icGenislik = HS.ray === 'metal' ? acW - ray.arkaFark : acW - 2 * (ray.yanBosluk + ekB) - 2 * tc;
       if (icGenislik < 60) {
         uyarilar.push(`${etiket}: açıklık (${r1(acW)} mm) çekmece kutusu için çok dar.`);
         return null;
@@ -1343,10 +1348,11 @@
         kutular.push({ etiket, metal: true, L, tabanBoy: L - ray.boyFark, tabanEn: acW - ray.tabanFark, arkaW: acW - ray.arkaFark, arkaH, adet });
         return { L, kutuW: acW - 10, kutuH: arkaH, pay: 5 };
       }
-      const kutuW = acW - 2 * ray.yanBosluk;
+      const kutuW = acW - 2 * (ray.yanBosluk + ekB);
       const kutuL = L - ray.kutuBoyFark;
       ekle(`Çekmece yanı (${etiket})`, 'cekmece', kutuL, kutuH, 2 * adet, { u: 1, k: 0 });
-      ekle(`Çekmece ön/arka (${etiket})`, 'cekmece', kutuW - 2 * tc, kutuH, 2 * adet, { u: 1, k: 0 });
+      ekle(`Çekmece ön/arka (${etiket})`, 'cekmece', kutuW - 2 * tc, kutuH, 2 * adet, { u: 1, k: 0 },
+        { not: `Kutu dış eni ${r1(kutuW)} = açıklık ${r1(acW)} − 2 × (ray ${r1(ray.yanBosluk)} + boşluk ${r1(ekB)}) mm` });
       if (A.cekmeceTabani === 'kanal') {
         ekle(`Çekmece tabanı (${etiket})`, 'arkalik', kutuL - 2 * tc + 2 * (kd - 1), kutuW - 2 * tc + 2 * (kd - 1), adet, null,
           { not: `Kanala geçme: yan ve ön/arka parçalarda alttan 10 mm, ${kd} mm derin kanal` });
@@ -1356,7 +1362,7 @@
       hEkle('ray_' + HS.ray, `${ray.ad} ${L} mm`, adet, 'takım');
       if (HS.kulp === 'basac') hEkle('basac_ray', 'Ray için bas-aç adaptörü', adet);
       kutular.push({ etiket, metal: false, L: kutuL, kutuW, kutuH, tc, kd, ta, taban: A.cekmeceTabani, ray: HS.ray, adet });
-      return { L: kutuL, kutuW, kutuH, pay: ray.yanBosluk };
+      return { L: kutuL, kutuW, kutuH, pay: ray.yanBosluk + ekB };
     }
     function cekmeceIciEkle(tur, adet, icGenislik) {
       if (tur === 'catal') hEkle('catal_kasiklik', `Çatal-kaşıklık (kutu içi ${r1(icGenislik)} mm)`, adet);
@@ -1872,7 +1878,7 @@
     const baza = modul.baza || { tip: 'yok', yukseklik: 0, geriCekme: 0 };
     const hb = baza.tip === 'yok' ? 0 : say(baza.yukseklik, 0);
     const Hc = H - hb;
-    const Ds = D - ta; // arkalık arkaya çakılır
+    const Ds = A.arkalikDerinlikte ? D - ta : D; // arkalık arkaya çakılır; derinliğe dahil değilse yanlar tam derinlik
     const bos = { parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, geo: null, malzemeler: M, hirdavatSecimi: HS };
 
     if (!(t > 0) || !(tk > 0) || !(ta > 0)) {

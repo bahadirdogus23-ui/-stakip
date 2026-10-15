@@ -39,9 +39,9 @@ test('alt dolap: çekmece kutusu, ray ve ara tabla', () => {
   assert.match(ray.ad, /500 mm/);
   const yan = bul(s, 'Çekmece yanı');
   assert.equal(yan.boy, 500); assert.equal(yan.en, 110); // 150 - 40
-  // Kutu genişliği 564 - 26 = 538; ön/arka 538 - 2*16
-  assert.equal(bul(s, 'Çekmece ön/arka').boy, 506);
-  assert.equal(bul(s, 'Çekmece tabanı').en, 538);
+  // Kutu genişliği 564 - 2 × (13 ray + 1,8 ek boşluk) = 534,4; ön/arka 534,4 - 2*16
+  assert.equal(bul(s, 'Çekmece ön/arka').boy, 502.4);
+  assert.equal(bul(s, 'Çekmece tabanı').en, 534.4);
   assert.equal(s.hirdavat.find((h) => h.ad.includes('ayarlı ayak')).adet, 4);
 });
 
@@ -68,9 +68,10 @@ test('gömme kapak ve ara dikme', () => {
   assert.match(s.hirdavat.find((h) => h.ad.startsWith('Menteşe')).ad, /gömme/);
 });
 
-test('çakma arkalık yan derinliğini azaltır', () => {
+test('çakma arkalık: varsayılan derinliğe dahil değil (yan tam derinlik); ayarla derinlikten düşülür', () => {
   const m = Hesap.yeniModul('kitaplik');
-  const s = Hesap.modulHesapla(m, ayar);
+  assert.equal(bul(Hesap.modulHesapla(m, ayar), 'Yan').en, 300);
+  const s = Hesap.modulHesapla(m, Object.assign({}, ayar, { arkalikDerinlikte: true }));
   assert.equal(bul(s, 'Yan').en, 300 - 8);
   assert.equal(bul(s, 'Arkalık').en, 800 - 4);
 });
@@ -131,10 +132,11 @@ const proje = (moduller, ek) => Object.assign({ ad: 'T', ayarlar: Hesap.varsayil
 
 test('L köşe dolap: tablalar, kapaklar ve arkalıklar', () => {
   const m = Hesap.yeniModul('lkose'); // A 900, B 900, Y 870, D 560, ayak 100, çakma arkalık 8
-  const s = Hesap.modulHesapla(m, ayar);
+  const s = Hesap.modulHesapla(m, Object.assign({}, ayar, { arkalikDerinlikte: true }));
   assert.deepEqual(s.uyarilar, []);
   assert.equal(bul(s, 'Yan').boy, 770);
   assert.equal(bul(s, 'Yan').en, 552);
+  assert.equal(bul(Hesap.modulHesapla(m, ayar), 'Yan').en, 560); // varsayılan: arkalık derinliğe dahil değil
   assert.equal(bul(s, 'Alt tabla – A').boy, 900 - 8 - 18);
   assert.equal(bul(s, 'Alt tabla – B').boy, 900 - 560 - 18);
   // B kapağı x = D düzleminde; A kapağı onun kalınlığı + boşluk sonrasında başlar
@@ -157,7 +159,7 @@ test('ray tipi çekmece kutusu ölçüsünü değiştirir', () => {
   const m = Hesap.yeniModul('alt');
   m.hirdavat = { ray: 'gizli' };
   let s = Hesap.modulHesapla(m, ayar);
-  assert.equal(bul(s, 'Çekmece ön/arka').boy, 564 - 10 - 32);
+  assert.equal(bul(s, 'Çekmece ön/arka').boy, 564 - 10 - 3.6 - 32);
   assert.equal(bul(s, 'Çekmece yanı').boy, 490);
   m.hirdavat = { ray: 'metal' };
   s = Hesap.modulHesapla(m, ayar);
@@ -606,7 +608,7 @@ test('çekmece tabanı kanala geçme seçeneği', () => {
   a2.cekmeceTabani = 'kanal';
   const s = Hesap.modulHesapla(Hesap.yeniModul('alt'), a2); // kutu 538 × 500, 16 mm yan
   const t = s.parcalar.find((p) => p.ad.startsWith('Çekmece tabanı'));
-  assert.deepEqual([t.boy, t.en], [500 - 32 + 14, 538 - 32 + 14]);
+  assert.deepEqual([t.boy, t.en], [500 - 32 + 14, 534.4 - 32 + 14]);
   assert.match(t.not, /kanal/);
 });
 

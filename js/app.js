@@ -964,7 +964,8 @@
     ['arkalikCakmaPay', 'Çakma arkalık kenar payı (mm)'],
     ['rafOnGeriCekme', 'Raf önden geri çekme (mm)'],
     ['gommeKayitEn', 'Gömme kapakta ön kayıt derinliği (mm)'],
-    ['cekmeceRayBosluk', 'Çekmece kutusu yan boşluğu, ray başına (mm, 0 = ray kataloğu)'],
+    ['cekmeceRayBosluk', 'Ray yan boşluğu, her yandan (mm, 0 = ray kataloğu: bilyeli 13)'],
+    ['cekmeceEkBosluk', 'Çekmece kutusu ek boşluğu, sağ ve sol her yandan (mm)'],
     ['seffafVidaAralik', 'Şeffaf T bağlantı: kulak vidaları arası (mm)'],
     ['seffafKenar', 'Şeffaf T bağlantı: vidanın birleşim çizgisine uzaklığı (mm)'],
     ['rafYanBosluk', 'Raf yan boşluğu (mm)'],
@@ -1015,6 +1016,7 @@
         <label>Çekmece tabanı<select data-ayar="cekmeceTabani"><option value="cakma"${A.cekmeceTabani === 'cakma' ? ' selected' : ''}>Alttan çakma</option><option value="kanal"${A.cekmeceTabani === 'kanal' ? ' selected' : ''}>Kanala geçme</option></select></label>
         <label title="Gömme (iç bini) kapaklı dolapta satırlar arasındaki tabla: tam derinlik ya da yalnız önde kayıt (10–12 cm yeterli)">Gömme kapakta ara tabla<select data-ayar="gommeAraTabla"><option value="tam"${A.gommeAraTabla === 'tam' ? ' selected' : ''}>Tam derinlik</option><option value="kayit"${A.gommeAraTabla === 'kayit' ? ' selected' : ''}>Önde kayıt</option></select></label>
         <label class="onay"><input data-ayar="bantDus" type="checkbox" ${A.bantDus ? 'checked' : ''}> Bant kalınlığını kesim ölçüsünden düş</label>
+        <label class="onay" title="Kapalı (önerilen): girilen derinlik yanların derinliğidir, arkaya çakılan arkalık bunun arkasına eklenir. Açık: arkalık kalınlığı derinlikten düşülür."><input data-ayar="arkalikDerinlikte" type="checkbox" ${A.arkalikDerinlikte ? 'checked' : ''}> Çakma arkalık derinliğe dahil</label>
         <label class="onay" title="Kapalıysa arkalıklar çizimde görünür ama kesim listesine, plakaya ve maliyete girmez (ayrı alınıyorsa)"><input data-ayar="arkalikListede" type="checkbox" ${A.arkalikListede ? 'checked' : ''}> Arkalıkları kesim listesine ve maliyete kat</label>
       </div>
       <button id="btnAyarSifirla" class="ikincil">Varsayılanlara dön</button>`;
