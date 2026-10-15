@@ -268,7 +268,7 @@ test('hata: dosyadan gelen veri temizlenir (XSS, bilinmeyen değerler)', () => {
   assert.equal(m.baza.tip, 'yok');
   assert.deepEqual(m.sutunlar[0].satirlar[0], {
     tip: 'kapak', yukseklik: null, adet: 1, raf: 0, dikme: 0, aski: false, kapakTuru: 'panel', acilim: 'yana', rafTipi: 'ahsap', led: false,
-    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null, altTablaYok: false,
+    rafSabit: false, menteseYonu: 'oto', kutuYukseklik: null, rayBoyu: null, cekmeceIc: 'yok', icCekmece: 0, icCekmeceH: null, rafYukseklikleri: [], askiUstten: null, rafGeri: null, altTablaYok: false, askiTuru: 'boru',
   });
   assert.deepEqual(m.malzeme, {});
   assert.equal(p.yerlesim.tip, 'duz');

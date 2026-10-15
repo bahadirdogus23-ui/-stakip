@@ -94,6 +94,10 @@
     supurge: { grup: 'Küçük ev aletleri', ad: 'Dikey süpürge', W: 260, H: 1150, D: 230, renk: '#7a7f86' },
     robot_supurge: { grup: 'Küçük ev aletleri', ad: 'Robot süpürge', W: 350, H: 100, D: 350, renk: '#2b2c2f' },
     utu: { grup: 'Küçük ev aletleri', ad: 'Ütü', W: 130, H: 150, D: 280, renk: '#6b8fb0' },
+    // Mobilya (yalnız görsel)
+    yatak_cift: { grup: 'Dekor', ad: 'Çift kişilik yatak', W: 1600, H: 500, D: 2000, renk: '#e8e2d6' },
+    yatak_tek: { grup: 'Dekor', ad: 'Tek kişilik yatak', W: 900, H: 450, D: 2000, renk: '#e8e2d6' },
+    kanepe: { grup: 'Dekor', ad: 'Kanepe (3 kişilik)', W: 2100, H: 850, D: 900, renk: '#8f9aa6' },
     // Dekor ve eşya
     kitap: { grup: 'Dekor', ad: 'Kitap sırası', W: 300, H: 240, D: 180, renk: '#8a5a3c' },
     kitap_yatay: { grup: 'Dekor', ad: 'Üst üste kitaplar', W: 260, H: 120, D: 190, renk: '#34465f' },
@@ -290,6 +294,8 @@
     raf_tasiyici: { ad: 'Gizli raf taşıyıcı', birim: 'adet', fiyat: 60 },
     aski_borusu: { ad: 'Askı borusu', birim: 'm', fiyat: 160 },
     aski_flans: { ad: 'Askı borusu flanşı', birim: 'adet', fiyat: 15 },
+    aski_kancasi: { ad: 'Askı kancası (portmanto)', birim: 'adet', fiyat: 35 },
+    onden_aski: { ad: 'Öne çekilir askı (derinlemesine ray)', birim: 'adet', fiyat: 280 },
     led_serit: { ad: 'LED şerit', birim: 'm', fiyat: 120 },
     led_profil: { ad: 'LED alüminyum profili', birim: 'm', fiyat: 80 },
     led_adaptor: { ad: 'LED adaptörü', birim: 'adet', fiyat: 300 },
@@ -463,6 +469,9 @@
     // Antre
     ayakkabilik: G('Antre', 'Ayakkabılık', 'Üst çekmeceler + raflı kapaklar', { genislik: 900, yukseklik: 1000, derinlik: 350, baza: AYAK(60), sutunlar: TEK(S('cekmece', 120, 2), S('kapak', null, 2, { raf: 4 })) }),
     vestiyer: G('Antre', 'Vestiyer / Portmanto', 'Açık askılık + kapaklı raf', { genislik: 1200, yukseklik: 2000, derinlik: 400, baza: BAZA(60, 30), sutunlar: [SUT(null, [S('acik', 300, 1, { raf: 0 }), S('acik', null)]), SUT(500, [S('kapak', null, 1, { raf: 5 })])] }),
+    vestiyer_oturak: G('Antre', 'Vestiyer – Oturaklı', 'Askılık nişi, oturak çekmecesi, altta ayakkabı rafı, yanda boy dolap', { genislik: 1400, yukseklik: 2100, derinlik: 400, yapi: 'tabla_boydan', yanlarYere: true, baza: BAZA(60, 30), sutunlar: [SUT(null, [S('kapak', 350, 2, { raf: 0 }), S('acik', null, 1, { aski: true, askiTuru: 'kanca', led: true }), S('cekmece', 160, 2), S('acik', 300, 1, { raf: 0 })]), SUT(450, [S('kapak', 350, 1), S('kapak', null, 1, { raf: 5, kapakTuru: 'ayna' })])] }),
+    vestiyer_ayakkabi: G('Antre', 'Vestiyer – Ayakkabılıklı', 'Altta kapaklı ayakkabılık, üstte askılık ve raf', { genislik: 900, yukseklik: 2000, derinlik: 350, yapi: 'tabla_boydan', yanlarYere: true, baza: BAZA(60, 30), sutunlar: [SUT(null, [S('acik', 300, 1, { raf: 0 }), S('acik', null, 1, { aski: true, askiTuru: 'kanca' }), S('kapak', 900, 2, { raf: 4 })])] }),
+    vestiyer_acik: G('Antre', 'Açık Vestiyer (asma)', 'Duvara asılı: raf + askı + ayna yanı', { genislik: 900, yukseklik: 1200, derinlik: 300, montajYuksekligi: 900, sutunlar: [SUT(null, [S('acik', 250, 1, { raf: 0 }), S('acik', null, 1, { aski: true, askiTuru: 'kanca' })])] }),
     // Ofis
     dosya: G('Ofis', 'Dosya Dolabı', 'Cam üst kapak + alt kapak', { genislik: 800, yukseklik: 1900, derinlik: 400, baza: BAZA(60, 30), sutunlar: TEK(S('kapak', 1000, 2, { kapakTuru: 'cam_profil', raf: 2 }), S('kapak', null, 2, { raf: 1 })) }),
     keson: G('Ofis', 'Çekmeceli Keson', 'Tekerlekli, 3 çekmece', { genislik: 400, yukseklik: 600, derinlik: 500, yapi: 'tabla_boydan', baza: { tip: 'tekerlek', yukseklik: 60, geriCekme: 0 }, sutunlar: TEK(S('cekmece', 120), S('cekmece', null), S('cekmece', null)) }),
@@ -584,6 +593,8 @@
       askiUstten: (() => { const v = sayiAl(s.askiUstten, null, 0, 600); return v >= 30 ? v : null; })(),
       rafGeri: sayiAl(s.rafGeri, null, 0, 300),
       altTablaYok: !!s.altTablaYok, // satırın altında sabit tabla olmasın
+      // Askı: boru (duvara paralel, derin dolap), kanca (portmanto), önden (derinlemesine çekilir ray, sığ dolap)
+      askiTuru: secenekAl(s.askiTuru, ['boru', 'kanca', 'onden'], 'boru'),
     };
   }
   /** "300, 650" ya da [300, 650] → sıralı, tekrarsız, en fazla 20 pozitif sayı. */
@@ -1647,7 +1658,17 @@
               }
               rafYerlestir();
             }
-            if (s.aski) {
+            if (s.aski && s.askiTuru === 'kanca') {
+              // Portmanto kancaları arkaya / arkalığa vidalanır; derinlik şartı yok
+              geo.kanca = Math.max(2, Math.floor(secW / 150));
+              hEkle('aski_kancasi', 'Askı kancası (portmanto)', geo.kanca * bolum);
+              hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', 2 * geo.kanca * bolum);
+            } else if (s.aski && s.askiTuru === 'onden') {
+              geo.ondenAski = true;
+              hEkle('onden_aski', 'Öne çekilir askı (derinlemesine ray)', bolum);
+              if (icDerinlik < 300) uyarilar.push(`${ek(i + 1)}: öne çekilir askı için iç derinlik ${r1(icDerinlik)} mm; en az 300 mm gerekir.`);
+              if (icH < 800) uyarilar.push(`${ek(i + 1)}: askı bölmesi yüksekliği ${r1(icH)} mm; en az 800 mm önerilir.`);
+            } else if (s.aski) {
               geo.aski = true;
               hEkle('aski_borusu', `Askı borusu (${r1(secW - 2)} mm)`, bolum, 'adet', (bolum * (secW - 2)) / 1000);
               if (icH - geo.askiUstten < 600) uyarilar.push(`${ek(i + 1)}: askı borusunun altında ${r1(icH - geo.askiUstten)} mm kalıyor; askı için en az 600 mm gerekir.`);

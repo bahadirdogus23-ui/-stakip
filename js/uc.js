@@ -202,6 +202,12 @@
             P.push(kutu(b.x1 + yb, b.x2 - yb, hb + ry - (cam ? 3 : t / 2), hb + ry + (cam ? 3 : t / 2), zIcArka, zIcOn - rg, cam ? 'cam' : 'panel', cam ? { saydam: 0.45 } : null));
           }
         }
+        if (s.kanca) for (let i = 0; i < s.kanca; i++) {
+          // Portmanto kancaları: arka yüzde, satırın üst bölümünde
+          const x = b.x1 + ((i + 0.5) * (b.x2 - b.x1)) / s.kanca;
+          P.push(kutu(x - 6, x + 6, hb + s.icUst - 220, hb + s.icUst - 200, zIcArka, zIcArka + 70, 'kulp'));
+        }
+        if (s.ondenAski) P.push(kutu((b.x1 + b.x2) / 2 - 8, (b.x1 + b.x2) / 2 + 8, hb + s.icUst - 40, hb + s.icUst - 24, zIcArka + 20, zIcOn - 20, 'kulp'));
         if (s.aski) P.push(kutu(b.x1, b.x2, hb + s.icUst - (s.askiUstten || 60) - 8, hb + s.icUst - (s.askiUstten || 60) + 8, (zIcArka + zIcOn) / 2 - 8, (zIcArka + zIcOn) / 2 + 8, 'kulp'));
         if (s.led) P.push(kutu(b.x1 + 10, b.x2 - 10, hb + s.icUst - 6, hb + s.icUst - 1, zIcOn - 40, zIcOn - 20, 'led'));
         if (dolguH && (s.icCekmeceler || []).some((c) => c.x1 >= b.x1 - 1 && c.x2 <= b.x2 + 1)) {
@@ -416,6 +422,23 @@
         const yap = [[0.55, 0.12], [0.85, 0.18], [1, 0.2], [0.8, 0.12], [0.5, 0.08], [0.25, 0.1]];
         let y = ph;
         yap.forEach(([f, h], i) => { const hh = (H - ph) * h / 0.8; k(W / 2 - (W * f) / 2, W / 2 + (W * f) / 2, y, Math.min(H, y + hh), D / 2 - (D * f) / 2, D / 2 + (D * f) / 2, koyu(r, 1 + (i % 2) * 0.12)); y += hh; });
+        break;
+      }
+      case 'yatak_cift': case 'yatak_tek': {
+        // Baza, şilte, yastıklar (başı duvarda)
+        const bz = H * 0.55;
+        k(0, W, 0, bz, 0, D, koyu(r, 0.75));
+        k(0, W, bz, H, 0, D, r);
+        const ny = g.nesne === 'yatak_cift' ? 2 : 1;
+        for (let i = 0; i < ny; i++) { const x = (W / ny) * i + 60; k(x, x + W / ny - 120, H, H + 120, 40, 420, '#ffffff'); }
+        break;
+      }
+      case 'kanepe': {
+        const ot = H * 0.5;
+        k(0, W, 0, 120, 0, D, '#4a4038');
+        k(0, W, 120, ot, 0, D, r);
+        k(0, W, ot, H, 0, D * 0.25, koyu(r, 0.9));
+        k(0, 180, ot, H * 0.72, D * 0.25, D, koyu(r, 0.95)); k(W - 180, W, ot, H * 0.72, D * 0.25, D, koyu(r, 0.95));
         break;
       }
       case 'lamba': {

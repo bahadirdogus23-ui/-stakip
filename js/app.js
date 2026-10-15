@@ -284,7 +284,7 @@
     $('#tasarimDurum').textContent = 'Hesaplanıyor…';
     // Arayüz güncellensin diye hesap bir sonraki karede
     setTimeout(() => {
-      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3, null, { stil: $('#tasarimStil').value });
+      tasarimOnerileri = Tasarim.oneriler(tasarimTur, sinir, proje.ayarlar, 3, null, { stil: $('#tasarimStil').value, dekor: $('#tasarimDekor').checked });
       const not = duzeltilen.length ? `Sınır dışı ölçü düzeltildi: ${duzeltilen.map((a) => `${a.etiket} ${sinir[a.ad]}`).join(', ')}. ` : '';
       $('#tasarimDurum').textContent = not + (tasarimOnerileri.length
         ? `${tasarimOnerileri.length} öneri. Beğenmediyseniz "Öneri üret"e tekrar basın.`
@@ -354,6 +354,7 @@
     bildir(`"${esc(t.ad)}" ${yeni ? 'yeni proje olarak açıldı' : 'projeye eklendi'}: ${moduller.length} modül.${ekler.length ? ` Malzemelere eklendi: ${esc(ekler.map((m) => m.ad).join(', '))}.` : ''}`, true);
   }
   $('#tasarimIc').addEventListener('change', tasarimSonucCiz);
+  $('#tasarimDekor').addEventListener('change', tasarimUret);
   $('#btnTasarim').addEventListener('click', () => {
     if (!tasarimOnerileri.length) $('#tasarimIc').checked = !!Tasarim.IC_ONIZLEME[tasarimTur];
     tasarimFormCiz();
@@ -432,7 +433,8 @@
           ${rafli && (s.raf > 0 || s.rafYukseklikleri.length) && !s.rafSabit ? `<label title="Rafın önden geri çekmesi (mm); boş = ayarlardaki değer">Raf geri${sayiGir('rafGeri', s.rafGeri, `min="0" placeholder="${esc(proje.ayarlar.rafOnGeriCekme)}"`)}</label>` : ''}
           ${rafli && s.raf > 0 && s.rafTipi !== 'cam' ? `<label title="Sabit raf ara bağlantıyla (ör. şeffaf T) vidalanır">Montaj${secim('rafSabit', String(!!s.rafSabit), [['false', 'Hareketli (pim)'], ['true', 'Sabit']])}</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="aski" type="checkbox" ${s.aski ? 'checked' : ''}> Askı</label>` : ''}
-          ${rafli && s.aski ? `<label title="Askı borusu ekseninin satırın iç tavanından mesafesi (mm)">Askı üstten${sayiGir('askiUstten', s.askiUstten, 'min="30" placeholder="60"')}</label>` : ''}
+          ${rafli && s.aski ? `<label title="Boru: duvara paralel elbise askısı (derinlik ≥ 500). Kanca: portmanto kancaları (vestiyer). Öne çekilir: sığ dolapta derinlemesine ray (≥ 300).">Askı türü${secim('askiTuru', s.askiTuru, [['boru', 'Askı borusu'], ['kanca', 'Kanca (portmanto)'], ['onden', 'Öne çekilir askı']])}</label>` : ''}
+          ${rafli && s.aski && s.askiTuru === 'boru' ? `<label title="Askı borusu ekseninin satırın iç tavanından mesafesi (mm)">Askı üstten${sayiGir('askiUstten', s.askiUstten, 'min="30" placeholder="60"')}</label>` : ''}
           ${rafli ? `<label class="onay"><input data-alan="led" type="checkbox" ${s.led ? 'checked' : ''}> LED</label>` : ''}
         </div>` : ''}
         ${i < m.sutunlar[si].satirlar.length - 1 && !(s.tip === 'cekmece' && m.sutunlar[si].satirlar[i + 1].tip === 'cekmece') ? `<div class="sk-alt"><label class="onay" title="Bu satırla altındaki satır arasına sabit tabla (ara raf) konmaz; iki satır tek iç boşluğu paylaşır"><input data-alan="altTablaYok" type="checkbox" ${s.altTablaYok ? 'checked' : ''}> Altında ara tabla yok</label></div>` : ''}
@@ -1340,8 +1342,10 @@
     $('#delikAlan').innerHTML = delikHtml(m);
   }
   $('#atolyeModul').addEventListener('change', (e) => { atolyeModulId = e.target.value; atolyeCiz(); });
-  const delikYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Delik planı — ${m.ad}`)}${delikHtml(m)}</section>`).join('');
-  const montajYazdirHtml = () => proje.moduller.map((m) => `<section class="y-sayfa">${baslikHtml(`Montaj kılavuzu — ${m.ad}`)}<div class="y-modul y-montaj"><div class="y-on">${Cizim.onGorunus(m, sonuc.modulSonuclari[m.id].geo, {})}</div><div>${montajHtml(m)}</div></div></section>`).join('');
+  // Parçasız modüller (boşluk, eşya/dekor) üretim çıktılarına girmez
+  const uretimModulleri = () => proje.moduller.filter((m) => !(m.tip === 'panel' && (m.panelTuru === 'bosluk' || m.panelTuru === 'nesne')));
+  const delikYazdirHtml = () => uretimModulleri().map((m) => `<section class="y-sayfa">${baslikHtml(`Delik planı — ${m.ad}`)}${delikHtml(m)}</section>`).join('');
+  const montajYazdirHtml = () => uretimModulleri().map((m) => `<section class="y-sayfa">${baslikHtml(`Montaj kılavuzu — ${m.ad}`)}<div class="y-modul y-montaj"><div class="y-on">${Cizim.onGorunus(m, sonuc.modulSonuclari[m.id].geo, {})}</div><div>${montajHtml(m)}</div></div></section>`).join('');
   $('#btnYazdirDelik').addEventListener('click', () => yazdir('delik'));
   $('#btnYazdirMontaj').addEventListener('click', () => yazdir('montaj'));
 
@@ -1478,7 +1482,7 @@
 
   function tumYazdirHtml() {
     let html = `<section class="y-sayfa">${baslikHtml('Proje çizimleri')}`;
-    for (const m of proje.moduller) {
+    for (const m of uretimModulleri()) {
       const geo = sonuc.modulSonuclari[m.id].geo;
       if (!geo) continue;
       html += `<div class="y-modul"><div class="y-on">${Cizim.onGorunus(m, geo, {})}</div><div class="y-yan">${Cizim.yanKesit(m, geo)}</div></div>`;
