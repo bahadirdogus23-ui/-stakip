@@ -354,6 +354,8 @@
     if (buzTur === 'serbest') uzunlar.push({ tur: 'buz_serbest', w: R.sec([650, 700]) });
     if (buzTur === 'ankastre') uzunlar.push({ tur: 'buz_ankastre', w: 600 });
     if (boyFirin) uzunlar.push({ tur: 'boy_firin', w: 600 });
+    // Uzun duvarda kiler ya da kahve köşesi boy dolabı
+    if (toplam >= 3800 && R.ihtimal(0.4)) uzunlar.push(R.ihtimal(0.5) ? { tur: 'kiler', w: R.sec([450, 600]) } : { tur: 'kahve', w: 800 });
     // Ocak/fırın ve evye: L'de farklı duvarlarda
     let evyeDuvar = L ? R.sec(['A', 'B']) : 'A';
     let firinDuvar = L ? (evyeDuvar === 'A' ? 'B' : 'A') : 'A';
@@ -369,7 +371,7 @@
       let uz = d === uzunDuvar ? uzunlar.slice() : [];
       const toplamW = () => grup.flat().reduce((a, e) => a + e.w, 0) + uz.reduce((a, e) => a + e.w, 0);
       // Kısa duvarda isteğe bağlı elemanlar sırayla çıkarılır: boy fırın, bulaşık, çekmeceli, buzdolabı
-      for (const cikar of ['boy_firin', 'bulasik', 'cekmece', 'buz_serbest', 'buz_ankastre']) {
+      for (const cikar of ['kahve', 'kiler', 'boy_firin', 'bulasik', 'cekmece', 'buz_serbest', 'buz_ankastre']) {
         if (toplamW() <= uzunluk[d]) break;
         grup = grup.map((g) => g.filter((e) => e.tur !== cikar)).filter((g) => g.length);
         uz = uz.filter((e) => e.tur !== cikar);
@@ -426,9 +428,11 @@
         else if (e.tur === 'buz_serbest') m = bosluk(`Buzdolabı boşluğu${adVer('b')}`, e.w, 1850, duvar);
         else if (e.tur === 'buz_ankastre') m = hazir('buzdolabi_kabin', Object.assign({ genislik: e.w, yukseklik: boyH, ad: `Buzdolabı Kabini${adVer('bk')}` }, duvar));
         else if (e.tur === 'boy_firin') m = hazir('boy_firin', Object.assign({ genislik: e.w, yukseklik: boyH, ad: `Boy Fırın Dolabı${adVer('bf')}` }, duvar));
+        else if (e.tur === 'kiler') m = hazir('boy_kiler', Object.assign({ genislik: e.w, yukseklik: boyH, ad: `Kiler Dolabı${adVer('kl')}` }, duvar));
+        else if (e.tur === 'kahve') m = hazir('kahve', Object.assign({ genislik: e.w, yukseklik: boyH, ad: `Kahve Köşesi${adVer('kk')}` }, duvar));
         moduller.push(m);
         // Üst sıra: altın genişliğiyle hizalı; boy dolapların üstü boş (yerleşim kendiliğinden atlar)
-        if (e.tur === 'buz_ankastre' || e.tur === 'boy_firin') continue;
+        if (['buz_ankastre', 'boy_firin', 'kiler', 'kahve'].includes(e.tur)) continue;
         if (e.tur === 'buz_serbest') ustler[d].push({ w: e.w, tur: 'buz_ustu' });
         else if (e.tur === 'firin' || e.tur === 'ocak') ustler[d].push({ w: e.w, tur: 'aspirator' });
         else if (e.tur === 'bulasik') ustler[d].push({ w: 597, tur: 'ust' }); // panel eniyle hizalı
@@ -475,6 +479,8 @@
     if (moduller.some((m) => m.ad.startsWith('Buzdolabı boşluğu'))) ozet.push('Serbest buzdolabı boşluğu + üstü dolap');
     if (moduller.some((m) => m.ad.startsWith('Buzdolabı Kabini'))) ozet.push('Ankastre buzdolabı kabini');
     if (moduller.some((m) => m.ad.startsWith('Boy Fırın'))) ozet.push('Boy fırın dolabı');
+    if (moduller.some((m) => m.ad.startsWith('Kiler'))) ozet.push('Kiler boy dolabı');
+    if (moduller.some((m) => m.ad.startsWith('Kahve Köşesi'))) ozet.push('Kahve köşesi (LED\'li niş, camlı üst)');
     if (moduller.some((m) => m.ad.startsWith('Bulaşık'))) ozet.push('Ankastre bulaşık makinesi');
     ozet.push(`Üst dolaplar ${ustH} mm${kalkar ? ', kaldırmalı kapaklı' : ''}${moduller.some((m) => m.ad.startsWith('Açık Raflı')) ? ', açık raflı üst kutular' : ''}`);
     return { ad: L ? 'L mutfak' : 'Düz mutfak', moduller, yerlesim: { tip: L ? 'L' : 'duz', duvarA: A, duvarB: L ? B : 0 }, ozet };
@@ -548,6 +554,10 @@
     const H = o.yukseklik - mt;
     const baza = asma ? { tip: 'yok' } : R.ihtimal(st.ayak) ? AYAK(R.sec([100, 120, 150])) : BAZA(R.sec([60, 80]), 30);
     const nMod = Math.ceil(W / 1800);
+    // Kavisli üst tabla köşeleri ve kapakların üstünü kapatan tabla (tekli mobilya görünümü)
+    const kavis = R.ihtimal(0.35) ? R.sec([30, 50, 80]) : 0;
+    const kapakUstu = R.ihtimal(0.4);
+    if (kavis) ozet.push(`Üst tabla köşeleri R${kavis} mm kavisli`);
     for (const [i, mw] of bol(W, nMod).entries()) {
       const nSut = Math.max(1, Math.round(mw / R.ara(400, 550)));
       const sutunlar = [];
@@ -570,7 +580,7 @@
         sutunlar.push(SUT(null, satir));
         tarif.push({ cekmece: 'çekmeceler', kapak: 'kapak', acik: 'açık raf', cam: 'camlı kapak' }[tip]);
       }
-      moduller.push(govdeli(`Dresuar${nMod > 1 ? ` ${i + 1}` : ''}`, { genislik: mw, yukseklik: H, derinlik: D, yapi: 'tabla_boydan', baza, montajYuksekligi: mt, sutunlar }));
+      moduller.push(govdeli(`Dresuar${nMod > 1 ? ` ${i + 1}` : ''}`, { genislik: mw, yukseklik: H, derinlik: D, yapi: 'tabla_boydan', baza, montajYuksekligi: mt, sutunlar, ustKavisR: kavis, ustKavisKose: nMod === 1 ? 'on' : i === 0 ? 'sol' : 'sag', ustKapakUstu: kapakUstu }));
       ozet.push(`${mw} mm: ${tarif.join(' | ')}`);
     }
     if (asma) ozet.push(`Duvara asma, yerden ${mt} mm yüksekte`);
@@ -656,7 +666,11 @@
     if (bos >= 900 && R.ihtimal(0.55)) {
       const pw = Math.min(2700, Math.round(Math.min(bos, Math.max(1000, Wa * R.sec([0.45, 0.6])))));
       const ph = R.sec([900, 1000, 1200]);
-      moduller.push(hazir('duvar_paneli', { ad: 'TV arkası duvar paneli', en: pw, boy: ph, montajYuksekligi: ustAlt + R.sec([100, 150]), konum: x0 + Math.round((Wa - pw) / 2), _aksan: true }));
+      const lambri = R.ihtimal(0.5);
+      moduller.push(lambri
+        ? hazir('lambri_tv', { ad: 'TV arkası lambri', en: pw, boy: ph, montajYuksekligi: ustAlt + R.sec([100, 150]), konum: x0 + Math.round((Wa - pw) / 2), lambriCitaEn: R.sec([30, 40]), lambriAralik: R.sec([15, 20, 30]), lambriArka: R.ihtimal(0.6) ? 'govde' : 'yok', _aksan: true })
+        : hazir('duvar_paneli', { ad: 'TV arkası duvar paneli', en: pw, boy: ph, montajYuksekligi: ustAlt + R.sec([100, 150]), konum: x0 + Math.round((Wa - pw) / 2), _aksan: true }));
+      if (lambri) ozet.push('TV arkası çıtalı lambri');
       ozet.push(`TV arkasında ${pw}×${ph} mm duvar kaplama paneli`);
     } else if (!asmaVar && R.ihtimal(0.6)) {
       // Kademeli raflar: yan yana iki ya da üç raf farklı yüksekliklerde
@@ -1005,7 +1019,9 @@
     const kh = asma ? R.sec([250, 300, 350]) : R.sec([450, 500, 550]);
     const kmt = asma ? R.sec([300, 350]) : 0;
     const kTip = R.sec(['cekmece2', 'cekmece1', 'acik_cekmece']);
+    const komKavis = R.ihtimal(0.4) ? R.sec([40, 60, 100]) : 0;
     const komodin = (ad) => govdeli(ad, {
+      ustKavisR: komKavis, ustKapakUstu: !asma && R.ihtimal(0.5),
       genislik: kw, yukseklik: kh, derinlik: R.sec([380, 400]), yapi: 'tabla_boydan', montajYuksekligi: kmt, _aksan: R.ihtimal(0.4),
       baza: asma ? { tip: 'yok' } : R.ihtimal(st.ayak) ? AYAK(R.sec([100, 150])) : BAZA(60, 30),
       sutunlar: [SUT(null, kTip === 'cekmece2' && kh >= 400 ? [S('cekmece', null), S('cekmece', null)] : kTip === 'acik_cekmece' ? [S('cekmece', null), S('acik', R.sec([120, 150]), 1)] : [S('cekmece', null)])],
@@ -1025,7 +1041,9 @@
     if (panelTur === 'dar') {
       const ph = Math.min(R.sec([1100, 1200, 1300]), kopru ? kopruMt - 100 : 9999);
       const pw = Math.min(yw, 2700);
-      moduller.push(hazir('duvar_paneli', { ad: 'Yatak başı paneli', en: pw, boy: ph, montajYuksekligi: 0, konum: yx + Math.round((yw - pw) / 2), _aksan: true }));
+      moduller.push(R.ihtimal(0.5)
+        ? hazir(R.ihtimal(0.5) ? 'lambri_yatay' : 'lambri_dikey', { ad: 'Yatak başı lambri', en: pw, boy: ph, montajYuksekligi: 0, konum: yx + Math.round((yw - pw) / 2), lambriArka: R.ihtimal(0.5) ? 'govde' : 'yok', _aksan: true })
+        : hazir('duvar_paneli', { ad: 'Yatak başı paneli', en: pw, boy: ph, montajYuksekligi: 0, konum: yx + Math.round((yw - pw) / 2), _aksan: true }));
       ozet.push(`Yatak başı duvar paneli ${pw}×${ph} mm`);
     } else if (panelTur === 'genis') {
       const pw = Math.min(2700, yw + 2 * kw);
@@ -1093,7 +1111,12 @@
       let kapak = palet.kapak;
       if (palet.aksan && (palet.ikiTon ? !ust : aksan)) kapak = palet.aksan;
       if (m.tip === 'panel') {
-        if (m.panelTuru === 'bosluk') continue;
+        if (m.panelTuru === 'bosluk' || m.panelTuru === 'nesne') continue;
+        if (m.panelTuru === 'lambri') {
+          // Çıta hazır çıta stoğundan kalır; arka panel paletin aksan / kapak rengi
+          m.malzeme = Object.assign({}, m.malzeme, { govde: palet.aksan || palet.kapak });
+          continue;
+        }
         // Tabla ve raflar gövde rengi (aksan varsa ahşap aksan), diğer paneller kapak rengi
         const p = m.panelMalzeme === 'govde' ? (aksan && palet.aksan) || palet.govde : kapak;
         m.malzeme = Object.assign({}, m.malzeme, { govde: p, kapak: p });
@@ -1144,9 +1167,8 @@
   /** Stil paletlerindeki, projede bulunmayan malzemeleri varsayılanlardan ekler. */
   function ayarTamamla(A) {
     const var0 = new Set(A.malzemeler.map((m) => m.id));
-    const gerek = new Set();
-    for (const s of Object.values(STILLER)) for (const id of [].concat(s.govde, s.kapak, s.aksan, s.camMalz || [])) gerek.add(id);
-    const ek = Hesap.varsayilanAyarlar().malzemeler.filter((m) => gerek.has(m.id) && !var0.has(m.id));
+    // Stil paletleri ve hazır modüllerin (lambri çıtası, keçe…) kullanabileceği tüm varsayılan malzemeler
+    const ek = Hesap.varsayilanAyarlar().malzemeler.filter((m) => !var0.has(m.id));
     return { ayar: ek.length ? Object.assign({}, A, { malzemeler: A.malzemeler.concat(ek) }) : A, ek };
   }
 
