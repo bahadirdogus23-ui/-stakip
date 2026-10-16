@@ -864,6 +864,8 @@
     const y = (p && p.yerlesim) || {};
     const t = (p && p.teklif) || {};
     return {
+      id: kimlikAl(p && p.id, 'pr'),
+      olusturma: typeof (p && p.olusturma) === 'string' ? p.olusturma.slice(0, 30) : new Date().toISOString(),
       ad: metinAl(p && p.ad, 'Yeni proje', 80),
       artikKullan: !!(p && p.artikKullan),
       ayarlar: A,

@@ -1449,3 +1449,47 @@ test('3B tezgah: alt dolaplar üstünde kesintisiz, L köşede iki kollu, evye v
   const N = Hesap.projeyiNormallestir({ yerlesim: { tezgah: { tur: 'mese', kalinlik: 40, renk: '#ABCDEF' } } });
   assert.deepEqual(N.yerlesim.tezgah, { acik: true, tur: 'mese', renk: '#abcdef', kalinlik: 40, tasma: 20, arasi: true });
 });
+
+// ---- Veri güvenliği (saf işlevler) ----
+const Depo = require('../js/depo.js');
+test('veri güvenliği: sürüm budama, yedek birleştirme, dosya adı, içerik çözme', () => {
+  const GUN = 86400000;
+  const simdi = Date.UTC(2026, 9, 16, 12);
+  // 200 gün boyunca günde 3 sürüm
+  const L = [];
+  let a = 1;
+  for (let g = 0; g < 200; g++) for (const s of [9, 13, 17]) L.push({ anahtar: a++, zaman: simdi - g * GUN - (24 - s) * 3600000 });
+  const sil = new Set(Depo.budanacaklar(L, simdi));
+  const kalan = L.filter((x) => !sil.has(x.anahtar));
+  // En yeni 40 korunur
+  const yeni40 = L.slice().sort((x, y) => y.zaman - x.zaman).slice(0, 40);
+  assert.ok(yeni40.every((x) => !sil.has(x.anahtar)));
+  // Son 60 günün her günü ve her ay en az bir sürüm
+  for (let g = 0; g < 60; g++) assert.ok(kalan.some((x) => Depo.tarihAd(x.zaman) === Depo.tarihAd(simdi - g * GUN)), `gün ${g}`);
+  const aylar = new Set(L.map((x) => Depo.tarihAd(x.zaman).slice(0, 7)));
+  for (const ay of aylar) assert.ok(kalan.some((x) => Depo.tarihAd(x.zaman).startsWith(ay)), ay);
+  assert.ok(kalan.length < L.length / 3);
+  // Riskli işlem öncesi kopya 180 gün korunur
+  const k = { anahtar: 9999, zaman: simdi - 150 * GUN + 1000, kalici: true };
+  assert.ok(!Depo.budanacaklar(L.concat([k]), simdi).includes(9999));
+  // Birleştirme: hiçbir kayıt silinmez, yeni olan ezmez
+  const plan = Depo.birlesimPlani([{ id: 'a', guncel: 5000 }, { id: 'b', guncel: 9000 }], [
+    { proje: { id: 'a' }, guncel: 20000 }, { proje: { id: 'b' }, guncel: 1000 }, { proje: { id: 'c' }, guncel: 1 }]);
+  assert.deepEqual(plan.map((x) => x.islem), ['guncelle', 'atla', 'ekle']);
+  // Dosya adı güvenli
+  assert.equal(Depo.projeDosyaAdi({ id: 'pr123456789', ad: 'Ali/Bey: mutfak*?' }), 'Ali Bey mutfak (456789).mobilya.json');
+  // İçerik: ham proje, sarılmış proje, tam yedek
+  const p = { id: 'x', ad: 'P', moduller: [] };
+  assert.equal(Depo.icerikCoz(p).projeler[0], p);
+  assert.equal(Depo.icerikCoz(JSON.parse(Depo.sarProje(p))).projeler[0].ad, 'P');
+  const y = Depo.icerikCoz(JSON.parse(Depo.tamYedekMetni([p, p], [{ id: 'ar1' }])));
+  assert.ok(y.tamYedek && y.projeler.length === 2 && y.artik.length === 1);
+  assert.equal(Depo.icerikCoz({ foo: 1 }), null);
+});
+
+test('proje kimliği kalıcı: normalleştirme kimliği korur, yoksa üretir', () => {
+  const p = Hesap.yeniProje();
+  assert.ok(/^pr/.test(p.id));
+  assert.equal(Hesap.projeyiNormallestir(JSON.parse(JSON.stringify(p))).id, p.id);
+  assert.equal(Hesap.projeyiNormallestir(JSON.parse(JSON.stringify(p))).olusturma, p.olusturma);
+});

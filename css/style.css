@@ -539,3 +539,26 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
   .delik-resim .cizim { max-height: 90mm; }
   .montaj-adim { font-size: 11px; }
 }
+
+/* Kayıt durumu ve Projelerim */
+.kayit-durum { background: #eef6ec; color: #2f6b2a; border: 1px solid #b9dcb3; font-size: 12px; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.kayit-durum.uyari { background: #fff4e0; color: #8a5a00; border-color: #f0cf8e; }
+.kayit-durum.hata { background: #fdecea; color: #a12a1f; border-color: #f2b8b1; }
+#projelerPencere { width: min(980px, calc(100vw - 24px)); max-height: calc(100vh - 40px); padding: 0; }
+.pr-govde { padding: 10px 18px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pr-kutu { border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px 12px; background: #fff; min-width: 0; }
+.pr-kutu h3 { margin: 4px 0 8px; }
+.pr-guvenlik { grid-column: 1 / -1; }
+.pr-durum { display: grid; gap: 4px; font-size: 13px; margin-bottom: 8px; }
+.pr-durum .tamam { color: #2f6b2a; }
+.pr-durum .uyari { color: #8a5a00; }
+.pr-liste { list-style: none; margin: 6px 0 0; padding: 0; max-height: 320px; overflow: auto; }
+.pr-liste li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--cizgi); font-size: 13px; }
+.pr-liste li.aktif { background: #fbf3e8; }
+.pr-liste .pr-ad { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-liste .pr-ad small { display: block; color: var(--soluk); }
+.pr-liste button { padding: 3px 8px; font-size: 12px; }
+#projeAra { width: 100%; }
+@media (max-width: 760px) { .pr-govde { grid-template-columns: 1fr; } }
+
+[hidden] { display: none !important; }

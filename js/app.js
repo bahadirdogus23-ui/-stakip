@@ -33,7 +33,10 @@
     } catch (e) { return []; }
   }
   let artikStok = artikYukle();
-  function artikKaydet() { try { localStorage.setItem(ARTIK_ANAHTARI, JSON.stringify(artikStok)); } catch (e) { /* depolama kapalı */ } }
+  function artikKaydet() {
+    try { localStorage.setItem(ARTIK_ANAHTARI, JSON.stringify(artikStok)); } catch (e) { /* depolama kapalı */ }
+    if (typeof Depo !== 'undefined') Depo.ayarYaz('artik', artikStok).catch(() => {});
+  }
   const plakaHesapla = (p, s) => Yerlesim.plakaSayilari(Yerlesim.projeYerlesimi(s.kesimListesi, p.ayarlar, proje.artikKullan ? artikStok : null));
   let maliyet = null;
   const para = (x) => Number(x || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
@@ -113,6 +116,7 @@
   function kaydet() {
     const json = JSON.stringify(proje);
     try { localStorage.setItem(KAYIT_ANAHTARI, json); } catch (e) { /* depolama kapalı olabilir */ }
+    arsivPlanla();
     if (gecmisAtla) gecmisAtla = false;
     else gecmiseEkle(json);
   }
@@ -164,6 +168,7 @@
     const m = proje.moduller[i];
     if (islem === 'sil') {
       if (!confirm(`"${m.ad}" silinsin mi?`)) return;
+      guvenlikKopyasi(`"${m.ad}" silinmeden önce`);
       proje.moduller.splice(i, 1);
       if (seciliId === id) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
     } else if (islem === 'kopya') {
@@ -322,7 +327,14 @@
     // Otomatik süsler projeye taşınmaz: 3B görünüşte "Süsler" açıkken aynı akıllı süsleme yapılır
     const moduller = JSON.parse(JSON.stringify(t.moduller.filter((m) => !(m.panelTuru === 'nesne' && /^Dekor – /.test(m.ad)))));
     if (!yeni && t.yerlesim.tip === 'L' && proje.moduller.length) { alert('L mutfak önerisi köşeden başladığı için yalnızca yeni proje olarak açılabilir.'); return; }
-    if (yeni && proje.moduller.length && !confirm('Mevcut modüller kaldırılıp bu tasarım yeni proje olarak açılsın mı? (Malzeme, hırdavat ve fiyat ayarları korunur.)')) return;
+    if (yeni && proje.moduller.length) {
+      // Mevcut proje silinmez: arşivde kalır, tasarım yeni projede açılır
+      arsivKaydetHemen();
+      const y = ayarlariKoruyanYeniProje('Yeni proje');
+      y.moduller = [];
+      proje = y;
+      gecmis.length = 0; ileri = [];
+    } else if (!yeni && proje.moduller.length) guvenlikKopyasi('Tasarım eklenmeden önce');
     // Stilin kullandığı, projede olmayan renkler malzeme listesine eklenir
     const ekler = (t.ekMalzemeler || []).filter((m) => !proje.ayarlar.malzemeler.some((x) => x.id === m.id));
     if (ekler.length) {
@@ -352,7 +364,7 @@
     $('#tasarimPencere').close();
     tumunuCiz(true);
     document.querySelector('[data-sekme="uc"]').click();
-    bildir(`"${esc(t.ad)}" ${yeni ? 'yeni proje olarak açıldı' : 'projeye eklendi'}: ${moduller.length} modül.${ekler.length ? ` Malzemelere eklendi: ${esc(ekler.map((m) => m.ad).join(', '))}.` : ''}`, true);
+    bildir(`"${esc(t.ad)}" ${yeni ? 'yeni proje olarak açıldı (önceki proje Projelerim\'de)' : 'projeye eklendi'}: ${moduller.length} modül.${ekler.length ? ` Malzemelere eklendi: ${esc(ekler.map((m) => m.ad).join(', '))}.` : ''}`, true);
   }
   $('#tasarimIc').addEventListener('change', tasarimSonucCiz);
   $('#tasarimDekor').addEventListener('change', tasarimUret);
@@ -2042,27 +2054,30 @@
     e.target.value = '';
     if (!dosya) return;
     try {
-      const p = JSON.parse(await dosya.text());
-      if (!p || !Array.isArray(p.moduller)) throw new Error('biçim');
-      proje = Hesap.projeyiNormallestir(p);
-      seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
-      $('#projeAd').value = proje.ad || '';
-      tumunuCiz(true);
-      ayarFormCiz();
-      if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); }
+      const c = Depo.icerikCoz(JSON.parse(await dosya.text()));
+      if (!c) throw new Error('biçim');
+      // Tam yedek dosyası: geri yükleme akışı
+      if (c.tamYedek) { await yedektenYukle(c); return; }
+      const p = Hesap.projeyiNormallestir(c.projeler[0]);
+      await projeyeGec(p, 'Dosyadan proje açılmadan önce');
+      bildir(`"${esc(p.ad)}" dosyadan açıldı ve Projelerim'e eklendi. Önceki proje de orada duruyor.`);
     } catch (err) {
       alert('Dosya okunamadı: geçerli bir proje dosyası değil.');
     }
   });
 
-  $('#btnYeniProje').addEventListener('click', () => {
-    if (!confirm('Mevcut proje silinip yeni proje başlatılsın mı? (Önce "Dosyaya kaydet" ile yedek alabilirsiniz.)')) return;
-    proje = yeniProje();
-    seciliId = proje.moduller[0].id;
-    $('#projeAd').value = proje.ad;
-    tumunuCiz(true);
-    ayarFormCiz();
-    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); }
+  /** Mevcut projenin malzeme, hırdavat ve fiyat ayarlarıyla yeni boş proje (kimlik yeni). */
+  function ayarlariKoruyanYeniProje(ad) {
+    const p = yeniProje();
+    const A = JSON.parse(JSON.stringify(proje.ayarlar));
+    const y = Hesap.projeyiNormallestir({ ad: ad || 'Yeni proje', ayarlar: A, moduller: p.moduller });
+    Hesap.otoTabakalariTemizle(y);
+    return y;
+  }
+  $('#btnYeniProje').addEventListener('click', async () => {
+    const eskiAd = proje.ad;
+    await projeyeGec(ayarlariKoruyanYeniProje('Yeni proje'));
+    bildir(`Yeni proje başladı. "${esc(eskiAd)}" Projelerim'de saklandı.`);
   });
 
   $('#projeAd').addEventListener('input', (e) => { proje.ad = e.target.value; kaydet(); });
@@ -2158,6 +2173,349 @@
     kaydet();
   }
 
+  // ---------------- Veri güvenliği: arşiv, sürümler, klasör, yedek ----------------
+  const SURUM_ARALIK = 10 * 60 * 1000; // en az 10 dakikada bir otomatik sürüm
+  const YEDEK_HATIRLAT = 7 * 86400000;
+  const guv = { hazir: false, hata: null, sonKayit: 0, sonSurum: {}, kalici: null, klasor: 'yok', bekleyen: null, yaziyor: false, tekrar: false };
+  const saatYaz = (t) => new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  const tarihYaz = (t) => new Date(t).toLocaleString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const kanal = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mobilya-olcu') : null;
+  const sekmeId = Math.random().toString(36).slice(2);
+
+  function arsivPlanla() {
+    if (typeof Depo === 'undefined') return;
+    clearTimeout(guv.bekleyen);
+    guv.bekleyen = setTimeout(() => arsivKaydetHemen(), 1200);
+    durumYaz();
+  }
+  /** Açık projeyi arşive, gerekiyorsa sürüm geçmişine ve klasöre yazar. Üst üste çağrılar sıraya girer. */
+  async function arsivKaydetHemen() {
+    clearTimeout(guv.bekleyen);
+    if (typeof Depo === 'undefined' || !guv.hazir) return;
+    if (guv.yaziyor) { guv.tekrar = true; return; }
+    guv.yaziyor = true;
+    try {
+      const p = JSON.parse(JSON.stringify(proje));
+      const z = Date.now();
+      await Depo.projeYaz(p, z);
+      guv.sonKayit = z;
+      if (z - (guv.sonSurum[p.id] || 0) >= SURUM_ARALIK) {
+        const s = await Depo.surumEkle(p);
+        guv.sonSurum[p.id] = z;
+        if (s && guv.klasor === 'izinli') await Depo.klasoraSurumYaz(p, z).catch(klasorHatasi);
+      }
+      if (guv.klasor === 'izinli') {
+        await Depo.klasoraProjeYaz(p, z).catch(klasorHatasi);
+        await gunlukTamYedek();
+      }
+      guv.hata = null;
+      if (kanal) kanal.postMessage({ tur: 'kayit', id: p.id, sekme: sekmeId, zaman: z });
+    } catch (e) {
+      guv.hata = e && e.message ? e.message : String(e);
+    } finally {
+      guv.yaziyor = false;
+      durumYaz();
+      if (guv.tekrar) { guv.tekrar = false; arsivKaydetHemen(); }
+    }
+  }
+  function klasorHatasi(e) {
+    // İzin geri alındıysa ya da klasör taşındıysa kullanıcıdan yeniden izin istenir; geçici hatada bir sonraki kayıtta yeniden denenir.
+    // Her durumda veri tarayıcı arşivinde güvende.
+    guv.klasorHata = e && e.message ? e.message : String(e);
+    Depo.klasorDurumu().then((d) => { guv.klasor = d; durumYaz(); }).catch(() => { guv.klasor = 'izin-gerekli'; durumYaz(); });
+  }
+  async function gunlukTamYedek() {
+    const bugun = Depo.tarihAd(Date.now());
+    if ((await Depo.ayarAl('sonKlasorTamYedek')) === bugun) return;
+    const metin = Depo.tamYedekMetni(await Depo.tumProjeler(), artikStok);
+    if (await Depo.klasoraTamYedekYaz(metin).catch(klasorHatasi)) await Depo.ayarYaz('sonKlasorTamYedek', bugun);
+  }
+  /** Riskli işlemden önce açık projenin kalıcı kopyası (içerik çağrı anında alınır). */
+  function guvenlikKopyasi(neden) {
+    if (typeof Depo === 'undefined' || !guv.hazir) return;
+    const p = JSON.parse(JSON.stringify(proje));
+    Depo.surumEkle(p, neden).then((s) => { if (s && guv.klasor === 'izinli') return Depo.klasoraSurumYaz(p).catch(klasorHatasi); }).catch(() => {});
+  }
+  /** Başka bir projeye geçer: açık proje önce arşive yazılır; aynı kimlikli eski kayıt farklıysa sürüme alınır. */
+  async function projeyeGec(p, neden) {
+    if (guv.hazir) {
+      await arsivKaydetHemen();
+      const eski = await Depo.projeAl(p.id).catch(() => null);
+      if (eski && JSON.stringify(eski.proje) !== JSON.stringify(p)) await Depo.surumEkle(eski.proje, neden || 'Başka sürüm açılmadan önce').catch(() => {});
+    }
+    proje = p;
+    seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
+    $('#projeAd').value = proje.ad || '';
+    gecmis.length = 0;
+    ileri = [];
+    tumunuCiz(true);
+    ayarFormCiz();
+    if (aktifSekme === 'maliyet') { fiyatFormCiz(); teklifFormCiz(); }
+    gecmisDugmeleri();
+    await arsivKaydetHemen();
+    if ($('#projelerPencere').open) projelerCiz();
+  }
+  /** Proje listesini içe aktarır; daha yeni yerel kayıtlar ezilmez, güncellenenlerin eskisi sürüme alınır. */
+  async function iceAktar(ogeler, artik) {
+    const liste = await Depo.projeListesi();
+    const plan = Depo.birlesimPlani(liste, ogeler);
+    let ek = 0, gun = 0, atla = 0;
+    for (const { islem, g } of plan) {
+      const p = Hesap.projeyiNormallestir(g.proje);
+      if (islem === 'atla') { atla++; continue; }
+      if (islem === 'guncelle') {
+        const eski = await Depo.projeAl(p.id);
+        if (eski) await Depo.surumEkle(eski.proje, 'Yedekten geri yüklenmeden önce');
+        gun++;
+      } else ek++;
+      await Depo.projeYaz(p, g.guncel || Date.now());
+      if (p.id === proje.id) { proje = p; $('#projeAd').value = proje.ad; gecmis.length = 0; ileri = []; tumunuCiz(true); ayarFormCiz(); }
+    }
+    let artikEk = 0;
+    if (Array.isArray(artik)) {
+      const var0 = new Set(artikStok.map((a) => a.id));
+      for (const a of artik) if (a && a.id && !var0.has(a.id)) { artikStok.push(a); artikEk++; }
+      if (artikEk) { artikKaydet(); artikStok = artikYukle(); }
+    }
+    return { ek, gun, atla, artikEk };
+  }
+  async function yedektenYukle(c) {
+    const z = Date.parse(c.tarih) || Date.now();
+    const r = await iceAktar(c.projeler.filter((p) => p && p.id).map((p) => ({ proje: p, guncel: z })).concat(c.projeler.filter((p) => p && !p.id).map((p) => ({ proje: Object.assign({}, p, { id: undefined }), guncel: z }))), c.artik);
+    bildir(`Yedek yüklendi: ${r.ek} yeni proje, ${r.gun} güncellendi (eskileri sürüm geçmişinde), ${r.atla} değişmedi${r.artikEk ? `, ${r.artikEk} artık parça` : ''}. Hiçbir kayıt silinmedi.`);
+    if ($('#projelerPencere').open) projelerCiz();
+  }
+
+  // ---- Durum göstergesi ----
+  async function klasorDurumOku() {
+    if (typeof Depo === 'undefined' || !Depo.klasorDestekli()) { guv.klasor = 'desteklenmiyor'; return; }
+    guv.klasor = await Depo.klasorDurumu();
+  }
+  function durumYaz() {
+    const b = $('#kayitDurum');
+    if (!b) return;
+    b.classList.remove('uyari', 'hata');
+    if (typeof Depo === 'undefined' || guv.hata) {
+      b.textContent = '⚠ Yalnız bu tarayıcıda';
+      b.title = `Arşive yazılamadı${guv.hata ? `: ${guv.hata}` : ''}. Çalışma tarayıcıda duruyor; "Projelerim > Tam yedek indir" ile yedek alın.`;
+      b.classList.add('hata');
+      return;
+    }
+    if (!guv.hazir || guv.bekleyen && !guv.sonKayit) { b.textContent = 'Kaydediliyor…'; return; }
+    const saat = guv.sonKayit ? saatYaz(guv.sonKayit) : '';
+    if (guv.klasor === 'izinli') {
+      b.textContent = `✓ Kaydedildi ${saat} · 📁 ${Depo.klasorAdi()}`;
+      b.title = `Tarayıcı arşivine ve "${Depo.klasorAdi()}" klasörüne kaydedildi.`;
+    } else if (guv.klasor === 'izin-gerekli' || guv.klasor === 'reddedildi') {
+      b.textContent = '⚠ Klasör izni gerekli';
+      b.title = 'Tıklayın: tarayıcı klasöre yazma iznini yeniden soracak. Çalışmanız tarayıcı arşivinde güvende.';
+      b.classList.add('uyari');
+    } else {
+      const eski = !guv.sonYedek || Date.now() - guv.sonYedek > YEDEK_HATIRLAT;
+      b.textContent = `✓ Kaydedildi ${saat}${eski ? ' · yedek önerilir' : ''}`;
+      b.title = guv.klasor === 'desteklenmiyor'
+        ? 'Tarayıcı arşivine kaydedildi. Bu tarayıcı klasöre otomatik kaydı desteklemiyor (Chrome / Edge masaüstü destekler); ara sıra "Tam yedek indir" ile yedek alın.'
+        : 'Tarayıcı arşivine kaydedildi. "Projelerim > Kayıt klasörü seç" ile her değişiklik bilgisayarınızdaki bir klasöre de yazılır.';
+      if (eski) b.classList.add('uyari');
+    }
+  }
+  $('#kayitDurum').addEventListener('click', async () => {
+    if (guv.klasor === 'izin-gerekli' || guv.klasor === 'reddedildi') {
+      try { if (await Depo.klasorIzinIste()) { guv.klasor = 'izinli'; await arsivKaydetHemen(); bildir(`Klasöre kayıt sürüyor: 📁 ${esc(Depo.klasorAdi())}`); return; } } catch (e) { /* aşağıda pencere açılır */ }
+    }
+    projelerAc();
+  });
+
+  // ---- Projelerim penceresi ----
+  async function projelerAc() {
+    $('#projelerPencere').showModal();
+    await arsivKaydetHemen();
+    projelerCiz();
+  }
+  $('#btnProjeler').addEventListener('click', projelerAc);
+  $('#projelerKapat').addEventListener('click', () => $('#projelerPencere').close());
+  $('#projeAra').addEventListener('input', () => projelerCiz());
+  async function projelerCiz() {
+    if (typeof Depo === 'undefined' || !guv.hazir) {
+      $('#projeListesi').innerHTML = '<li>Arşiv kullanılamıyor (tarayıcı depolamaya izin vermiyor). "Dosyaya kaydet" ile yedek alın.</li>';
+      return;
+    }
+    await klasorDurumOku();
+    // Güvenlik durumu
+    const kd = guv.klasor;
+    const satir = (ok, metin) => `<div class="${ok ? 'tamam' : 'uyari'}">${ok ? '✓' : '⚠'} ${metin}</div>`;
+    $('#guvenlikDurum').innerHTML = [
+      satir(true, `Tüm projeler bu tarayıcının arşivinde (son kayıt ${guv.sonKayit ? saatYaz(guv.sonKayit) : '—'}).`),
+      satir(guv.kalici === true, guv.kalici === true ? 'Kalıcı depolama açık: tarayıcı yer açmak için verilerinizi silmez.' : 'Tarayıcı kalıcı depolamayı onaylamadı; klasöre kayıt ya da düzenli tam yedek önerilir.'),
+      kd === 'izinli' ? satir(true, `Her değişiklik <b>📁 ${esc(Depo.klasorAdi())}</b> klasörüne yazılıyor (Projeler/, Yedekler/). Program klasördeki dosyaları silmez.`)
+        : kd === 'desteklenmiyor' ? satir(false, 'Bu tarayıcı klasöre otomatik kaydı desteklemiyor (Chrome / Edge masaüstü gerekir). Düzenli "Tam yedek indir" kullanın.')
+          : kd === 'yok' ? satir(false, 'Kayıt klasörü seçilmedi. Bilgisayarınızda (tercihen OneDrive / Google Drive ile eşitlenen) bir klasör seçin.')
+            : satir(false, `📁 ${esc(Depo.klasorAdi())} klasörü için izin gerekiyor: "Klasöre kaydı sürdür"e basın.`),
+      satir(!!guv.sonYedek && Date.now() - guv.sonYedek < YEDEK_HATIRLAT, guv.sonYedek ? `Son indirilen tam yedek: ${tarihYaz(guv.sonYedek)}` : 'Henüz tam yedek indirilmedi.'),
+    ].join('');
+    $('#btnKlasorSec').hidden = kd === 'desteklenmiyor';
+    $('#btnKlasorSec').textContent = kd === 'yok' ? '📁 Kayıt klasörü seç' : '📁 Klasörü değiştir';
+    $('#btnKlasorIzin').hidden = !(kd === 'izin-gerekli' || kd === 'reddedildi');
+    $('#btnKlasordenAl').hidden = kd !== 'izinli';
+    // Projeler
+    const ara = $('#projeAra').value.trim().toLocaleLowerCase('tr');
+    const tum = await Depo.projeListesi();
+    const L = tum.filter((p) => !p.silindi && (!ara || String(p.ad).toLocaleLowerCase('tr').includes(ara)));
+    $('#projeSayisi').textContent = `(${tum.filter((p) => !p.silindi).length})`;
+    $('#projeListesi').innerHTML = L.map((p) => `<li data-pr="${esc(p.id)}" class="${p.id === proje.id ? 'aktif' : ''}">
+      <span class="pr-ad">${esc(p.ad)}${p.id === proje.id ? ' <b>(açık)</b>' : ''}<small>${p.modulSayisi} modül · ${tarihYaz(p.guncel)}</small></span>
+      ${p.id === proje.id ? '' : '<button data-pi="ac">Aç</button>'}
+      <button data-pi="kopya" class="ikincil" title="Kopyasını yeni proje olarak aç">⧉</button>
+      <button data-pi="indir" class="ikincil" title="Proje dosyası indir">⬇</button>
+      ${p.id === proje.id ? '' : '<button data-pi="cop" class="ikincil" title="Çöp kutusuna taşı (geri alınabilir)">🗑</button>'}
+    </li>`).join('') || '<li>Proje yok.</li>';
+    // Sürümler
+    const S = await Depo.surumListesi(proje.id);
+    $('#surumListesi').innerHTML = S.map((s) => `<li data-sr="${s.anahtar}">
+      <span class="pr-ad">${tarihYaz(s.zaman)}${s.neden ? ` · <i>${esc(s.neden)}</i>` : ''}<small>${esc(s.ad)} · ${s.modulSayisi} modül</small></span>
+      <button data-si="don" title="Projeyi bu sürüme döndür (şimdiki hali de sürüm olarak saklanır)">Geri dön</button>
+      <button data-si="kopya" class="ikincil" title="Bu sürümü ayrı proje olarak aç">⧉</button>
+    </li>`).join('') || '<li>Henüz sürüm yok; düzenledikçe oluşur.</li>';
+    // Çöp
+    const C = tum.filter((p) => p.silindi);
+    $('#copListesi').innerHTML = C.map((p) => `<li data-pr="${esc(p.id)}">
+      <span class="pr-ad">${esc(p.ad)}<small>${p.modulSayisi} modül · silinme ${tarihYaz(p.silindi)}</small></span>
+      <button data-pi="geri">Geri al</button>
+      <button data-pi="kalici" class="ikincil" title="Kalıcı sil (geri alınamaz)">Kalıcı sil</button>
+    </li>`).join('') || '<li>Çöp kutusu boş.</li>';
+  }
+  $('#projelerPencere').addEventListener('click', async (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const li = b.closest('li');
+    try {
+      if (b.dataset.pi) {
+        const id = li.dataset.pr;
+        const k = await Depo.projeAl(id);
+        if (!k) return;
+        const islem = b.dataset.pi;
+        if (islem === 'ac') { await projeyeGec(Hesap.projeyiNormallestir(k.proje)); bildir(`"${esc(k.ad)}" açıldı.`); }
+        else if (islem === 'kopya') {
+          const p = Hesap.projeyiNormallestir(Object.assign({}, k.proje, { id: undefined, ad: `${k.ad} (kopya)`.slice(0, 80), olusturma: undefined }));
+          await projeyeGec(p);
+          bildir(`"${esc(p.ad)}" oluşturuldu.`);
+        } else if (islem === 'indir') indir(`${Depo.guvenliAd(k.ad)}${Depo.DOSYA_UZANTI}`, Depo.sarProje(k.proje, k.guncel), 'application/json');
+        else if (islem === 'cop') { await Depo.copeAt(id); bildir(`"${esc(k.ad)}" çöp kutusuna taşındı; oradan geri alabilirsiniz.`); }
+        else if (islem === 'geri') { await Depo.coptenCikar(id); bildir(`"${esc(k.ad)}" geri alındı.`); }
+        else if (islem === 'kalici') {
+          if (!confirm(`"${k.ad}" ve tüm sürüm geçmişi kalıcı olarak silinsin mi? Bu geri alınamaz.`)) return;
+          if (!confirm('Emin misiniz? (Kayıt klasöründeki dosyalar silinmez.)')) return;
+          await Depo.kaliciSil(id);
+        }
+        projelerCiz();
+        return;
+      }
+      if (b.dataset.si) {
+        const s = await Depo.surumAl(Number(li.dataset.sr));
+        if (!s) return;
+        const p = Hesap.projeyiNormallestir(JSON.parse(s.json));
+        if (b.dataset.si === 'don') {
+          if (!confirm(`Proje ${tarihYaz(s.zaman)} sürümüne döndürülsün mü? Şimdiki hali de sürüm geçmişine kaydedilir.`)) return;
+          await Depo.surumEkle(JSON.parse(JSON.stringify(proje)), 'Eski sürüme dönmeden önce');
+          await projeyeGec(p);
+          bildir(`Proje ${tarihYaz(s.zaman)} sürümüne döndürüldü.`);
+        } else {
+          await projeyeGec(Hesap.projeyiNormallestir(Object.assign({}, p, { id: undefined, ad: `${p.ad} (${Depo.tarihAd(s.zaman)})`.slice(0, 80), olusturma: undefined })));
+          bildir('Sürüm ayrı proje olarak açıldı.');
+        }
+        return;
+      }
+      if (b.id === 'btnKlasorSec') {
+        await Depo.klasorSec();
+        guv.klasor = 'izinli';
+        await Depo.ayarYaz('sonKlasorTamYedek', null);
+        // Tüm projeler hemen klasöre yazılır
+        for (const k of await Depo.projeListesi()) if (!k.silindi) { const r = await Depo.projeAl(k.id); await Depo.klasoraProjeYaz(r.proje, r.guncel).catch(klasorHatasi); }
+        await arsivKaydetHemen();
+        bildir(`Projeler 📁 ${esc(Depo.klasorAdi())} klasörüne kaydediliyor; bundan sonra her değişiklik otomatik yazılır.`);
+        projelerCiz();
+      } else if (b.id === 'btnKlasorIzin') {
+        if (await Depo.klasorIzinIste()) { guv.klasor = 'izinli'; await arsivKaydetHemen(); }
+        projelerCiz();
+      } else if (b.id === 'btnKlasordenAl') {
+        const L = await Depo.klasordenOku();
+        if (!L.length) { bildir('Klasörün "Projeler" bölümünde proje dosyası bulunamadı.'); return; }
+        const r = await iceAktar(L.map((x) => ({ proje: x.proje, guncel: x.guncel })), null);
+        bildir(`Klasörden: ${r.ek} yeni, ${r.gun} güncellendi, ${r.atla} zaten güncel.`);
+        projelerCiz();
+      } else if (b.id === 'btnTamYedek') {
+        await arsivKaydetHemen();
+        const metin = Depo.tamYedekMetni(await Depo.tumProjeler(), artikStok);
+        indir(`Mobilya Ölçü tam yedek ${Depo.tarihAd(Date.now())}.json`, metin, 'application/json');
+        guv.sonYedek = Date.now();
+        await Depo.ayarYaz('sonYedekIndirme', guv.sonYedek);
+        durumYaz();
+        projelerCiz();
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // klasör seçimi iptal
+      bildir(`İşlem yapılamadı: ${esc(err && err.message ? err.message : String(err))}`);
+    }
+  });
+  $('#yedekAc').addEventListener('change', async (e) => {
+    const dosya = e.target.files[0];
+    e.target.value = '';
+    if (!dosya) return;
+    try {
+      const c = Depo.icerikCoz(JSON.parse(await dosya.text()));
+      if (!c) throw new Error('biçim');
+      if (!c.tamYedek && !c.tarih) c.tarih = new Date(dosya.lastModified).toISOString();
+      await yedektenYukle(c);
+    } catch (err) {
+      alert('Yedek okunamadı: geçerli bir Mobilya Ölçü yedek ya da proje dosyası değil.');
+    }
+  });
+  // Başka sekmede aynı proje kaydedilirse uyar (iki sekme birbirinin üstüne yazmasın)
+  if (kanal) kanal.onmessage = (e) => {
+    const m = e.data || {};
+    if (m.tur === 'kayit' && m.id === proje.id && m.sekme !== sekmeId) {
+      bildir('Bu proje başka bir sekmede de açık ve orada değiştirildi. Çakışmayı önlemek için yalnız bir sekmede çalışın; değişiklikler sürüm geçmişinde saklanır.');
+    }
+  };
+  window.addEventListener('beforeunload', () => { try { localStorage.setItem(KAYIT_ANAHTARI, JSON.stringify(proje)); } catch (e) { /* yok say */ } arsivKaydetHemen(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') arsivKaydetHemen(); });
+
+  /** Açılışta: arşivi hazırla, eski tek-proje kaydını arşive taşı, klasör iznini kontrol et. */
+  async function guvenlikBaslat(ilk) {
+    if (typeof Depo === 'undefined') { durumYaz(); return; }
+    try {
+      await Depo.vt();
+      guv.hazir = true;
+      guv.kalici = await Depo.kaliciDepolama();
+      guv.sonYedek = (await Depo.ayarAl('sonYedekIndirme')) || null;
+      await Depo.klasorYukle();
+      await klasorDurumOku();
+      const liste = await Depo.projeListesi();
+      const kayitli = liste.find((p) => p.id === proje.id);
+      if (ilk && !kayitli && liste.some((p) => !p.silindi)) {
+        // Tarayıcının tek-proje kaydı yoksa son çalışılan arşiv projesi açılır
+        const son = liste.find((p) => !p.silindi);
+        const k = await Depo.projeAl(son.id);
+        proje = Hesap.projeyiNormallestir(k.proje);
+        seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
+        $('#projeAd').value = proje.ad;
+        gecmis.length = 0;
+        tumunuCiz(true);
+        ayarFormCiz();
+      }
+      if (!artikStok.length) {
+        const a = await Depo.ayarAl('artik');
+        if (Array.isArray(a) && a.length) { try { localStorage.setItem(ARTIK_ANAHTARI, JSON.stringify(a)); } catch (e) { /* yok say */ } artikStok = artikYukle(); }
+      }
+      const L = await Depo.surumListesi(proje.id);
+      guv.sonSurum[proje.id] = L.length ? L[0].zaman : 0;
+      await arsivKaydetHemen();
+    } catch (e) {
+      guv.hata = e && e.message ? e.message : String(e);
+    }
+    durumYaz();
+  }
+
   let ilkAcilis = false;
   try { ilkAcilis = !localStorage.getItem(KAYIT_ANAHTARI); } catch (e) { /* yok say */ }
   proje = yukle();
@@ -2165,5 +2523,6 @@
   $('#projeAd').value = proje.ad;
   ayarFormCiz();
   tumunuCiz(true);
+  guvenlikBaslat(ilkAcilis);
   if (ilkAcilis) $('#yardim').showModal();
 })();

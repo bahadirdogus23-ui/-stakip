@@ -71,6 +71,20 @@ Atölye sekmesinde ve "Kurulum şeması PDF" çıktısında.
   zeytin ağacı, meyveli kase; yuvarlak hatlı beyaz eşya, kahve makinesi, airfryer, kanepe, yatak, minder,
   ayakkabı; pürüzsüz gölgeleme; mum, lamba ve sarkıt kendi ışığını verir.
 
+## 7. Veri güvenliği — tamamlandı
+
+- **Projelerim**: her proje kimliğiyle tarayıcı veritabanında (IndexedDB) ayrı saklanır. "Yeni proje",
+  "Dosyadan aç" ve tasarımı "yeni proje olarak aç" artık eskisini silmez; ara, aç, kopyala, indir.
+- **Sürüm geçmişi**: düzenlerken en az 10 dakikada bir ve riskli işlemlerden (modül silme, başka proje açma,
+  tasarım ekleme, yedekten yükleme, eski sürüme dönme) önce kopya; son 40, son 60 günün her günü, her ay.
+- **Çöp kutusu**: silinen proje geri alınabilir; kalıcı silme iki onayla, yalnız çöpten.
+- **Kayıt klasörü** (Chrome / Edge masaüstü): seçilen klasöre her değişiklikte `Projeler/<ad> (<kimlik>).mobilya.json`,
+  sürümlerde `Yedekler/<yıl-ay>/…`, günde bir `Yedekler/Tam yedek <tarih>.json`. Program klasördeki dosyaları
+  silmez. İzin gerekirse üstteki durum düğmesiyle tek tıkla sürdürülür; "Klasörden içe aktar" ile yeni bilgisayara taşınır.
+- **Tam yedek**: tüm projeler + artık stoku tek dosya; geri yüklemede daha yeni kayıtlar ezilmez, güncellenenlerin
+  eskisi sürüm geçmişine alınır. 7 günden eski yedekte hatırlatma.
+- Kalıcı depolama istenir; tarayıcının tek-proje kaydı silinse bile arşivden geri gelir; iki sekme uyarısı.
+
 ## Sıradaki adaylar
 
 - Kurulum şemasında adım başına vida/minifix yerlerinin büyütülmüş detay çizimi.
