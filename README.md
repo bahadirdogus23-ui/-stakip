@@ -16,7 +16,7 @@ Kalıp boşluğu, modelin etrafına kutu çizilerek değil, Boolean fark işlemi
 
 ### Windows
 
-`run.bat` dosyasına çift tıklayın. İlk çalıştırmada `.venv` sanal ortamını oluşturur ve paketleri yükler (birkaç dakika sürebilir), ardından uygulamayı açar.
+`run.bat` dosyasına çift tıklayın. Python kurulu değilse `run.bat` onu Windows'un paket yöneticisi winget ile otomatik kurar (Python 3.13, yalnızca bu kullanıcı için). İlk çalıştırmada `.venv` sanal ortamını oluşturur ve paketleri yükler (birkaç dakika sürebilir), ardından uygulamayı açar.
 
 Elle kurmak isterseniz:
 

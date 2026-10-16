@@ -25,6 +25,14 @@ if not defined PY (
   python -c "import sys; sys.exit(0 if (3, 12) <= sys.version_info[:2] <= (3, 14) else 1)" >nul 2>&1 && set "PY=python"
 )
 if not defined PY (
+  REM No usable Python: install Python 3.13 for this user with winget (Windows 10/11).
+  where winget >nul 2>&1 && (
+    echo Python bulunamadi. Python 3.13 otomatik kuruluyor ^(winget^)...
+    winget install -e --id Python.Python.3.13 --scope user --accept-package-agreements --accept-source-agreements
+  )
+  if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" set PY="%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+)
+if not defined PY (
   echo [HATA] Uygun Python bulunamadi ^(3.12, 3.13 veya 3.14 gerekli^).
   echo.
   echo Bu bilgisayarda bulunan Python surumleri:
