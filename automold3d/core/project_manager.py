@@ -70,6 +70,8 @@ class Session:
     validation: ValidationReport | None = None
     mold: MoldResult | None = None
     split: SplitResult | None = None
+    # The split before pour channels were cut, so channels can be re-planned.
+    split_base: SplitResult | None = None
     label: str = ""
 
     def snapshot(self, label: str) -> Session:

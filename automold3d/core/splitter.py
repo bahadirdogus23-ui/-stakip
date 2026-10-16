@@ -6,6 +6,7 @@ import dataclasses
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import trimesh
@@ -44,6 +45,9 @@ class SplitResult:
     planes: list[PartingPlane] = field(default_factory=list)
     pins: PinLayout | None = None
     warnings: list[str] = field(default_factory=list)
+    # Filled by pouring.apply_channels (Channel / AirTrapSuggestion objects).
+    channels: list[Any] = field(default_factory=list)
+    air_traps: list[Any] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------- Mode A

@@ -4,7 +4,7 @@
 
 Kalıp boşluğu, modelin etrafına kutu çizilerek değil, Boolean fark işlemiyle (`Dış gövde − Model`, manifold3d) hesaplanır. Her işlemden sonra geometri kontrol edilir.
 
-> **Durum:** Aşama 0–5 tamamlandı: içe aktarma, doğrulama, negatif kalıp, bölme, pimler, dışa aktarma ve arayüz. Döküm ağzı ve hava kanalları (Aşama 6) ile çok parçalı kalıplar (Aşama 7) henüz yok; ilgili düğmeler devre dışıdır.
+> **Durum:** Aşama 0–6 tamamlandı: içe aktarma, doğrulama, negatif kalıp, bölme, pimler, döküm ağzı ve hava kanalları, dışa aktarma ve arayüz. Çok parçalı kalıplar (Aşama 7) henüz yok.
 
 ## Gereksinimler
 
@@ -54,9 +54,14 @@ sudo apt install libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 
    - **Pimler**: adet, çap, boy ve çap boşluğu (varsayılan 0,2 mm).
 5. **Negatif Kalıp Oluştur**: Boolean öncesinde dış gövde tel kafes olarak önizlenir. Mod A'da tek parçalı açık kalıp doğrudan oluşur.
 6. Mod B'de **Kalıbı Böl** ile kalıbı ikiye ayırın veya **Pimleri Oluştur** ile bölüp pim ve yuva ekleyin. Pimler 1. parçada, yuvalar 2. parçadadır. Elle konum girmek için "Konumlar" alanına düzlem koordinatı yazın, örneğin `22, 22; -22, -22`. Kurala uymayan konumlar reddedilir ve nedeni yazılır.
-7. **Geometriyi Doğrula**: tüm kontroller "Kontroller" sekmesinde BAŞARILI / UYARI / HATA / MANUEL İNCELEME olarak listelenir. "Üretime hazır" ifadesi yalnızca bütün kontroller geçtiğinde kullanılır.
-8. **Dışa Aktar**: STL / OBJ / 3MF, PNG önizleme ve `kalip_raporu.json` üretir. Dosya adları birimi içerir (`kalip_parca_1_mm.stl`). Her dosya yazıldıktan sonra geri okunur ve kontrol edilir: kapalı mı, üçgen sayısı ve hacim aynı mı.
-9. **Projeyi Kaydet** (`.amproj`, JSON): ayarlar ve kaynak dosya yolu kaydedilir. Kalıp geometrisi kaydedilmez; proje açıldığında model yeniden yüklenir ve işlemler yeniden çalıştırılır. Son projeler: Dosya → Son Projeler.
+7. İsteğe bağlı **Döküm Ağzı Ekle** / **Hava Kanalları Ekle** (varsayılan: kapalı). "Döküm yönü (yukarı)" ayarı döküm sırasında yukarıyı gösteren yöndür.
+   - Döküm ağzı boşluğun en yüksek noktasına açılır.
+   - Hava kanalları **hava kapanı önerilerine** açılır. Öneriler, boşluk yüzeyinin döküm yönüne göre yerel en yüksek noktalarıdır; akış simülasyonu yapılmaz.
+   - Konumları elle de girebilirsiniz (`x, y, z`).
+   - Her kanal için başlangıcının boşluğun içinde olduğu ve yolunun dışarıya açık olduğu kontrol edilir. Bağlantısız kanal **HATA** olarak raporlanır.
+8. **Geometriyi Doğrula**: tüm kontroller "Kontroller" sekmesinde BAŞARILI / UYARI / HATA / MANUEL İNCELEME olarak listelenir. "Üretime hazır" ifadesi yalnızca bütün kontroller geçtiğinde kullanılır.
+9. **Dışa Aktar**: STL / OBJ / 3MF, PNG önizleme ve `kalip_raporu.json` üretir. Dosya adları birimi içerir (`kalip_parca_1_mm.stl`). Her dosya yazıldıktan sonra geri okunur ve kontrol edilir: kapalı mı, üçgen sayısı ve hacim aynı mı.
+10. **Projeyi Kaydet** (`.amproj`, JSON): ayarlar ve kaynak dosya yolu kaydedilir. Kalıp geometrisi kaydedilmez; proje açıldığında model yeniden yüklenir ve işlemler yeniden çalıştırılır. Son projeler: Dosya → Son Projeler.
 
 **Geri Al / Yinele** (Ctrl+Z / Ctrl+Y) her işlem ve parametre değişikliği için çalışır. Görünüm menüsünden şunları açıp kapatabilirsiniz: pozitif model, negatif boşluk, dış gövde, patlatılmış görünüm, kesit, şeffaf, tel kafes, ölçüler, pim/kanal. Kalıptan çıkmayı engelleyen yüzeyler kırmızıyla işaretlenir.
 
@@ -74,7 +79,8 @@ Her sürümden önce şu adımları uygulayın:
 6. Yan payı değiştirin. Kalıp silinmeli ve tel kafes önizleme güncellenmeli. Ctrl+Z eski kalıbı geri getirmeli.
 7. Yaklaşık 500 bin üçgenli bir model içe aktarın ve kalıp oluşturun. İşlem sürerken pencere taşınabilmeli, menüler açılabilmeli. İptal'e basınca işlem birkaç saniye içinde durmalı.
 8. Dışa Aktar: klasörde `kalip_parca_1_mm.stl`, `kalip_parca_2_mm.stl`, `kalip_onizleme.png` ve `kalip_raporu.json` oluşmalı. Aynı klasöre yeniden aktarırken üzerine yazma onayı sorulmalı.
-9. Projeyi kaydedin, Dosya → Yeni Proje, ardından Dosya → Son Projeler'den açın. Parametreler geri gelmeli, model yeniden yüklenmeli.
+9. Döküm Ağzı Ekle ve Hava Kanalları Ekle'ye basın. Turkuaz kanallar ve öneri küreleri görünmeli; "Kontroller" sekmesinde her kanal için "bağlantısı" satırı BAŞARILI olmalı. "Kanal konumları" alanına modelin dışında kalan bir nokta girip kanalları yeniden ekleyin: o kanal HATA vermeli.
+10. Projeyi kaydedin, Dosya → Yeni Proje, ardından Dosya → Son Projeler'den açın. Parametreler geri gelmeli, model yeniden yüklenmeli.
 
 ## Testler
 
@@ -111,6 +117,6 @@ Dosyalar 2 MB'de döner ve 5 yedek tutulur. Farklı bir klasör için `AUTOMOLD_
 | 3 | Kalıbı bölme, ayırma yüzeyi, pimler | Tamam |
 | 4 | Dışa aktarma (STL/OBJ/3MF, rapor, PNG) | Tamam |
 | 5 | Arayüz entegrasyonu, geri al/yinele, proje kaydetme | Tamam |
-| 6 | Döküm ağzı ve hava kanalları | — |
+| 6 | Döküm ağzı ve hava kanalları | Tamam |
 | 7 | Çok parçalı kalıplar | — |
 | 8 | Kullanım kılavuzu ve Windows paketi | — |

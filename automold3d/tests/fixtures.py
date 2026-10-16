@@ -105,3 +105,14 @@ def write_broken_stl(path: Path) -> Path:
     count = np.uint32(1000).tobytes()
     path.write_bytes(header + count + b"\x00" * 50)
     return path
+
+
+def two_towers() -> trimesh.Trimesh:
+    """Base slab (z 0..5) with a tall tower (top z=25) and a short one (top z=20)."""
+    base = box(extents=(40, 20, 5))
+    base.apply_translation((0, 0, 2.5))
+    tall = cylinder(radius=5, height=25, sections=32)
+    tall.apply_translation((-10, 0, 12.5))
+    short = cylinder(radius=5, height=20, sections=32)
+    short.apply_translation((10, 0, 10))
+    return union_meshes([base, tall, short])

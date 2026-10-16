@@ -285,3 +285,33 @@ def test_ui_stays_responsive_on_500k_triangles(qtbot, window, tmp_path):
     assert import_gap < 0.3, import_gap
     assert mold_gap < 0.3, mold_gap
     assert import_redraw < 5.0 and mold_redraw < 5.0
+
+
+def test_spout_and_vents_buttons(qtbot, window, tmp_path):
+    import_file(qtbot, window, fx.write_mesh(fx.two_towers(), tmp_path / "kule.stl"))
+    assert not window.toolbar_actions["Döküm Ağzı Ekle"].isEnabled()
+    window.panel.plane_offset.setValue(2.5)
+    window.panel.flush()
+    window.on_generate()
+    wait_idle(qtbot, window)
+    window.on_pins()
+    wait_idle(qtbot, window)
+    assert window.toolbar_actions["Döküm Ağzı Ekle"].isEnabled()
+    window.on_spout()
+    wait_idle(qtbot, window)
+    window.on_vents()
+    wait_idle(qtbot, window)
+    split = window.session.split
+    assert [c.kind for c in split.channels][:1] == ["spout"]
+    assert any(c.kind == "vent" for c in split.channels)
+    assert len(window.viewport.scene.channels) == len(split.channels)
+    assert any(
+        "öneri" in window.status_list.item(i).text() for i in range(window.status_list.count())
+    )
+    window.on_undo()
+    assert [c.kind for c in window.session.split.channels] == ["spout"]
+    # Changing a channel setting drops the stale channels.
+    window.panel.spout_diameter.setValue(9.0)
+    window.panel.flush()
+    assert window.session.split.channels == []
+    assert not window.session.state.pouring.spout_enabled

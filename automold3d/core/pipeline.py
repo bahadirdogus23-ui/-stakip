@@ -17,8 +17,9 @@ from automold3d.core.exporter import ExportedFile, export_all
 from automold3d.core.importer import ImportResult, load_model, to_mm
 from automold3d.core.mesh_validation import repair_mesh, validate_mesh
 from automold3d.core.mold_generator import generate_mold
+from automold3d.core.pouring import apply_channels
 from automold3d.core.project_manager import ProjectState, Session
-from automold3d.core.splitter import one_part_open, two_part
+from automold3d.core.splitter import SplitResult, one_part_open, two_part
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def repair(session: Session) -> Session:
     out.model = result.mesh
     out.validation = validate_mesh(result.mesh, check_self_intersection=False)
     out.state.repaired = True
-    out.mold = out.split = None
+    out.mold = out.split = out.split_base = None
     log.info("Repair: %s", result.actions)
     return out
 
@@ -83,10 +84,11 @@ def build_mold(session: Session) -> Session:
     out = session.snapshot("Negatif kalıp oluşturma")
     if state.mode == "A":
         out.mold = None
-        out.split = one_part_open(model, state.mold, state.pull_dir, state.opening_offset)
+        out.split_base = one_part_open(model, state.mold, state.pull_dir, state.opening_offset)
+        out.split = _with_channels(out.split_base, state)
     else:
         out.mold = generate_mold(model, state.mold)
-        out.split = None
+        out.split = out.split_base = None
     return out
 
 
@@ -97,14 +99,40 @@ def split(session: Session, with_pins: bool = False) -> Session:
         raise GeometryError("Önce negatif kalıbı oluşturun.", "no mold")
     state = session.state
     out = session.snapshot("Pim ekleme" if with_pins else "Kalıbı bölme")
-    out.split = two_part(
+    out.split_base = two_part(
         session.mold,
         state.plane,
         state.mold,
         state.pins if with_pins else None,
         state.pin_positions if with_pins else None,
     )
+    out.split = _with_channels(out.split_base, state)
     return out
+
+
+def add_channels(session: Session, spout: bool | None = None, vents: bool | None = None) -> Session:
+    """Enable the spout and/or vents (None = keep current setting) and cut them."""
+    base = session.split_base or session.split
+    if base is None:
+        raise GeometryError("Önce kalıbı oluşturun (Mod B'de bölün).", "no split")
+    label = "Döküm ağzı ekleme" if spout else "Hava kanalı ekleme"
+    out = session.snapshot(label)
+    pouring = out.state.pouring
+    if spout is not None:
+        pouring.spout_enabled = spout
+    if vents is not None:
+        pouring.vents_enabled = vents
+    out.split_base = base
+    out.split = _with_channels(base, out.state)
+    return out
+
+
+def _with_channels(base: SplitResult, state: ProjectState) -> SplitResult:
+    p = state.pouring
+    if not (p.spout_enabled or p.vents_enabled):
+        return base
+    result, _ = apply_channels(base, p, p.spout_enabled, p.vents_enabled)
+    return result
 
 
 def current_checks(session: Session) -> list[qa.CheckResult]:

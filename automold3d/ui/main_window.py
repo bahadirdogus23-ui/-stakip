@@ -140,8 +140,12 @@ class MainWindow(QMainWindow):
             self.toolbar_actions[label] = action
         self.toolbar_actions["Model İçe Aktar"].setShortcut(QKeySequence("Ctrl+I"))
         self.toolbar_actions["Projeyi Kaydet"].setShortcut(QKeySequence.Save)
-        self.toolbar_actions["Döküm Ağzı Ekle"].setToolTip("Henüz uygulanmadı (Aşama 6).")
-        self.toolbar_actions["Hava Kanalları Ekle"].setToolTip("Henüz uygulanmadı (Aşama 6).")
+        self.toolbar_actions["Döküm Ağzı Ekle"].setToolTip(
+            "Boşluğun en yüksek noktasından dışarı döküm ağzı açar (varsayılan: kapalı)."
+        )
+        self.toolbar_actions["Hava Kanalları Ekle"].setToolTip(
+            "Hava kapanı önerilerinden dışarı kanal açar (öneri; akış simülasyonu yapılmaz)."
+        )
 
     def _build_menus(self) -> None:
         file_menu = self.menus["Dosya"]
@@ -361,9 +365,14 @@ class MainWindow(QMainWindow):
         session = self.session.snapshot(PARAM_LABEL)
         session.state = new
         if _mold_inputs(old) != _mold_inputs(new):
-            session.mold = session.split = None
+            session.mold = session.split = session.split_base = None
         elif _split_inputs(old) != _split_inputs(new) and session.state.mode == "B":
-            session.split = None
+            session.split = session.split_base = None
+        elif old.pouring != new.pouring and session.split is not session.split_base:
+            # Channel geometry is stale: drop it; the user re-adds it with the new values.
+            session.split = session.split_base
+            new.pouring.spout_enabled = new.pouring.vents_enabled = False
+            self.log_warning("Döküm ağzı/kanal ayarı değişti; kanalları yeniden ekleyin.")
         if self.session.label == PARAM_LABEL and self.history.can_undo():
             self.history.replace_current(session)
         else:
@@ -477,12 +486,26 @@ class MainWindow(QMainWindow):
         self.run_task("Pimler", pipeline.split, (session, True), self._built)
 
     def on_spout(self) -> None:
-        self.prompts.info("Döküm Ağzı", "Döküm ağzı Aşama 6'da eklenecek (henüz uygulanmadı).")
+        self.panel.flush()
+        self.run_task(
+            "Döküm ağzı", pipeline.add_channels, (self.session, True, None), self._channels_added
+        )
 
     def on_vents(self) -> None:
-        self.prompts.info(
-            "Hava Kanalları", "Hava kanalları Aşama 6'da eklenecek (henüz uygulanmadı)."
+        self.panel.flush()
+        self.run_task(
+            "Hava kanalları",
+            pipeline.add_channels,
+            (self.session, None, True),
+            self._channels_added,
         )
+
+    def _channels_added(self, result: object) -> None:
+        self._built(result)
+        split = self.session.split
+        if split is not None and split.air_traps:
+            points = "; ".join(", ".join(f"{c:.1f}" for c in t.point) for t in split.air_traps[:6])
+            self.log_status(f"Hava kapanı önerileri (öneri, simülasyon değil): {points}")
 
     def _built(self, result: object) -> None:
         session: Session = result  # type: ignore[assignment]
@@ -636,6 +659,8 @@ class MainWindow(QMainWindow):
             scene.undercut_mask = s.split.undercut.face_mask
             if s.split.pins is not None:
                 scene.pins = list(s.split.pins.pins)
+            scene.channels = [c.mesh for c in s.split.channels]
+            scene.markers = [t.point for t in s.split.air_traps]
         elif s.mold is not None:
             scene.mold = s.mold.mold
             scene.cavity = s.mold.cavity_model
@@ -685,6 +710,8 @@ class MainWindow(QMainWindow):
                 QTreeWidgetItem(root, [f"{part.part_id}: {part.name}"])
             if scene.pins:
                 QTreeWidgetItem(root, [f"Pimler ({len(scene.pins)})"])
+            if scene.channels:
+                QTreeWidgetItem(root, [f"Döküm ağzı / kanallar ({len(scene.channels)})"])
             root.setExpanded(True)
 
     def _update_actions(self) -> None:
@@ -704,8 +731,8 @@ class MainWindow(QMainWindow):
             "Negatif Kalıp Oluştur": idle and solid,
             "Kalıbı Böl": idle and mode_b and s.mold is not None,
             "Pimleri Oluştur": idle and mode_b and s.mold is not None,
-            "Döküm Ağzı Ekle": False,
-            "Hava Kanalları Ekle": False,
+            "Döküm Ağzı Ekle": idle and s.split is not None,
+            "Hava Kanalları Ekle": idle and s.split is not None,
             "Geometriyi Doğrula": idle and (s.mold is not None or s.split is not None),
             "Projeyi Kaydet": idle,
             "Dışa Aktar": idle and s.split is not None,

@@ -160,6 +160,17 @@ def build_report(
             {"normal": list(pl.unit_normal()), "ofset_mm": pl.offset} for pl in result.planes
         ],
         "pimler": _pins_report(result),
+        "kanallar": [
+            {
+                "tur": "dokum_agzi" if c.kind == "spout" else "hava_kanali",
+                "konum_mm": list(c.position),
+                "cap_mm": c.diameter,
+            }
+            for c in result.channels
+        ],
+        "hava_kapani_onerileri": [
+            {"konum_mm": list(t.point), "not": "öneri"} for t in result.air_traps
+        ],
         "ters_aci": {
             "alan_mm2": round(result.undercut.undercut_area, 3),
             "oran": round(result.undercut.undercut_fraction, 5),
