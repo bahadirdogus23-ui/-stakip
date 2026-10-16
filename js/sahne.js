@@ -68,7 +68,7 @@ precision highp sampler2DShadow;
 in vec3 vPos; in vec3 vNor; in vec4 vRenk; in vec4 vIsik; in vec4 vDoku;
 uniform sampler2DShadow uGolge; uniform float uGolgeVar; uniform vec2 uGolgeAdim;
 uniform vec3 uIsikYon; uniform vec3 uGoz; uniform float uOrto; uniform vec3 uBakis;
-uniform int uLedN; uniform vec3 uLedA[${LED_MAX}]; uniform vec3 uLedB[${LED_MAX}];
+uniform int uLedN; uniform vec3 uLedA[${LED_MAX}]; uniform vec3 uLedB[${LED_MAX}]; uniform vec2 uLedG[${LED_MAX}];
 uniform vec4 uVurgu; uniform float uAlfaCarpan;
 out vec4 renk;
 // Değer gürültüsü (doku için)
@@ -85,7 +85,8 @@ vec3 dokuUygula(vec3 c, vec3 n) {
     float v = dot(vPos, vec3(0.0042, 0.0026, 0.0031)) + fbm(vPos * 0.0028) * 2.4;
     float ana = smoothstep(0.0, 0.09, abs(sin(v * 3.1416)));
     float ince = smoothstep(0.0, 0.03, abs(sin(v * 7.0 + fbm(vPos * 0.01) * 3.0)));
-    vec3 damar = c * 0.58 + vec3(0.06, 0.045, 0.02);
+    float lum = dot(c, vec3(0.3, 0.59, 0.11));
+    vec3 damar = lum < 0.35 ? mix(c, vec3(0.86, 0.84, 0.8), 0.55) : c * 0.58 + vec3(0.06, 0.045, 0.02);
     c = mix(damar, c, ana * 0.85 + 0.15);
     c = mix(c * 0.86, c, ince * 0.55 + 0.45);
     return c * (0.97 + 0.05 * fbm(vPos * 0.02));
@@ -133,8 +134,9 @@ void main() {
     float t = clamp(dot(vPos - a, ab) / max(dot(ab, ab), 1e-3), 0.0, 1.0);
     vec3 l = a + ab * t - vPos;
     float r = length(l);
-    float k = max(dot(n, l / max(r, 1e-3)), 0.0) / (1.0 + (r / 160.0) * (r / 160.0));
-    c += taban * vec3(1.0, 0.72, 0.38) * k * 0.95;
+    float menzil = uLedG[i].y;
+    float k = max(dot(n, l / max(r, 1e-3)), 0.0) / (1.0 + (r / menzil) * (r / menzil));
+    c += taban * vec3(1.0, 0.72, 0.38) * k * 0.95 * uLedG[i].x;
   }
   c = mix(c, uVurgu.rgb, uVurgu.a);
   renk = vec4(c, min(vRenk.a, 1.0) * uAlfaCarpan);
@@ -196,23 +198,43 @@ void main() { renk = uRenk; }`;
       const sb = [0, 1, 2].map((k) => Math.max(...v.map((q) => q[k])) - Math.min(...v.map((q) => q[k])));
       const ax = [0, 1, 2].reduce((e, k) => (sb[k] > sb[e] ? k : e), 0);
       const dk = [ax === 0 ? 1 : 0, ax === 1 ? 1 : 0, ax === 2 ? 1 : 0, p.doku === 'mermer' ? 2 : p.doku === 'ahsap' ? 1 : 0];
-      const yuzN = [];
-      for (const f of p.gizli ? [] : F) {
+      // Yüz normalleri: sarım yönü güvenilir ağlarda (sk.yon) olduğu gibi, diğerlerinde dışa çevrilir
+      const yuzN = (p.gizli ? [] : F).map((f) => {
         const pts = f.map((j) => v[j]);
         let n = newell(pts);
-        if (Math.hypot(n[0], n[1], n[2]) < 1e-9) { yuzN.push(null); continue; }
+        if (Math.hypot(n[0], n[1], n[2]) < 1e-9) return null;
         n = birim(n);
         const fm = [0, 1, 2].map((k) => pts.reduce((s, q) => s + q[k], 0) / pts.length);
-        if (nokta(n, alt(fm, m)) < 0) n = n.map((x) => -x);
-        yuzN.push(n);
-        for (let t = 1; t + 1 < pts.length; t++) {
-          for (const q of [pts[0], pts[t], pts[t + 1]]) { V.push(q[0], q[1], q[2]); N.push(n[0], n[1], n[2]); C.push(rgb[0], rgb[1], rgb[2], a); T.push(dk[0], dk[1], dk[2], dk[3]); }
-        }
+        if (!(p.sk && p.sk.yon) && nokta(n, alt(fm, m)) < 0) n = n.map((x) => -x);
+        return n;
+      });
+      // Yumuşak parçalarda köşe normali: aynı köşeyi paylaşan, 50°'den yakın yüzlerin ortalaması
+      let kose = null;
+      if (p.yumusak) {
+        kose = new Map();
+        F.forEach((f, fi) => { if (yuzN[fi]) for (const j of f) { if (!kose.has(j)) kose.set(j, []); kose.get(j).push(yuzN[fi]); } });
       }
+      const koseN = (j, n) => {
+        if (!kose) return n;
+        const t = [0, 0, 0];
+        for (const q of kose.get(j)) if (nokta(q, n) > 0.64) { t[0] += q[0]; t[1] += q[1]; t[2] += q[2]; }
+        return birim(t);
+      };
+      F.forEach((f, fi) => {
+        const n = yuzN[fi];
+        if (!n) return;
+        for (let t = 1; t + 1 < f.length; t++) {
+          for (const j of [f[0], f[t], f[t + 1]]) {
+            const q = v[j];
+            const nn = koseN(j, n);
+            V.push(q[0], q[1], q[2]); N.push(nn[0], nn[1], nn[2]); C.push(rgb[0], rgb[1], rgb[2], a); T.push(dk[0], dk[1], dk[2], dk[3]);
+          }
+        }
+      });
       araliklar[i] = [bas, V.length / 3 - bas];
       // Keskin kenarlar: tek yüze ait ya da yüz normalleri 30°'den fazla ayrılan kenarlar
       const kBas = K.length / 3;
-      if (p.tur !== 'led') {
+      if (p.tur !== 'led' && !p.kenarsiz) {
         const kenar = new Map();
         F.forEach((f, fi) => {
           if (!yuzN[fi]) return;
@@ -225,12 +247,12 @@ void main() { renk = uRenk; }`;
           }
         });
         for (const e of kenar.values()) {
-          if (e.n.length === 2 && nokta(e.n[0], e.n[1]) > 0.87) continue;
+          if (e.n.length === 2 && Math.abs(nokta(e.n[0], e.n[1])) > 0.8) continue;
           const q1 = v[e.a];
           const q2 = v[e.b];
           K.push(q1[0], q1[1], q1[2], q2[0], q2[1], q2[2]);
         }
-      } else {
+      } else if (p.tur === 'led') {
         // LED şeridi: kutunun en uzun ekseni boyunca bir doğru parçası
         const b = [0, 1, 2].map((k) => [Math.min(...v.map((q) => q[k])), Math.max(...v.map((q) => q[k]))]);
         const ax = [0, 1, 2].reduce((e, k) => (b[k][1] - b[k][0] > b[e][1] - b[e][0] ? k : e), 0);
@@ -239,7 +261,7 @@ void main() { renk = uRenk; }`;
         A[ax] = b[ax][0];
         B[ax] = b[ax][1];
         A[1] -= 8; B[1] -= 8; // şeridin hemen altından yayılır
-        ledler.push(p.ledA && p.ledB ? [p.ledA, p.ledB] : [A, B]);
+        ledler.push(p.ledA && p.ledB ? [p.ledA, p.ledB, p.ledGuc || 1, p.ledMenzil || 160] : [A, B, p.ledGuc || 1, p.ledMenzil || 160]);
       }
       kenarAraliklari[i] = [kBas, K.length / 3 - kBas];
     }
@@ -453,9 +475,11 @@ void main() { renk = uRenk; }`;
       if (L.length) {
         const A = new Float32Array(LED_MAX * 3);
         const B = new Float32Array(LED_MAX * 3);
-        L.forEach(([a, bb], i) => { A.set(a, i * 3); B.set(bb, i * 3); });
+        const G = new Float32Array(LED_MAX * 2);
+        L.forEach(([a, bb, gg, mz], i) => { A.set(a, i * 3); B.set(bb, i * 3); G[i * 2] = gg; G[i * 2 + 1] = mz; });
         gl.uniform3fv(u.uLedA, A);
         gl.uniform3fv(u.uLedB, B);
+        gl.uniform2fv(u.uLedG, G);
       }
       gl.uniform1f(u.uAlfaCarpan, 1);
       const vurgusuz = () => gl.uniform4f(u.uVurgu, 0, 0, 0, 0);

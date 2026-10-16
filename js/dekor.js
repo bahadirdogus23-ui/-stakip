@@ -210,14 +210,16 @@
         }
       }
       // Alçak mobilyanın üstü: mutfak tezgahı, komodin, dresuar, TV ünitesi, ayakkabılık, lavabo
-      const ustY = y.montaj + g.H;
       const tezgah = bg === 'mutfak' && y.sira === 'zemin' && g.H < 1000;
+      // 3B'de tezgah çiziliyorsa eşyalar tezgahın üstüne; ocak ve evye tezgahla birlikte çizilir
+      const tzK = tezgah && g.ust === 'kusak' ? S.tezgahKal || 0 : 0;
+      const ustY = y.montaj + g.H + tzK;
       if (g.H <= 1250 && ustY <= 1350 && R.ihtimal(Y.ust)) {
         let liste = UST_ESYA[bg === 'mutfak' ? 'mutfak' : bg === 'komodin' ? 'komodin' : bg === 'banyo' ? 'banyo' : 'salon'];
         if (tezgah && /ocak|fırın altı/i.test(y.modul.ad) && g.W >= 580) {
-          ekle('ocak', y, (g.W - Math.min(580, g.W - 20)) / 2, Math.min(580, g.W - 20), ustY, 50, 510, Math.max(20, g.D - 530), 'Ocak');
+          if (!tzK) ekle('ocak', y, (g.W - Math.min(580, g.W - 20)) / 2, Math.min(580, g.W - 20), ustY, 50, 510, Math.max(20, g.D - 530), 'Ocak');
           liste = null;
-        } else if (tezgah && /evye/i.test(y.modul.ad)) liste = ['sise', 'saksi'];
+        } else if (tezgah && /evye/i.test(y.modul.ad)) liste = tzK ? null : ['sise', 'saksi'];
         if (liste) {
           const dUst = Math.min(g.D - (tezgah ? 60 : 40), 420);
           yuzeyDoldur(R, y, liste, 20, g.W - 20, ustY, 600, dUst, (g.D - dUst) / 2, Math.max(1, Y.adet - (g.W < 600 ? 1 : 0)));
@@ -283,7 +285,7 @@
   function cakismalar(yer, adaylar) {
     const Uc = (typeof self !== 'undefined' && self.Uc) || (typeof require === 'function' ? require('./uc.js') : null);
     if (!Uc) return new Set();
-    const P = Uc.projeParcalari(yer, {}).map((p) => ({ p, b: [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]) }));
+    const P = Uc.projeParcalari(yer, { tezgah: false }).map((p) => ({ p, b: [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]) }));
     const ic = (a, b) => [0, 1, 2].every((k) => Math.min(a[k][1], b[k][1]) - Math.max(a[k][0], b[k][0]) > 1);
     const kotu = new Set();
     // Yalnız yeni eklenen süsler elenir; projedeki eşyalar engel sayılır
@@ -304,7 +306,8 @@
    */
   function susle(proje, sonuc, secenek) {
     const yer = sonuc.yerlesim;
-    let moduller = uret(yer, Object.assign({ tavan: yer.tavan || (proje.yerlesim && proje.yerlesim.tavan) }, secenek));
+    const tz = proje.yerlesim && proje.yerlesim.tezgah;
+    let moduller = uret(yer, Object.assign({ tavan: yer.tavan || (proje.yerlesim && proje.yerlesim.tavan), tezgahKal: tz && tz.acik ? tz.kalinlik : 0 }, secenek));
     const yerOf = (m) => {
       const g = Hesap.modulHesapla(m, proje.ayarlar).geo;
       const mt = Number(m.montajYuksekligi) || 0;

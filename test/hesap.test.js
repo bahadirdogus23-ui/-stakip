@@ -1431,3 +1431,21 @@ test('trend: kapak deseni, kulp rengi/uzun kulp, alttan ve arkadan LED, kapsül/
   assert.equal(Hesap.malzemeDokusu(Hesap.malzemeBul(ayar, 'sl18c')), 'ahsap');
   assert.equal(Hesap.malzemeDokusu(Hesap.malzemeBul(ayar, 'mermer12')), 'mermer');
 });
+
+test('3B tezgah: alt dolaplar üstünde kesintisiz, L köşede iki kollu, evye ve ocak; kapatılabilir', () => {
+  const t = Tasarim.uret('mutfak', { duvarA: 3200, duvarB: 2600, tavan: 2600 }, ayar, 5, { stil: 'modern' });
+  const P = Uc.projeParcalari(t.sonuc.yerlesim, {});
+  const tz = P.filter((p) => p.modulId === '__tezgah');
+  const sinir = (p) => [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
+  const tablalar = tz.filter((p) => { const b = sinir(p); return b[1][1] - b[1][0] === 30 && (b[0][1] - b[0][0] > 500 || b[2][1] - b[2][0] > 500); });
+  assert.ok(tablalar.length >= 3, `tabla sayısı ${tablalar.length}`);
+  for (const p of tablalar) assert.equal(sinir(p)[1][0], 870);
+  // Önden taşma: alt dolap derinliği 560 + kapak 18 + 20
+  assert.ok(tablalar.some((p) => Math.round(sinir(p)[2][1]) === 598 || Math.round(sinir(p)[0][1]) === 598));
+  assert.ok(tz.some((p) => p.renk === '#6d7277'), 'evye');
+  assert.ok(tz.some((p) => p.tur === 'nesne' || p.renk === '#16171a'), 'ocak');
+  assert.equal(Uc.projeParcalari(t.sonuc.yerlesim, { tezgah: false }).filter((p) => p.modulId === '__tezgah').length, 0);
+  // Tezgah ayarı projede saklanır
+  const N = Hesap.projeyiNormallestir({ yerlesim: { tezgah: { tur: 'mese', kalinlik: 40, renk: '#ABCDEF' } } });
+  assert.deepEqual(N.yerlesim.tezgah, { acik: true, tur: 'mese', renk: '#abcdef', kalinlik: 40, tasma: 20, arasi: true });
+});

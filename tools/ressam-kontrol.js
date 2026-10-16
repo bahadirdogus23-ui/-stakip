@@ -8,7 +8,9 @@ function dogrula(parcalar, gorus, adim) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
   const don = ([x, y, z]) => { const x1 = cy * x + sy * z; const z1 = -sy * x + cy * z; return [x1, cp * y - sp * z1, sp * y + cp * z1]; };
   const bakis = [don([1, 0, 0])[2], don([0, 1, 0])[2], don([0, 0, 1])[2]];
-  parcalar = parcalar.filter((p) => !p.ayrinti && !p.gizli);
+  // Dönel cisim bantları (iç içe değmeleri doğal) aynı grupta sayılır
+  let gs = 0;
+  parcalar = parcalar.flatMap((p) => { const gr = p.grup || 'donel' + gs++; return p.alt ? p.alt.map((a) => Object.assign({}, a, { saydam: p.saydam, grup: gr, renk: p.renk })) : [p]; }).filter((p) => !p.ayrinti && !p.gizli);
   const og = parcalar.map((p) => {
     const v = (p.sk ? p.sk.v : p.k).map(don);
     const b = [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
@@ -57,7 +59,8 @@ function dogrula(parcalar, gorus, adim) {
       if (!on || z > on.z) on = { i, z };
       if (!son || rank[i] > son.r) son = { i, r: rank[i], z };
     }
-    if (on && son && on.i !== son.i && on.z - son.z > 2) {
+    // İç içe geçen eşya parçaları (meyve, yaprak) çizim görünümünde sıralanamaz; yalnız gerçekçi görünümde doğru
+    if (on && son && on.i !== son.i && on.z - son.z > 2 && !(og[on.i].p.tur === 'nesne' && og[son.i].p.tur === 'nesne') && !(og[on.i].p.grup && og[on.i].p.grup === og[son.i].p.grup)) {
       const k = son.i + '>' + on.i;
       const h = hatalar.get(k) || { n: 0, ust: og[son.i].p, gercek: og[on.i].p, dz: on.z - son.z };
       h.n++; hatalar.set(k, h);

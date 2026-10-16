@@ -61,10 +61,20 @@ Atölye sekmesinde ve "Kurulum şeması PDF" çıktısında.
   kapsül / yuvarlak / kemer / organik ayna, mermer desenli TV paneli, LED'li niş, siyah profil vitrin,
   aplik, sarkıt, pampas, minder; yeni stiller: sıcak minimal, koyu lüks, neo klasik, japandi.
 
+## 6. Tezgah ve gerçekçi eşyalar — tamamlandı
+
+- **Tezgah (3B)**: tezgah altı dolapların (kuşaklı alt dolap, L köşe, bulaşık makinesi) üstünde kesintisiz,
+  önden taşmalı tabla; L köşede iki kollu; evye + batarya, ankastre ocak; üst dolapların altına kadar tezgah
+  arası kaplama. Tür (beyaz/siyah mermer, gri kuvars, antrasit, beton, meşe, ceviz), renk, kalınlık, taşma
+  3B araç çubuğundan ya da tezgaha tıklayınca açılan menüden. Eşyalar tezgahın üstüne oturur.
+- **Eşyalar yeniden modellendi**: torna (dönel) vazo, şişe, kavanoz, bardak, lamba; küre yapraklı bitkiler ve
+  zeytin ağacı, meyveli kase; yuvarlak hatlı beyaz eşya, kahve makinesi, airfryer, kanepe, yatak, minder,
+  ayakkabı; pürüzsüz gölgeleme; mum, lamba ve sarkıt kendi ışığını verir.
+
 ## Sıradaki adaylar
 
 - Kurulum şemasında adım başına vida/minifix yerlerinin büyütülmüş detay çizimi.
 - Kavisli uç (çeyrek daire) açık raf modülü.
 - 3B'de iki modül arasına sürükleyerek yerleştirme (duvarda konum).
-- Mutfakta sürekli baza bandı ve tezgah modülü (yerleşimden otomatik).
+- Tezgahın metre olarak maliyete ve teklife eklenmesi; mutfakta sürekli baza bandı.
 - Yapı şablonlarının kullanıcı tarafından kaydedilmesi (kendi atölye kuralları).

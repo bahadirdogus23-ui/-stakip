@@ -24,6 +24,16 @@
   const camMi = (m) => !!m && (m.tur === 'Cam' || m.tur === 'Ayna');
 
   const SATIR_TIPLERI = { kapak: 'Kapak', cekmece: 'Çekmece', acik: 'Açık raf', nis: 'Cihaz nişi' };
+  /** Tezgah türleri (3B görünüş rengi ve dokusu). */
+  const TEZGAH_TURLERI = {
+    beyaz_mermer: { ad: 'Beyaz mermer görünüm (kuvars)', renk: '#ece9e3', doku: 'mermer' },
+    gri_kuvars: { ad: 'Gri kuvars', renk: '#a9a8a4', doku: 'mermer' },
+    siyah_mermer: { ad: 'Siyah mermer görünüm', renk: '#2f3033', doku: 'mermer' },
+    antrasit: { ad: 'Antrasit kompakt', renk: '#45474b', doku: null },
+    beton: { ad: 'Beton görünüm', renk: '#b8b3ab', doku: null },
+    mese: { ad: 'Masif meşe', renk: '#c9a57a', doku: 'ahsap' },
+    ceviz: { ad: 'Ceviz', renk: '#8a5a3c', doku: 'ahsap' },
+  };
   /** Kapak yüzey deseni (görünüş + CNC işçiliği). */
   const KAPAK_DESENLERI = { duz: 'Düz', cerceve: 'Çerçeveli (shaker freze)', citali: 'Çıtalı / oluklu (dikey freze)', kemer: 'Kemer desenli (freze)', altin_cita: 'Altın çıta kakmalı' };
   const KULP_RENKLERI = { siyah: '#2b2b2d', altin: '#c9a34a', krom: '#c7cacd', bronz: '#8c6a43', beyaz: '#eeeeea' };
@@ -864,6 +874,11 @@
         duvarB: sayiAl(y.duvarB, 2400, 0, 50000),
         birlestir: y.birlestir === undefined ? true : !!y.birlestir,
         tavan: sayiAl(y.tavan, 0, 0, 10000),
+        // Mutfak tezgahı (3B görünüş): tür, kalınlık, önden taşma, tezgah arası kaplama
+        tezgah: (() => {
+          const t = y.tezgah || {};
+          return { acik: t.acik !== false, tur: secenekAl(t.tur, Object.keys(TEZGAH_TURLERI), 'beyaz_mermer'), renk: typeof t.renk === 'string' && /^#[0-9a-f]{6}$/i.test(t.renk) ? t.renk.toLowerCase() : null, kalinlik: sayiAl(t.kalinlik, 30, 10, 80), tasma: sayiAl(t.tasma, 20, 0, 80), arasi: t.arasi !== false };
+        })(),
         koseAcisi: sayiAl(y.koseAcisi, 90, 45, 135),
         duvarSapma: sayiAl(y.duvarSapma, 0, 0, 200),
         engeller: (Array.isArray(y.engeller) ? y.engeller : []).slice(0, 60).map((e) => ({
@@ -2644,6 +2659,7 @@
     mentesheKonumlari,
     KAPAK_TURLERI,
     KAPAK_DESENLERI,
+    TEZGAH_TURLERI,
     KULP_RENKLERI,
     ACILIMLAR,
     SURGU_TURLERI,

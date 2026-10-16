@@ -1430,7 +1430,7 @@
   let susOnbellek = { anahtar: null, sonuc: null };
   /** Görünen yerleşime süsleri ekler (önbellekli; yerleşim ya da ayar değişince yenilenir). */
   function susluYerlesim(yer, kapsamProje) {
-    const anahtar = JSON.stringify([kapsamProje, yer.yerler.map((y) => [y.modul.id, y.bas, y.montaj, y.duvar]), proje.moduller.length, $('#ucSusYogun').value, susTohum, sonuc === susOnbellek.sonucRef]);
+    const anahtar = JSON.stringify([kapsamProje, yer.yerler.map((y) => [y.modul.id, y.bas, y.montaj, y.duvar]), proje.moduller.length, $('#ucSusYogun').value, susTohum, sonuc === susOnbellek.sonucRef, proje.yerlesim.tezgah]);
     if (susOnbellek.anahtar === anahtar && susOnbellek.sonucRef === sonuc) return susOnbellek.deger;
     const deger = Dekor.susle(proje, Object.assign({}, sonuc, { yerlesim: yer }), { yogunluk: $('#ucSusYogun').value, tohum: susTohum });
     susOnbellek = { anahtar, sonucRef: sonuc, deger };
@@ -1450,14 +1450,34 @@
   let ucSecim = null; // { modulId, satir: [sutun, no] | null, kul, tur, parca }
   const glAcik = () => $('#ucGercek').checked && !!sahneAl();
 
+  /** Projenin tezgah ayarından 3B tezgah seçeneği (kapalıysa false). */
+  function tezgahSecenek() {
+    const t = proje.yerlesim.tezgah;
+    if (!t || !t.acik) return false;
+    const tt = Hesap.TEZGAH_TURLERI[t.tur] || Hesap.TEZGAH_TURLERI.beyaz_mermer;
+    return { renk: t.renk || tt.renk, doku: tt.doku, kalinlik: t.kalinlik, tasma: t.tasma, arasi: t.arasi };
+  }
+  $('#ucTezgahTur').innerHTML = Object.entries(Hesap.TEZGAH_TURLERI).map(([k, v]) => `<option value="${k}">${esc(v.ad)}</option>`).join('');
+  const tezgahFormu = () => {
+    const t = proje.yerlesim.tezgah;
+    $('#ucTezgah').checked = t.acik;
+    $('#ucTezgahTur').value = t.tur;
+    $('#ucTezgahArasi').checked = t.arasi;
+    $('#ucTezgahTur').disabled = $('#ucTezgahArasi').disabled = !t.acik;
+  };
+  const tezgahDegis = (f) => { f(proje.yerlesim.tezgah); tumunuCiz(false); };
+  $('#ucTezgah').addEventListener('change', (e) => tezgahDegis((t) => { t.acik = e.target.checked; }));
+  $('#ucTezgahTur').addEventListener('change', (e) => tezgahDegis((t) => { t.tur = e.target.value; t.renk = null; }));
+  $('#ucTezgahArasi').addEventListener('change', (e) => tezgahDegis((t) => { t.arasi = e.target.checked; }));
   /** Görünen parçalar (seçenekler ve süslerle) */
   function ucParcalariHazirla() {
     const kapaksiz = $('#ucKapaksiz').checked;
+    const tezgah = tezgahSecenek();
     const sus = $('#ucSus').checked;
     const renkFn = (x) => Hesap.modulRenkleri(x, proje.ayarlar);
     if ($('#ucKapsam').value === 'proje') {
       const yer = sus ? susluYerlesim(sonuc.yerlesim, true).yerlesim : sonuc.yerlesim;
-      return { P: Uc.projeParcalari(yer, { kapaksiz, renkFn }), L: yer.tip === 'L', tavan: yer.tavan };
+      return { P: Uc.projeParcalari(yer, { kapaksiz, renkFn, tezgah }), L: yer.tip === 'L', tavan: yer.tavan };
     }
     const m = seciliModul();
     const s = m && sonuc.modulSonuclari[m.id];
@@ -1466,12 +1486,15 @@
     if (sus && !s.geo.panel) {
       // Tek modül: kendi başına küçük bir yerleşim gibi süslenir
       const yer = { tip: 'duz', duvarA: s.geo.W, duvarB: 0, tavan: 0, yerler: [{ modul: m, kaynak: m, duvar: 'A', sira: 'zemin', bas: 0, W: s.geo.W, D: s.geo.D, montaj: 0, geo: s.geo }] };
-      P = Uc.projeParcalari(susluYerlesim(yer, false).yerlesim, { kapaksiz, renkFn });
+      P = Uc.projeParcalari(susluYerlesim(yer, false).yerlesim, { kapaksiz, renkFn, tezgah });
+    } else if (tezgah && !s.geo.panel && s.geo.ust === 'kusak') {
+      const yer = { tip: 'duz', duvarA: s.geo.W, duvarB: 0, tavan: 0, yerler: [{ modul: m, kaynak: m, duvar: 'A', sira: 'zemin', bas: 0, W: s.geo.W, D: s.geo.D, montaj: 0, geo: s.geo }] };
+      P = Uc.projeParcalari(yer, { kapaksiz, renk: null, renkFn: (x) => Hesap.modulRenkleri(x, proje.ayarlar), tezgah });
     } else P = Uc.modulParcalari(s.geo, { kapaksiz, renk: Hesap.modulRenkleri(m, proje.ayarlar) }).map((p) => Object.assign(p, { modulId: m.id }));
     // Tek modül montaj yüksekliğinde gösterilir (asma dolap havada, raf duvarda)
     const my = Number(m.montajYuksekligi) || 0;
     const yuk = (q) => [q[0], q[1] + my, q[2]];
-    if (my > 0 && $('#ucOda').checked) P = P.map((p) => Object.assign({}, p, { k: p.k.map(yuk) }, p.sk ? { sk: { v: p.sk.v.map(yuk), f: p.sk.f } } : {}, p.ledA ? { ledA: yuk(p.ledA), ledB: yuk(p.ledB) } : {}));
+    if (my > 0 && $('#ucOda').checked) P = P.map((p) => Uc.parcaDonustur(p, yuk));
     return { P };
   }
   function ucVurgula() {
@@ -1485,6 +1508,7 @@
     });
   }
   function ucCiz() {
+    tezgahFormu();
     const { P, L, tavan } = ucParcalariHazirla();
     ucParcalar = P;
     const gl = glAcik();
@@ -1541,6 +1565,7 @@
    * kapsam: satir | modul | proje | akilli
    */
   function boya(sec, b, kapsam) {
+    if (sec.modulId === '__tezgah') { if (b.renk) tezgahDegis((t) => { t.renk = b.renk; }); return; }
     const m = proje.moduller.find((x) => x.id === sec.modulId);
     if (!m) { bildir('Bu süs yalnız görsel; boyanamaz. "Süsleri projeye ekle" ile eşyaya çevirebilirsiniz.'); return; }
     const A = proje.ayarlar;
@@ -1572,13 +1597,29 @@
   }
 
   // ---- Nesne menüsü (tıklanan parça) ----
-  const TUR_AD = { govde: 'Gövde', panel: 'İç bölücü / raf', kapak: 'Kapak', cekmece: 'Çekmece önü', ic: 'Çekmece kutusu', arkalik: 'Arkalık', baza: 'Baza', ayak: 'Ayak / profil', kulp: 'Kulp / askı', cam: 'Cam', ayna: 'Ayna', led: 'LED şerit', nesne: 'Eşya' };
+  const TUR_AD = { govde: 'Gövde', panel: 'İç bölücü / raf', kapak: 'Kapak', cekmece: 'Çekmece önü', ic: 'Çekmece kutusu', arkalik: 'Arkalık', baza: 'Baza', ayak: 'Ayak / profil', kulp: 'Kulp / askı', cam: 'Cam', ayna: 'Ayna', led: 'LED şerit', nesne: 'Eşya', tezgah: 'Tezgah' };
   function ucMenuCiz() {
     const kutu = $('#ucMenu');
     if (!ucSecim) { kutu.hidden = true; return; }
     const m = proje.moduller.find((x) => x.id === ucSecim.modulId);
     const A = proje.ayarlar;
     const sec = ucSecim;
+    if (sec.modulId === '__tezgah') {
+      const t = proje.yerlesim.tezgah;
+      const tt = Hesap.TEZGAH_TURLERI[t.tur];
+      kutu.innerHTML = `<h4><span>Tezgah</span><button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4>
+        <div class="alt">${esc(tt.ad)} · ${t.kalinlik} mm · önden ${t.tasma} mm taşma</div>
+        <fieldset><legend>Tezgah</legend>
+          <label class="tam">Tür<select data-tz="tur">${Object.entries(Hesap.TEZGAH_TURLERI).map(([k, v]) => `<option value="${k}"${k === t.tur ? ' selected' : ''}>${esc(v.ad)}</option>`).join('')}</select></label>
+          <div class="paletler">${Hesap.RENK_PALETI.map(([ad, r]) => `<button type="button" class="renk-kare${t.renk === r ? ' secili' : ''}" data-tz-renk="${r}" title="${esc(ad)}" style="background:${r}"></button>`).join('')}<input type="color" data-tz-ozel value="${esc(t.renk || tt.renk)}" title="Özel renk"></div>
+          <label>Kalınlık (mm)<input type="number" data-tz="kalinlik" value="${t.kalinlik}" min="10" max="80"></label>
+          <label>Önden taşma (mm)<input type="number" data-tz="tasma" value="${t.tasma}" min="0" max="80"></label>
+          <label class="onay"><input type="checkbox" data-tz="arasi"${t.arasi ? ' checked' : ''}> Tezgah arası kaplama</label>
+          <div class="dugmeler"><button data-um="tezgahKapat" class="ikincil kucuk-buton">Tezgahı gizle</button></div>
+        </fieldset>`;
+      kutu.hidden = false;
+      return;
+    }
     if (!m) {
       kutu.innerHTML = `<h4>Süs / eşya (otomatik) <button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4><div class="alt">Yalnız görsel; projede değil.</div><div class="dugmeler"><button data-um="karistir" class="ikincil kucuk-buton">🎲 Süsleri karıştır</button><button data-um="susEkle" class="ikincil kucuk-buton">Projeye ekle</button><button data-um="susKapat" class="ikincil kucuk-buton">Süsleri kapat</button></div>`;
       kutu.hidden = false;
@@ -1654,6 +1695,8 @@
   $('#ucMenu').addEventListener('pointerdown', (e) => e.stopPropagation());
   $('#ucMenu').addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
   $('#ucMenu').addEventListener('click', (e) => {
+    const tr = e.target.closest('[data-tz-renk]');
+    if (tr) { tezgahDegis((t) => { t.renk = tr.dataset.tzRenk; }); return; }
     const b = e.target.closest('[data-um], [data-um-boya]');
     if (!b) return;
     if (b.dataset.umBoya) { boya(ucSecim, { renk: b.dataset.umBoya, ad: b.dataset.ad }, $('#ucMenu [data-um-kapsam]').value); return; }
@@ -1664,6 +1707,7 @@
     if (islem === 'susEkle') { ucSecim = null; $('#ucSusEkle').click(); return; }
     if (islem === 'susKapat') { ucSecim = null; $('#ucSus').checked = false; susKaydet(); ucCiz(); ucMenuCiz(); return; }
     if (islem === 'kapaksiz') { $('#ucKapaksiz').checked = !$('#ucKapaksiz').checked; ucCiz(); return; }
+    if (islem === 'tezgahKapat') { ucSecim = null; tezgahDegis((t) => { t.acik = false; }); return; }
     if (!m) return;
     if (islem === 'form') {
       seciliId = m.id;
@@ -1702,6 +1746,16 @@
   function ucKameraCiz2() { ucVurgula(); ucKameraCiz(); }
   $('#ucMenu').addEventListener('change', (e) => {
     const el = e.target;
+    if (el.matches('[data-tz-ozel]')) { tezgahDegis((t) => { t.renk = el.value; }); return; }
+    if (el.dataset.tz) {
+      const k = el.dataset.tz;
+      tezgahDegis((t) => {
+        if (k === 'arasi') t.arasi = el.checked;
+        else if (k === 'tur') { t.tur = el.value; t.renk = null; }
+        else { const v = Number(el.value); if (Number.isFinite(v)) t[k] = Math.max(k === 'kalinlik' ? 10 : 0, Math.min(80, v)); }
+      });
+      return;
+    }
     if (el.matches('[data-um-kapsam]')) { ucMenuKapsam = el.value; return; }
     if (el.matches('[data-um-ozel]')) { boya(ucSecim, { renk: el.value, ad: null }, $('#ucMenu [data-um-kapsam]').value); return; }
     if (el.matches('[data-um-malz]')) { boya(ucSecim, { malzeme: el.value }, $('#ucMenu [data-um-kapsam]').value); return; }
@@ -1781,7 +1835,7 @@
           const ip = $('#ucIpucu');
           if (!p || p.modulId == null) { ip.hidden = true; return; }
           const m = proje.moduller.find((x) => x.id === p.modulId);
-          ip.textContent = `${m ? m.ad : 'Süs'} · ${TUR_AD[p.tur] || p.tur}${boyaModu ? ' · tıkla: boya' : ''}`;
+          ip.textContent = p.modulId === '__tezgah' ? `Tezgah${boyaModu ? ' · tıkla: boya' : ' · tıkla: ayarlar'}` : `${m ? m.ad : 'Süs'} · ${TUR_AD[p.tur] || p.tur}${boyaModu ? ' · tıkla: boya' : ''}`;
           ip.style.left = (e.clientX - r.left + 14) + 'px';
           ip.style.top = (e.clientY - r.top + 12) + 'px';
           ip.hidden = false;

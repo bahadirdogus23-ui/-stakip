@@ -17,7 +17,7 @@
 
   const sinir = (p) => [0, 1, 2].map((k) => [Math.min(...p.k.map((q) => q[k])), Math.max(...p.k.map((q) => q[k]))]);
   const kaydir = (d) => ([x, y, z]) => [x + d[0], y + d[1], z + d[2]];
-  const tasi = (p, d) => Object.assign({}, p, { k: p.k.map(kaydir(d)) }, p.sk ? { sk: { v: p.sk.v.map(kaydir(d)), f: p.sk.f } } : {});
+  const tasi = (p, d) => Uc.parcaDonustur(p, kaydir(d));
 
   /**
    * Adım tanımları (gövdeli dolap). sec: 3B parçayı bu adıma alan koşul; yon: patlatma yönü;

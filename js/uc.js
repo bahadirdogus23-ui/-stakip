@@ -16,7 +16,7 @@
 
   const RENK = {
     govde: '#efe6d6', ic: '#e4d9c4', panel: '#d6c3a3', kapak: '#e7cfa8', cekmece: '#dcc19a',
-    cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', ayak: '#555555', kulp: '#6f6658', led: '#ffd84d', baza: '#c9bba3', nesne: '#cccccc',
+    cam: '#9cc8e6', ayna: '#cfdbe3', arkalik: '#cfc6b8', tezgah: '#ece9e3', ayak: '#555555', kulp: '#6f6658', led: '#ffd84d', baza: '#c9bba3', nesne: '#cccccc',
   };
 
   /** Eksenlere paralel kutu (8 köşe). */
@@ -37,6 +37,52 @@
     for (let i = 0; i < n; i++) { const j = (i + 1) % n; f.push([i, j, n + j, n + i]); }
     const b = [0, 1, 2].map((k) => [Math.min(...v.map((q) => q[k])), Math.max(...v.map((q) => q[k]))]);
     return Object.assign(kutu(b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], tur), { sk: { v, f } }, ek || {});
+  }
+  /** Parçanın tüm noktalarını (kutu, ağ, LED ucu, alt parçalar) f ile dönüştürür. */
+  function parcaDonustur(p, f) {
+    const o = Object.assign({}, p, { k: p.k.map(f) });
+    if (p.sk) o.sk = Object.assign({}, p.sk, { v: p.sk.v.map(f) });
+    if (p.ledA) { o.ledA = f(p.ledA); o.ledB = f(p.ledB); }
+    if (p.alt) o.alt = p.alt.map((q) => parcaDonustur(q, f));
+    return o;
+  }
+  /**
+   * Dönel (torna) cisim: (cx, cz) ekseni etrafında profil [[y, r], ...] döndürülür; sx, sz kesit ölçeği
+   * (elips kesit). Gerçekçi görünümde tek pürüzsüz ağ; çizim görünümü için dışbükey bant parçaları (alt).
+   */
+  function donel(cx, cz, profil, tur, ek, sx, sz) {
+    const n = 22;
+    const ax = sx || 1;
+    const az = sz || 1;
+    const halka = (y, r) => Array.from({ length: n }, (_, i) => { const a = (i / n) * 2 * Math.PI; return [cx + r * ax * Math.cos(a), y, cz + r * az * Math.sin(a)]; });
+    const v = [];
+    const f = [];
+    profil.forEach(([y, r]) => v.push(...halka(y, r)));
+    const m = profil.length;
+    // Yan yüzler dışa bakacak sırayla (eksenden dışa doğru normal)
+    for (let j = 0; j + 1 < m; j++) for (let i = 0; i < n; i++) {
+      const a = j * n + i, b = j * n + ((i + 1) % n), c = (j + 1) * n + ((i + 1) % n), d = (j + 1) * n + i;
+      f.push([a, d, c, b]);
+    }
+    if (profil[0][1] > 0.01) f.push(Array.from({ length: n }, (_, i) => i));
+    if (profil[m - 1][1] > 0.01) f.push(Array.from({ length: n }, (_, i) => (m - 1) * n + (n - 1 - i)));
+    const b = [0, 1, 2].map((k) => [Math.min(...v.map((q) => q[k])), Math.max(...v.map((q) => q[k]))]);
+    const alt = [];
+    for (let j = 0; j + 1 < m; j++) {
+      const v2 = halka(profil[j][0], profil[j][1]).concat(halka(profil[j + 1][0], profil[j + 1][1]));
+      const f2 = [Array.from({ length: n }, (_, i) => i), Array.from({ length: n }, (_, i) => n + i)];
+      for (let i = 0; i < n; i++) { const i2 = (i + 1) % n; f2.push([i, i2, n + i2, n + i]); }
+      const b2 = [0, 1, 2].map((k) => [Math.min(...v2.map((q) => q[k])), Math.max(...v2.map((q) => q[k]))]);
+      alt.push(Object.assign(kutu(b2[0][0], b2[0][1], b2[1][0], b2[1][1], b2[2][0], b2[2][1], tur), { sk: { v: v2, f: f2 } }, ek || {}));
+    }
+    return Object.assign(kutu(b[0][0], b[0][1], b[1][0], b[1][1], b[2][0], b[2][1], tur), { sk: { v, f, yon: true }, yumusak: true, kenarsiz: true, alt }, ek || {});
+  }
+  /** Küre / elipsoit: merkez (cx, cy, cz), yarıçaplar rx, ry, rz. */
+  function kure(cx, cy, cz, rx, ry, rz, tur, ek) {
+    const prof = [];
+    const N = 8;
+    for (let i = 0; i <= N; i++) { const t = -Math.PI / 2 + (i / N) * Math.PI; prof.push([cy + ry * Math.sin(t), Math.max(0, Math.cos(t))]); }
+    return donel(cx, cz, prof, tur, ek, rx, rz);
   }
   /**
    * Şekil yolu (Hesap.sekilGeometrisi: M, L, Q köşe radyüsü, A yay, E elips; orijin sol-alt, y yukarı)
@@ -476,67 +522,146 @@
     const z0 = g.zGeri || 0;
     const r = g.renk || '#cccccc';
     const P = [];
-    const k = (x1, x2, y1, y2, za, zb, renk, ek) => P.push(Object.assign(kutu(x1, x2, y1, y2, z0 + za, z0 + zb, 'nesne', ek), { renk }));
-    // Dönel dilim: (cx, cz) merkezli rx × rz elips kesitli silindir, y1..y2
-    const sil = (cx, cz, rx, rz, y1, y2, renk, ek) => {
-      const n = 16;
-      const pts = Array.from({ length: n }, (_, i) => [cx + rx * Math.cos((i / n) * 2 * Math.PI), z0 + cz + rz * Math.sin((i / n) * 2 * Math.PI)]);
-      P.push(Object.assign(prizma(pts, (u, v, w) => [u, w, v], y1, y2, 'nesne', ek), { renk }));
+    const Z = (z) => z0 + z;
+    const ekle = (p, renk, ek) => { P.push(Object.assign(p, { renk }, ek || {})); return p; };
+    // Düz kutu
+    const k = (x1, x2, y1, y2, za, zb, renk, ek) => ekle(kutu(x1, x2, y1, y2, Z(za), Z(zb), 'nesne'), renk, ek);
+    const kose = (a, b, rr) => Math.max(0, Math.min(rr, a / 2 - 0.5, b / 2 - 0.5));
+    // Üstten bakınca köşeleri yuvarlak kutu (dikey kenarlar kavisli)
+    const yk = (x1, x2, y1, y2, za, zb, renk, rr, ek) => {
+      const q = kose(x2 - x1, zb - za, rr);
+      if (q < 1) return k(x1, x2, y1, y2, za, zb, renk, ek);
+      return ekle(prizma(yuvarlakDikdortgen(x1, x2, Z(za), Z(zb), [q, q, q, q], 4), (u, v, w) => [u, w, v], y1, y2, 'nesne'), renk, Object.assign({ yumusak: true }, ek));
     };
+    // Önden bakınca köşeleri yuvarlak (yastık, kapak, ekran); kq: [sol-alt, sağ-alt, sağ-üst, sol-üst]
+    const ykOn = (x1, x2, y1, y2, za, zb, renk, rr, ek, kq) => {
+      const q = kose(x2 - x1, y2 - y1, rr);
+      if (q < 1 && !kq) return k(x1, x2, y1, y2, za, zb, renk, ek);
+      return ekle(prizma(yuvarlakDikdortgen(x1, x2, y1, y2, (kq || [q, q, q, q]).map((x) => Math.min(x, (x2 - x1) / 2 - 0.5, (y2 - y1) / 2 - 0.5)), 4), (u, v, w) => [u, v, w], Z(za), Z(zb), 'nesne'), renk, Object.assign({ yumusak: true }, ek));
+    };
+    // Yandan bakınca köşeleri yuvarlak (minder, katlı giysi, ses çubuğu)
+    const ykYan = (x1, x2, y1, y2, za, zb, renk, rr, ek) => {
+      const q = kose(zb - za, y2 - y1, rr);
+      if (q < 1) return k(x1, x2, y1, y2, za, zb, renk, ek);
+      return ekle(prizma(yuvarlakDikdortgen(Z(za), Z(zb), y1, y2, [q, q, q, q], 4), (u, v, w) => [w, v, u], x1, x2, 'nesne'), renk, Object.assign({ yumusak: true }, ek));
+    };
+    // Dönel cisim (profil [[y, r]], r birim; sx, sz yarıçap) ve küre
+    const don = (cx, cz, profil, sx, sz, renk, ek) => ekle(donel(cx, Z(cz), profil, 'nesne', null, sx, sz), renk, ek);
+    const sil = (cx, cz, rx, rz, y1, y2, renk, ek) => don(cx, cz, [[y1, 1], [y2, 1]], rx, rz, renk, ek);
+    const top = (cx, cy, cz, rx, ry, rz, renk, ek) => ekle(kure(cx, cy, Z(cz), rx, ry, rz, 'nesne'), renk, ek);
+    // Öne bakan silindir (düğme, lomboz, saat kadranı): ekseni z
+    const silZ = (cx, cy, rr, za, zb, renk, ek) => {
+      const n = 22;
+      const pts = Array.from({ length: n }, (_, i) => [cx + rr * Math.cos((i / n) * 2 * Math.PI), cy + rr * Math.sin((i / n) * 2 * Math.PI)]);
+      return ekle(prizma(pts, (u, v, w) => [u, v, w], Z(za), Z(zb), 'nesne'), renk, Object.assign({ yumusak: true }, ek));
+    };
+    // Yatay çubuk (kulp): ekseni x
+    const silX = (cy, cz, rr, x1, x2, renk, ek) => {
+      const n = 14;
+      const pts = Array.from({ length: n }, (_, i) => [Z(cz) + rr * Math.cos((i / n) * 2 * Math.PI), cy + rr * Math.sin((i / n) * 2 * Math.PI)]);
+      return ekle(prizma(pts, (u, v, w) => [w, v, u], x1, x2, 'nesne'), renk, Object.assign({ yumusak: true }, ek));
+    };
+    const isik = (x, y, z, dy) => P.push(Object.assign(kutu(x - 3, x + 3, y - 3, y + 3, Z(z) - 3, Z(z) + 3, 'led'), { ledA: [x - 1, y + (dy || 0), Z(z)], ledB: [x + 1, y + (dy || 0), Z(z)] }));
+    const CELIK = '#b9bdc2';
+    const CAM = '#14181d';
     const on = Math.min(20, D * 0.08);
-    switch (g.nesne) {
+    const n0 = g.nesne;
+    switch (n0) {
       case 'buzdolabi': case 'buzdolabi_genis': {
-        k(0, W, 0, H, 0, D - on, r);
-        const cift = g.nesne === 'buzdolabi_genis';
+        yk(0, W, 0, H, 0, D - on, koyu(r, 0.94), 20);
+        const cift = n0 === 'buzdolabi_genis';
         if (cift) {
-          k(0, W / 2 - 2, 0, H, D - on, D, koyu(r, 1.05)); k(W / 2 + 2, W, 0, H, D - on, D, koyu(r, 1.05));
-          for (const x of [W / 2 - 30, W / 2 + 18]) k(x, x + 12, H * 0.45, H * 0.75, D, D + 25, '#777b80');
+          ykOn(2, W / 2 - 2, 2, H - 2, D - on, D, r, 10); ykOn(W / 2 + 2, W - 2, 2, H - 2, D - on, D, r, 10);
+          ykOn(W * 0.12, W * 0.36, H * 0.52, H * 0.68, D, D + 4, '#2a2d31', 6);
+          for (const x of [W / 2 - 34, W / 2 + 22]) ykOn(x, x + 12, H * 0.42, H * 0.8, D + 10, D + 24, CELIK, 6);
         } else {
           const s1 = H * 0.36;
-          k(0, W, 0, s1 - 3, D - on, D, koyu(r, 1.05)); k(0, W, s1 + 3, H, D - on, D, koyu(r, 1.05));
-          k(W - 60, W - 48, s1 - 160, s1 - 30, D, D + 25, '#777b80'); k(W - 60, W - 48, s1 + 40, s1 + 340, D, D + 25, '#777b80');
+          ykOn(2, W - 2, 2, s1 - 3, D - on, D, r, 10); ykOn(2, W - 2, s1 + 3, H - 2, D - on, D, r, 10);
+          ykOn(W - 62, W - 50, s1 - 200, s1 - 30, D + 10, D + 24, CELIK, 6); ykOn(W - 62, W - 50, s1 + 40, s1 + 420, D + 10, D + 24, CELIK, 6);
         }
         break;
       }
       case 'bulasik': case 'camasir': case 'kurutma': case 'derin_dondurucu': {
         const panel = Math.min(90, H * 0.11);
-        k(0, W, 0, H, 0, D - on, r);
-        k(0, W, H - panel, H, D - on, D, koyu(r, 0.9));
-        k(0, W, 0, H - panel, D - on, D, koyu(r, 1.03));
-        if (g.nesne === 'camasir' || g.nesne === 'kurutma') { const c = Math.min(W, H) * 0.55; k(W / 2 - c / 2, W / 2 + c / 2, (H - panel) / 2 - c / 2, (H - panel) / 2 + c / 2, D, D + 8, '#5b6670'); }
-        if (g.nesne === 'derin_dondurucu') for (const f of [0.33, 0.66]) k(W * 0.35, W * 0.65, (H - panel) * f - 12, (H - panel) * f - 4, D, D + 15, '#777b80');
+        yk(0, W, 0, H, 0, D - on, koyu(r, 0.94), 12);
+        ykOn(1, W - 1, H - panel, H - 1, D - on, D, koyu(r, 0.97), 6);
+        ykOn(1, W - 1, 1, H - panel - 2, D - on, D, r, 8);
+        ykOn(W * 0.55, W * 0.8, H - panel * 0.7, H - panel * 0.3, D, D + 2, '#2a2d31', 4);
+        silZ(W * 0.2, H - panel / 2, panel * 0.22, D, D + 12, CELIK);
+        if (n0 === 'camasir' || n0 === 'kurutma') {
+          const c = Math.min(W, H - panel) * 0.3;
+          const cy = (H - panel) * 0.5;
+          silZ(W / 2, cy, c, D, D + 10, CELIK);
+          silZ(W / 2, cy, c * 0.78, D + 10, D + 16, '#3f4b55', { saydam: 0.85 });
+        }
+        if (n0 === 'derin_dondurucu') for (const f of [0.33, 0.66]) ykOn(W * 0.35, W * 0.65, (H - panel) * f - 14, (H - panel) * f - 4, D, D + 15, CELIK, 4);
         break;
       }
       case 'firin': case 'mikrodalga': {
         const panel = Math.min(90, H * 0.2);
-        k(0, W, 0, H, 0, D - on, r);
-        k(0, W, H - panel, H, D - on, D, koyu(r, 1.3));
-        k(0, W, 0, H - panel, D - on, D, '#22252a');
-        k(W * 0.1, W * 0.9, H - panel - 40, H - panel - 28, D, D + 22, '#9a9ea3');
+        k(0, W, 0, H, 0, D - on, '#2c2f33');
+        ykOn(2, W - 2, H - panel, H - 2, D - on, D, koyu(r, 1.25), 4);
+        if (n0 === 'firin') {
+          ykOn(2, W - 2, 2, H - panel - 3, D - on, D, CAM, 6);
+          ykOn(W * 0.18, W * 0.82, H * 0.18, H - panel - 70, D, D + 1, '#262c33', 10);
+          silX(H - panel - 45, D + 22, 9, W * 0.12, W * 0.88, CELIK);
+          for (const x of [W * 0.12, W * 0.88 - 8]) k(x, x + 8, H - panel - 52, H - panel - 38, D, D + 22, CELIK);
+          for (const x of [W * 0.15, W * 0.85]) silZ(x, H - panel / 2, panel * 0.2, D, D + 14, CELIK);
+          ykOn(W * 0.42, W * 0.58, H - panel * 0.68, H - panel * 0.32, D, D + 2, '#0c1a12', 3);
+        } else {
+          ykOn(2, W * 0.7, 2, H - panel - 3, D - on, D, CAM, 6);
+          ykOn(W * 0.7 + 3, W - 2, 2, H - panel - 3, D - on, D, '#2a2d31', 4);
+          silZ(W * 0.85, H * 0.35, 14, D, D + 10, CELIK);
+        }
         break;
       }
       case 'aspirator': {
-        const alt = Math.min(120, H * 0.3);
-        k(0, W, 0, alt, 0, D, r);
-        k(W * 0.3, W * 0.7, alt, H, 0, Math.min(D, 260), koyu(r, 0.95));
+        const alt = Math.min(140, H * 0.32);
+        ekle(prizma([[Z(0), 0], [Z(D), 0], [Z(D), 40], [Z(D * 0.45), alt], [Z(0), alt]], (u, v, w) => [w, v, u], 0, W, 'nesne'), r);
+        k(W * 0.08, W * 0.92, -1, 0, 20, D - 20, '#5a5e63');
+        isik(W * 0.3, -6, D * 0.6, -10); isik(W * 0.7, -6, D * 0.6, -10);
+        yk(W * 0.32, W * 0.68, alt, H, 0, Math.min(D * 0.5, 240), koyu(r, 0.96), 8);
         break;
       }
       case 'tv55': case 'tv65': case 'tv75': case 'monitor': {
-        if (g.nesne === 'monitor') {
-          k(W / 2 - 40, W / 2 + 40, 0, 12, D * 0.2, D * 0.8, '#333333');
-          k(W / 2 - 15, W / 2 + 15, 12, H * 0.25, D * 0.45, D * 0.55, '#333333');
-          k(0, W, H * 0.25, H, D * 0.55, D * 0.75, r);
-        } else { k(0, W, 0, H, 0, D * 0.4, '#2a2b2e'); k(0, W, 0, H, D * 0.4, D, r); }
+        if (n0 === 'monitor') {
+          don(W / 2, D * 0.5, [[0, 1], [10, 1], [12, 0.96]], W * 0.16, D * 0.35, '#3a3b3e');
+          yk(W / 2 - 16, W / 2 + 16, 12, H * 0.38, D * 0.45, D * 0.6, '#3a3b3e', 6);
+          ykOn(0, W, H * 0.2, H, D * 0.58, D * 0.72, '#1d1e21', 8);
+          ykOn(10, W - 10, H * 0.2 + 26, H - 10, D * 0.72, D * 0.73, CAM, 4);
+        } else {
+          ykOn(W * 0.08, W * 0.92, H * 0.1, H * 0.9, 0, D * 0.5, '#2a2b2e', 20);
+          ykOn(0, W, 0, H, D * 0.5, D, '#18191b', 6);
+          ykOn(8, W - 8, 8, H - 8, D, D + 0.6, CAM, 3);
+          // Ekranda hafif yansıma
+          ekle(prizma([[W * 0.55, H - 8], [W * 0.72, H - 8], [W * 0.42, 8], [W * 0.25, 8]], (u, v, w) => [u, v, w], Z(D + 0.6), Z(D + 0.8), 'nesne'), '#20262d');
+        }
+        break;
+      }
+      case 'soundbar': {
+        ykYan(0, W, 0, H, 0, D, r, H * 0.45);
+        k(W * 0.02, W * 0.98, H * 0.2, H * 0.75, D, D + 0.5, koyu(r, 0.75));
         break;
       }
       case 'kitap': {
-        // Farklı en ve boyda kitaplar yan yana
+        // Farklı en ve boyda kitaplar; üstte sayfa kenarı, sonda yaslanmış bir kitap
         let x = 0;
         let i = 0;
         while (x < W - 8) {
           const w = Math.min(W - x, [28, 34, 22, 40, 30, 26, 36][i % 7]);
           const h = H * [0.95, 0.82, 1, 0.88, 0.76, 0.92, 0.85][i % 7];
-          k(x, x + w - 0.5, 0, h, 0, D * [1, 0.9, 0.95, 0.85, 1, 0.92, 0.88][i % 7], KITAP_RENK[i % KITAP_RENK.length]);
+          const d = D * [1, 0.9, 0.95, 0.85, 1, 0.92, 0.88][i % 7];
+          const rk = KITAP_RENK[(i + Math.round(W / 13)) % KITAP_RENK.length];
+          const son = x + w >= W - 8 && i > 2 && W - x > 60;
+          if (son) {
+            // Yaslanan kitap (paralelkenar kesit)
+            const e = Math.min(h * 0.3, W - x - w);
+            ekle(prizma([[x, 0], [x + w, 0], [x + w + e, h * 0.95], [x + e, h * 0.95]], (u, v, ww) => [u, v, ww], Z(0), Z(d), 'nesne'), rk);
+            break;
+          }
+          k(x, x + w - 0.6, 0, h, 0, d, rk);
+          k(x + 2, x + w - 2.6, h, h + 0.8, 2, d - 1.5, '#efe7d4');
+          if (w >= 30) k(x + 3, x + w - 3.6, h * 0.78, h * 0.82, d, d + 0.4, '#d8c38a');
           x += w; i++;
         }
         break;
@@ -547,96 +672,142 @@
         while (y < H - 5) {
           const h = Math.min(H - y, [32, 24, 40, 28][i % 4]);
           const ic = [0, 12, 4, 18][i % 4];
-          k(ic, W - ic / 2, y, y + h - 0.5, ic / 3, D - ic / 3, KITAP_RENK[(i + 2) % KITAP_RENK.length]);
+          const rk = KITAP_RENK[(i + 2) % KITAP_RENK.length];
+          k(ic, W - ic / 2, y, y + h - 0.6, ic / 3, D - ic / 3, rk);
+          k(ic + 2, W - ic / 2 - 2, y + 2, y + h - 2.6, D - ic / 3, D - ic / 3 + 0.4, '#efe7d4');
           y += h; i++;
         }
         break;
       }
       case 'aplik': {
         // Duvar plakası, ince gövde, iki ucunda ışık (duvara yukarı-aşağı hare)
-        k(W / 2 - 18, W / 2 + 18, H / 2 - 30, H / 2 + 30, 0, 12, r);
-        k(W / 2 - 7, W / 2 + 7, 30, H - 30, 12, D - 30, r);
-        P.push(Object.assign(kutu(W / 2 - 9, W / 2 + 9, H - 34, H - 26, z0 + D - 34, z0 + D - 22, 'led'), { ledA: [W / 2, H + 40, z0 + 20], ledB: [W / 2, H + 120, z0 + 20] }));
-        P.push(Object.assign(kutu(W / 2 - 9, W / 2 + 9, 26, 34, z0 + D - 34, z0 + D - 22, 'led'), { ledA: [W / 2, -40, z0 + 20], ledB: [W / 2, -120, z0 + 20] }));
+        silZ(W / 2, H / 2, 24, 0, 12, r);
+        yk(W / 2 - 8, W / 2 + 8, 30, H - 30, 18, D - 22, r, 8);
+        yk(W / 2 - 4, W / 2 + 4, H / 2 - 6, H / 2 + 6, 12, 22, r, 4);
+        P.push(Object.assign(kutu(W / 2 - 9, W / 2 + 9, H - 34, H - 26, Z(D - 34), Z(D - 14), 'led'), { ledA: [W / 2, H + 40, Z(20)], ledB: [W / 2, H + 120, Z(20)] }));
+        P.push(Object.assign(kutu(W / 2 - 9, W / 2 + 9, 26, 34, Z(D - 34), Z(D - 14), 'led'), { ledA: [W / 2, -40, Z(20)], ledB: [W / 2, -120, Z(20)] }));
         break;
       }
       case 'sarkit': {
-        // Tavandan kablo, altta cam küre (dilimler) ve içinde ampul
+        // Tavandan kablo, pirinç başlık, cam küre ve içinde ampul
         const c = Math.min(W, D);
-        k(W / 2 - 2, W / 2 + 2, c, H, D / 2 - 2, D / 2 + 2, '#3a3a3a');
-        k(W / 2 - 22, W / 2 + 22, c - 10, c + 30, D / 2 - 22, D / 2 + 22, r);
-        [0.55, 0.85, 1, 0.85, 0.55].forEach((f, i) => { const w = c * f; sil(W / 2, D / 2, w / 2, w / 2, (i * c) / 5, ((i + 1) * c) / 5, '#e9dcc0', { saydam: 0.55 }); });
-        P.push(Object.assign(kutu(W / 2 - 14, W / 2 + 14, c / 2 - 14, c / 2 + 14, z0 + D / 2 - 14, z0 + D / 2 + 14, 'led'), { ledA: [W / 2 - 1, c / 2, z0 + D / 2], ledB: [W / 2 + 1, c / 2, z0 + D / 2] }));
+        sil(W / 2, D / 2, 2, 2, c, H, '#3a3a3a');
+        don(W / 2, D / 2, [[c - 6, 0.5], [c + 20, 1], [c + 34, 0.6]], 24, 24, r);
+        top(W / 2, c / 2, D / 2, c / 2, c / 2, c / 2, '#efe3c8', { saydam: 0.5 });
+        P.push(Object.assign(kutu(W / 2 - 12, W / 2 + 12, c / 2 - 12, c / 2 + 12, Z(D / 2 - 12), Z(D / 2 + 12), 'led'), { ledA: [W / 2 - 1, c / 2, Z(D / 2)], ledB: [W / 2 + 1, c / 2, Z(D / 2)], ledGuc: 0.6, ledMenzil: 260 }));
         break;
       }
       case 'pampas': {
         // Seramik vazo ve üstte kabaran tüylü otlar
         const vh = H * 0.38;
-        [0.55, 0.85, 0.75, 0.45].forEach((f, i) => { const w = W * 0.55 * f; sil(W / 2, D / 2, w / 2, w / 2, (i * vh) / 4, ((i + 1) * vh) / 4, '#d9cbb4'); });
-        // Otlar: vazodan yelpaze gibi açılan ince saplar ve üstlerinde tüylü başaklar
+        const vr = W * 0.27;
+        don(W / 2, D / 2, [[0, 0.62], [vh * 0.08, 0.86], [vh * 0.45, 1], [vh * 0.8, 0.72], [vh * 0.93, 0.5], [vh, 0.56]], vr, vr, '#d9cbb4');
         const oh = H - vh;
         for (let i = 0; i < 7; i++) {
           const a = (i - 3) / 3;
-          const x = W / 2 + a * W * 0.38;
-          const z = D / 2 + Math.sin(i * 2.1) * D * 0.18;
-          const ust = vh + oh * (0.75 + 0.25 * Math.cos(a * 1.2));
-          k(W / 2 + a * W * 0.08 - 2, W / 2 + a * W * 0.08 + 2, vh - 20, vh + oh * 0.35, z - 2, z + 2, '#b9a888');
-          // Başak: yukarı doğru kabarıp incelen tüylü dilimler
+          const x = W / 2 + a * W * 0.36;
+          const z = D / 2 + Math.sin(i * 2.1) * D * 0.16;
+          const ust = vh + oh * (0.78 + 0.22 * Math.cos(a * 1.2));
           const y0 = vh + oh * 0.3;
-          const pr2 = [0.45, 0.85, 1, 0.8, 0.45];
-          pr2.forEach((f, j) => sil(x, z, W * 0.09 * f, D * 0.09 * f, y0 + ((ust - y0) * j) / pr2.length, y0 + ((ust - y0) * (j + 1)) / pr2.length, i % 2 ? r : koyu(r, 0.94)));
+          k(W / 2 + a * W * 0.05 - 1.5, W / 2 + a * W * 0.05 + 1.5, vh - 30, y0 + 20, z - 1.5, z + 1.5, '#b9a888');
+          top(x, (y0 + ust) / 2, z, W * 0.085, (ust - y0) / 2, D * 0.085, i % 2 ? r : koyu(r, 0.94));
         }
         break;
       }
       case 'minder': {
-        k(0, W, 0, H * 0.75, 0, D, r);
-        k(15, W - 15, H * 0.75, H, 15, D - 15, koyu(r, 1.04));
+        ykYan(0, W, 0, H, 0, D, r, H * 0.42);
+        k(6, W - 6, H * 0.48, H * 0.52, D, D + 0.6, koyu(r, 0.9));
         break;
       }
       case 'tepsi': {
-        k(0, W, 0, 6, 0, D, r);
-        k(0, W, 6, H, 0, 6, r); k(0, W, 6, H, D - 6, D, r); k(0, 6, 6, H, 6, D - 6, r); k(W - 6, W, 6, H, 6, D - 6, r);
+        yk(0, W, 0, 5, 0, D, r, 30);
+        yk(0, W, 5, H, 0, 5, r, 2); yk(0, W, 5, H, D - 5, D, r, 2); yk(0, 5, 5, H, 5, D - 5, r, 2); yk(W - 5, W, 5, H, 5, D - 5, r, 2);
         break;
       }
-      case 'vazo': case 'vazo_uzun': case 'biblo': case 'mum': case 'kettle': case 'blender': {
-        // Dönel cisim: üst üste daralan/genişleyen dilimler
-        const profil = { vazo: [0.6, 0.9, 1, 0.8, 0.5, 0.65], vazo_uzun: [0.55, 0.8, 0.95, 0.75, 0.5, 0.4, 0.55], biblo: [0.9, 0.6, 0.7, 0.5], mum: [1, 0.85], kettle: [1, 0.95, 0.75, 0.4], blender: [0.9, 0.7, 0.75, 0.85, 1, 0.9] }[g.nesne];
-        const n = profil.length;
-        profil.forEach((f, i) => {
-          const w = W * f;
-          const d = D * f;
-          sil(W / 2, D / 2, w / 2, d / 2, (H * i) / n, (H * (i + 1)) / n, i === 0 && g.nesne === 'blender' ? '#2b2c2f' : koyu(r, 1 - i * 0.03));
-        });
+      case 'vazo': case 'vazo_uzun': case 'biblo': case 'mum': {
+        const R2 = Math.min(W, D) / 2;
+        if (n0 === 'vazo') don(W / 2, D / 2, [[0, 0.55], [H * 0.04, 0.72], [H * 0.3, 0.98], [H * 0.55, 0.92], [H * 0.78, 0.52], [H * 0.9, 0.42], [H, 0.5]], R2, R2, r);
+        else if (n0 === 'vazo_uzun') don(W / 2, D / 2, [[0, 0.5], [H * 0.05, 0.7], [H * 0.25, 0.95], [H * 0.45, 0.8], [H * 0.7, 0.42], [H * 0.9, 0.36], [H, 0.46]], R2, R2, r);
+        else if (n0 === 'biblo') {
+          don(W / 2, D / 2, [[0, 0.8], [H * 0.08, 0.8], [H * 0.1, 0.5], [H * 0.2, 0.3]], R2, R2, koyu(r, 0.85));
+          top(W / 2, H * 0.2 + R2 * 0.75, D / 2, R2 * 0.75, R2 * 0.75, R2 * 0.75, r);
+          top(W / 2, H * 0.2 + R2 * 1.7, D / 2, R2 * 0.42, R2 * 0.42, R2 * 0.42, koyu(r, 1.05));
+        } else {
+          // Mum: gövde, fitil ve küçük alev (çevresine sıcak ışık)
+          don(W / 2, D / 2, [[0, 1], [H * 0.82, 1], [H * 0.86, 0.9]], R2, R2, r);
+          sil(W / 2, D / 2, 1.5, 1.5, H * 0.86, H * 0.9, '#3a3a3a');
+          Object.assign(top(W / 2, H * 0.97, D / 2, 5, 11, 5, '#ffd27a'), { tur: 'led', ledA: [W / 2 - 1, H, Z(D / 2)], ledB: [W / 2 + 1, H, Z(D / 2)], ledGuc: 0.3, ledMenzil: 110 });
+        }
+        break;
+      }
+      case 'kettle': {
+        const R2 = Math.min(W * 0.8, D) / 2;
+        const cx = W * 0.42;
+        don(cx, D / 2, [[0, 0.95], [H * 0.06, 1], [H * 0.55, 0.92], [H * 0.82, 0.62], [H * 0.86, 0.5]], R2, R2, r);
+        don(cx, D / 2, [[H * 0.86, 0.45], [H * 0.9, 0.42], [H * 0.93, 0.1]], R2, R2, koyu(r, 0.8));
+        ykOn(cx + R2 * 0.7, cx + R2 * 1.25, H * 0.25, H * 0.8, D / 2 - 10, D / 2 + 10, koyu(r, 0.75), 14);
+        yk(cx - R2 * 1.25, cx - R2 * 0.8, H * 0.6, H * 0.72, D / 2 - 8, D / 2 + 8, r, 6);
+        break;
+      }
+      case 'blender': {
+        yk(W * 0.1, W * 0.9, 0, H * 0.28, D * 0.1, D * 0.9, '#2b2c2f', 20);
+        silZ(W / 2, H * 0.14, W * 0.1, D * 0.9, D * 0.9 + 8, CELIK);
+        don(W / 2, D / 2, [[H * 0.28, 0.62], [H * 0.9, 0.95]], W * 0.4, D * 0.4, '#cfe3ea', { saydam: 0.5 });
+        don(W / 2, D / 2, [[H * 0.9, 1], [H, 0.9]], W * 0.4, D * 0.4, '#2b2c2f');
         break;
       }
       case 'saksi': case 'bitki_buyuk': {
-        const ph = H * 0.3;
-        sil(W / 2, D / 2, W * 0.3, D * 0.3, 0, ph * 0.85, '#a0613d');
-        sil(W / 2, D / 2, W * 0.33, D * 0.33, ph * 0.85, ph, koyu('#a0613d', 0.9));
-        const yap = [[0.55, 0.12], [0.85, 0.18], [1, 0.2], [0.8, 0.12], [0.5, 0.08], [0.25, 0.1]];
-        let y = ph;
-        yap.forEach(([f, h], i) => { const hh = (H - ph) * h / 0.8; sil(W / 2 + (i % 2 ? W * 0.04 : -W * 0.03), D / 2, (W * f) / 2, (D * f) / 2, y, Math.min(H, y + hh), koyu(r, 1 + (i % 2) * 0.12)); y += hh; });
+        const buyuk = n0 === 'bitki_buyuk';
+        const ph = H * (buyuk ? 0.26 : 0.32);
+        const pr = Math.min(W, D) * (buyuk ? 0.3 : 0.34);
+        const saksiR = buyuk ? '#d8d2c6' : '#b56b45';
+        don(W / 2, D / 2, [[0, 0.78], [ph * 0.85, 1], [ph * 0.86, 1.08], [ph, 1.08]], pr, pr, saksiR);
+        sil(W / 2, D / 2, pr * 0.98, pr * 0.98, ph - 6, ph - 2, '#4a3628');
+        const yesil = [r, koyu(r, 1.15), koyu(r, 0.85), koyu(r, 1.05)];
+        if (buyuk) {
+          // Zeytin ağacı: ince gövde, dallar ve topak yapraklar
+          sil(W / 2, D / 2, 9, 9, ph - 4, H * 0.62, '#6b5444');
+          const tepe = [[0, 0.72, 0, 0.26], [-0.22, 0.62, 0.05, 0.2], [0.24, 0.66, -0.06, 0.21], [0.05, 0.86, 0.04, 0.2], [-0.15, 0.8, -0.1, 0.17], [0.2, 0.82, 0.1, 0.16], [0, 0.95, 0, 0.13]];
+          tepe.forEach(([dx, y, dz, rr], i) => top(W / 2 + dx * W, H * y, D / 2 + dz * D, W * rr, H * rr * 0.55, D * rr, yesil[i % 4]));
+        } else {
+          const yap = [[0, 0.55, 0, 0.3], [-0.2, 0.48, 0.08, 0.22], [0.21, 0.5, -0.06, 0.22], [0.08, 0.7, 0.05, 0.22], [-0.12, 0.72, -0.08, 0.2], [0.02, 0.88, 0, 0.16], [0.18, 0.66, 0.15, 0.15]];
+          yap.forEach(([dx, y, dz, rr], i) => top(W / 2 + dx * W, ph + (H - ph) * (y - 0.3) * 1.25, D / 2 + dz * D, W * rr, (H - ph) * rr * 0.75, D * rr, yesil[i % 4]));
+        }
         break;
       }
       case 'yatak_cift': case 'yatak_tek': {
-        // Baza, şilte, yastıklar (başı duvarda)
-        const bz = H * 0.55;
-        k(0, W, 0, bz, 0, D, koyu(r, 0.75));
-        k(0, W, bz, H, 0, D, r);
-        const ny = g.nesne === 'yatak_cift' ? 2 : 1;
-        for (let i = 0; i < ny; i++) { const x = (W / ny) * i + 60; k(x, x + W / ny - 120, H, H + 120, 40, 420, '#ffffff'); }
+        // Döşemeli baza, başlık, şilte, yastıklar ve ayak ucunda örtü
+        const bz = H * 0.5;
+        const bas = 80;
+        ykOn(0, W, 0, H + 520, 0, bas, koyu(r, 0.82), 30, null, [0, 0, 40, 40]);
+        for (let i = 1; i < 4; i++) k(i * W / 4 - 2, i * W / 4 + 2, H * 0.8, H + 500, bas, bas + 0.6, koyu(r, 0.7));
+        ykYan(0, W, 0, bz, bas, D, koyu(r, 0.82), 20);
+        ykYan(15, W - 15, bz, H, bas + 10, D - 10, '#f4f1ea', 40);
+        ykYan(-4, W + 4, bz + 10, H + 6, D * 0.68, D - 4, koyu(r, 0.7), 30);
+        const ny = n0 === 'yatak_cift' ? 2 : 1;
+        for (let i = 0; i < ny; i++) {
+          const x = (W / ny) * i + 50;
+          ykYan(x, x + W / ny - 100, H, H + 140, bas + 30, bas + 400, '#ffffff', 60);
+        }
         break;
       }
       case 'kanepe': {
-        const ot = H * 0.5;
-        k(0, W, 0, 120, 0, D, '#4a4038');
-        k(0, W, 120, ot, 0, D, r);
-        k(0, W, ot, H, 0, D * 0.25, koyu(r, 0.9));
-        k(0, 180, ot, H * 0.72, D * 0.25, D, koyu(r, 0.95)); k(W - 180, W, ot, H * 0.72, D * 0.25, D, koyu(r, 0.95));
+        // Ahşap ayaklar, oturma ve sırt minderleri, yuvarlak kolçaklar
+        for (const [x, z] of [[60, 60], [W - 60, 60], [60, D - 60], [W - 60, D - 60]]) don(x, z, [[0, 0.7], [110, 1]], 18, 18, '#4a3a2c');
+        const kol = 170;
+        ykYan(0, W, 110, H * 0.45, 0, D, koyu(r, 0.92), 30);
+        const n = W > 1800 ? 3 : 2;
+        const sw = (W - 2 * kol) / n;
+        for (let i = 0; i < n; i++) {
+          ykYan(kol + i * sw + 4, kol + (i + 1) * sw - 4, H * 0.45, H * 0.6, D * 0.28, D - 10, r, 40);
+          ykOn(kol + i * sw + 6, kol + (i + 1) * sw - 6, H * 0.45, H - 10, D * 0.08, D * 0.3, koyu(r, 1.04), 60);
+        }
+        ykOn(0, W, 110, H * 0.82, 0, D * 0.12, koyu(r, 0.9), 40);
+        for (const x of [0, W - kol]) ykYan(x, x + kol, 110, H * 0.68, 0, D, koyu(r, 0.95), 70);
         break;
       }
       case 'giysi': {
-        // Askıdaki giysiler: farklı kalınlık ve boyda, askı borusundan sarkar
+        // Askıdaki giysiler: askı, omuzları yuvarlak gövde, farklı boy ve kalınlık
         const RENKLER = ['#5d6d7e', '#a04040', '#e8e2d6', '#2f3a44', '#7a8f5a', '#c9a57a', '#34465f', '#d8b4a0', '#4b4d50'];
         let x = 15;
         let i = 0;
@@ -644,8 +815,9 @@
           const w = Math.min(W - 15 - x, [45, 60, 38, 52, 70, 42][i % 6]);
           const h = H * [1, 0.62, 0.85, 0.55, 0.95, 0.7, 0.78][i % 7];
           const d = D * [0.9, 0.95, 0.85, 1][i % 4];
-          k(x, x + w - 3, H - h, H - 25, (D - d) / 2, (D + d) / 2, RENKLER[(i * 5 + Math.round(W)) % RENKLER.length]);
-          k(x + w / 2 - 4, x + w / 2 + 1, H - 25, H, D / 2 - 2, D / 2 + 2, '#8a8f96'); // askı kancası
+          ykYan(x, x + w - 3, H - h, H - 30, (D - d) / 2, (D + d) / 2, RENKLER[(i * 5 + Math.round(W)) % RENKLER.length], Math.min(d * 0.35, 90));
+          k(x + w / 2 - 3, x + w / 2 + 1, H - 30, H - 22, D * 0.12, D * 0.88, '#9a8a72');
+          sil(x + w / 2 - 1, D / 2, 2, 2, H - 22, H, '#8a8f96');
           x += w + [6, 14, 4, 20][i % 4];
           i++;
         }
@@ -657,9 +829,16 @@
         const bw = W / n;
         for (let i = 0; i < n; i++) {
           const canta = i % 3 === 2;
-          const h = canta ? H * 0.42 : H * [1, 0.85, 0.92][i % 3];
-          const d = canta ? D * 0.6 : D * 0.85;
-          k(i * bw + 8, (i + 1) * bw - 8, H - h, H, 0, d, RENKLER[(i + Math.round(W / 7)) % RENKLER.length]);
+          const rk = RENKLER[(i + Math.round(W / 7)) % RENKLER.length];
+          if (canta) {
+            const h = H * 0.4;
+            ykOn(i * bw + 20, (i + 1) * bw - 20, H - 180 - h, H - 180, 10, D * 0.55, rk, 30, null, [30, 30, 12, 12]);
+            for (const x of [i * bw + bw * 0.35, (i + 1) * bw - bw * 0.35 - 6]) k(x, x + 6, H - 180, H - 30, D * 0.25, D * 0.3, koyu(rk, 0.8));
+          } else {
+            const h = H * [1, 0.85, 0.92][i % 3];
+            ykOn(i * bw + 8, (i + 1) * bw - 8, H - h, H - 40, 0, D * 0.85, rk, 50, null, [20, 20, 70, 70]);
+            ykOn(i * bw + bw * 0.3, (i + 1) * bw - bw * 0.3, H - 70, H - 20, D * 0.05, D * 0.5, koyu(rk, 0.85), 22);
+          }
         }
         break;
       }
@@ -671,87 +850,202 @@
           const h = H * [1, 0.7, 0.85, 0.6][i % 4];
           const L = D * [1, 0.92, 0.85][i % 3];
           const sw = Math.min(85, (pw - 30) / 2);
+          const rk = RENKLER[(i * 3 + Math.round(W / 9)) % RENKLER.length];
           for (const j of [0, 1]) {
             const x = i * pw + 10 + j * (sw + 8);
-            k(x, x + sw, 0, h, D - L, D, RENKLER[(i * 3 + Math.round(W / 9)) % RENKLER.length]);
+            const taban = (a, b, y1, y2, za, zb, renk, rOn) => ekle(prizma(yuvarlakDikdortgen(a, b, Z(za), Z(zb), [sw * 0.35, sw * 0.35, rOn, rOn], 4), (u, v, w) => [u, w, v], y1, y2, 'nesne'), renk, { yumusak: true });
+            taban(x, x + sw, 0, 14, D - L, D, '#e9e5dc', sw * 0.48);
+            taban(x + 2, x + sw - 2, 14, h, D - L + 2, D - L * 0.38, rk, sw * 0.3);
+            taban(x + 3, x + sw - 3, 14, h * 0.5, D - L * 0.5, D - 2, rk, sw * 0.46);
           }
         }
         break;
       }
       case 'katli': case 'havlu': {
-        const RENKLER = g.nesne === 'havlu' ? ['#e9e4da', '#9db09a', '#e9e4da', '#c9d6df', '#d8b4a0'] : ['#b9a68f', '#34465f', '#e8e2d6', '#7a8f5a', '#a04040', '#5d6d7e', '#d8b4a0'];
-        const kat = g.nesne === 'havlu' ? 55 : 38;
+        const RENKLER = n0 === 'havlu' ? ['#e9e4da', '#9db09a', '#e9e4da', '#c9d6df', '#d8b4a0'] : ['#b9a68f', '#34465f', '#e8e2d6', '#7a8f5a', '#a04040', '#5d6d7e', '#d8b4a0'];
+        const kat = n0 === 'havlu' ? 55 : 38;
         let y = 0;
         let i = 0;
         while (y < H - 10) {
           const h = Math.min(H - y, kat);
           const ic = [0, 8, 3, 12][i % 4];
-          k(ic, W - ic / 2, y, y + h - 0.5, ic / 2, D - ic / 3, RENKLER[(i + Math.round(W / 11)) % RENKLER.length]);
+          ykYan(ic, W - ic / 2, y, y + h - 0.6, ic / 2, D - ic / 3, RENKLER[(i + Math.round(W / 11)) % RENKLER.length], h * 0.45);
           y += h; i++;
         }
         break;
       }
       case 'tabak': {
-        k(W * 0.15, W * 0.85, 0, 12, D * 0.15, D * 0.85, koyu(r, 0.95));
-        k(0, W, 12, H, 0, D, r);
+        const R2 = Math.min(W, D) / 2;
+        don(W / 2, D / 2, [[0, 0.62], [6, 0.66], [10, 0.95], [H, 1]], R2, R2, r);
+        don(W / 2, D / 2, [[H, 0.97], [H + 1, 0.6]], R2, R2, koyu(r, 0.97));
+        for (let y = 14; y < H - 4; y += 12) sil(W / 2, D / 2, R2 * 1.003, R2 * 1.003, y, y + 1.2, koyu(r, 0.88));
         break;
       }
       case 'bardak': case 'kavanoz': case 'sise': {
-        const n = Math.max(1, Math.floor(W / (g.nesne === 'bardak' ? 75 : 95)));
+        const n = Math.max(1, Math.floor(W / (n0 === 'bardak' ? 75 : 95)));
         const bw = W / n;
-        const RENKLER = g.nesne === 'sise' ? ['#6f8f6a', '#8a2f2f', '#c9a57a', '#4b6b8a'] : g.nesne === 'kavanoz' ? ['#d9c9a3', '#b0763f', '#e3dccf', '#8a5a3c'] : ['#cfe3ea'];
+        const RENKLER = n0 === 'sise' ? ['#6f8f6a', '#8a2f2f', '#c9a57a', '#4b6b8a'] : n0 === 'kavanoz' ? ['#d9c9a3', '#b0763f', '#e3dccf', '#8a5a3c'] : ['#cfe3ea'];
         for (let i = 0; i < n; i++) {
-          const x = i * bw;
-          const w = bw - 14;
-          const h = H * (g.nesne === 'bardak' ? 1 : [1, 0.75, 0.88][i % 3]);
-          const d = Math.min(D, w);
-          const z1 = (D - d) / 2;
-          if (g.nesne === 'sise') {
-            k(x + 4, x + 4 + w, 0, h * 0.68, z1, z1 + d, RENKLER[i % RENKLER.length]);
-            k(x + 4 + w * 0.35, x + 4 + w * 0.65, h * 0.68, h, z1 + d * 0.35, z1 + d * 0.65, RENKLER[i % RENKLER.length]);
-          } else if (g.nesne === 'kavanoz') {
-            k(x + 4, x + 4 + w, 0, h * 0.86, z1, z1 + d, RENKLER[i % RENKLER.length], { saydam: 0.8 });
-            k(x + 4 + 3, x + 4 + w - 3, h * 0.86, h, z1 + 3, z1 + d - 3, '#6b5a4a');
-          } else k(x + 4, x + 4 + w, 0, h, z1, z1 + d, RENKLER[0], { saydam: 0.55 });
+          const cx = i * bw + bw / 2;
+          const rr = Math.min(bw - 14, D) / 2;
+          const h = H * (n0 === 'bardak' ? 1 : [1, 0.75, 0.88][i % 3]);
+          const rk = RENKLER[i % RENKLER.length];
+          if (n0 === 'sise') {
+            don(cx, D / 2, [[0, 0.92], [3, 1], [h * 0.58, 1], [h * 0.7, 0.62], [h * 0.78, 0.3], [h * 0.97, 0.28], [h, 0.3]], rr, rr, rk, { saydam: 0.85 });
+            sil(cx, D / 2, rr * 0.32, rr * 0.32, h - 2, h + 8, '#6b5a4a');
+          } else if (n0 === 'kavanoz') {
+            don(cx, D / 2, [[0, 0.95], [3, 1], [h * 0.84, 1], [h * 0.88, 0.85]], rr, rr, '#e8eef0', { saydam: 0.45 });
+            sil(cx, D / 2, rr * 0.88, rr * 0.88, 4, h * 0.6, rk);
+            don(cx, D / 2, [[h * 0.86, 0.92], [h, 0.92], [h + 2, 0.8]], rr, rr, '#9a7b5a');
+          } else don(cx, D / 2, [[0, 0.82], [3, 0.86], [h, 1]], rr, rr, rk, { saydam: 0.5 });
         }
         break;
       }
       case 'kase': {
-        k(W * 0.3, W * 0.7, 0, H * 0.15, D * 0.3, D * 0.7, koyu(r, 0.9));
-        k(0, W, H * 0.15, H * 0.55, 0, D, r);
-        const M = ['#d23c2c', '#f0b429', '#6aa84f', '#e8742e'];
-        for (let i = 0; i < 4; i++) { const x = W * (0.12 + 0.2 * i); k(x, x + W * 0.18, H * 0.55, H * (0.85 + 0.05 * (i % 2)), D * (0.25 + 0.1 * (i % 2)), D * (0.65 + 0.1 * (i % 2)), M[i]); }
+        const R2 = Math.min(W, D) / 2;
+        const kh = H * 0.5;
+        don(W / 2, D / 2, [[0, 0.4], [kh * 0.08, 0.46], [kh * 0.35, 0.78], [kh * 0.7, 0.95], [kh, 1]], R2, R2, r);
+        const M = ['#c8372a', '#f0a429', '#6aa84f', '#e8742e', '#e8d23a'];
+        const yer = [[0, 0], [-0.32, 0.12], [0.3, -0.1], [0.05, 0.36], [-0.12, -0.33]];
+        yer.forEach(([dx, dz], i) => { const fr = R2 * (i === 4 ? 0.26 : 0.32); top(W / 2 + dx * R2, kh + fr * (i ? 0.6 : 1.1), D / 2 + dz * R2, fr, fr * (i === 4 ? 0.8 : 0.95), fr, M[i]); });
         break;
       }
       case 'kupa': {
-        k(0, W * 0.78, 0, H, 0, D, r);
-        k(W * 0.78, W, H * 0.25, H * 0.75, D * 0.4, D * 0.6, koyu(r, 0.9));
+        const R2 = Math.min(W * 0.78, D) / 2;
+        don(R2, D / 2, [[0, 0.9], [3, 0.94], [H, 1]], R2, R2, r);
+        don(R2, D / 2, [[H - 8, 0.9], [H - 7, 0.9]], R2, R2, '#3b2a20');
+        ykOn(R2 * 1.8, R2 * 2.45, H * 0.2, H * 0.78, D / 2 - 5, D / 2 + 5, koyu(r, 0.95), 20);
         break;
       }
       case 'laptop': {
-        k(0, W, 0, 18, 0, D, r);
-        k(0, W, 18, H, 0, 12, '#2a2b2e');
+        yk(0, W, 0, 14, 0, D, '#b4b8bd', 10);
+        k(W * 0.08, W * 0.92, 14, 14.6, D * 0.38, D * 0.92, '#2b2c2f');
+        // Hafif geriye yatık kapak ve ekran
+        const zf = (y) => 38 - (30 * (y - 14)) / (H - 14);
+        ekle(prizma([[Z(30), 14], [Z(38), 14], [Z(8), H], [Z(0), H]], (u, v, w) => [w, v, u], 0, W, 'nesne'), '#b4b8bd');
+        ekle(prizma([[Z(zf(24) + 0.2), 24], [Z(zf(24) + 0.9), 24], [Z(zf(H - 10) + 0.9), H - 10], [Z(zf(H - 10) + 0.2), H - 10]], (u, v, w) => [w, v, u], 10, W - 10, 'nesne'), CAM);
         break;
       }
       case 'lamba': {
-        k(W * 0.25, W * 0.75, 0, H * 0.06, D * 0.25, D * 0.75, '#444444');
-        k(W * 0.46, W * 0.54, H * 0.06, H * 0.55, D * 0.46, D * 0.54, '#555555');
-        k(0, W, H * 0.55, H, 0, D, r);
+        // Seramik ayak, ince gövde, keten abajur ve içinde ampul (çevresine ışık)
+        const R2 = Math.min(W, D) / 2;
+        don(W / 2, D / 2, [[0, 0.42], [H * 0.04, 0.48], [H * 0.22, 0.5], [H * 0.36, 0.22], [H * 0.4, 0.12]], R2, R2, '#c9b7a0');
+        sil(W / 2, D / 2, 4, 4, H * 0.4, H * 0.62, '#b08d57');
+        don(W / 2, D / 2, [[H * 0.55, 1], [H, 0.7]], R2, R2, r, { saydam: 0.85 });
+        Object.assign(top(W / 2, H * 0.66, D / 2, 18, 22, 18, '#fff1c9'), { tur: 'led', ledA: [W / 2 - 1, H * 0.6, Z(D / 2)], ledB: [W / 2 + 1, H * 0.6, Z(D / 2)], ledGuc: 0.45, ledMenzil: 200 });
         break;
       }
       case 'cerceve': {
-        k(0, W, 0, 12, 0, D, '#3a2e25');
-        k(0, W, 12, H, D - 15, D, '#3a2e25');
+        ykOn(0, W, 0, H, D - 16, D, '#3a2e25', 3);
+        k(16, W - 16, 16, H - 16, D, D + 0.5, '#d9c7a8');
+        k(22, W - 22, 22, H * 0.55, D + 0.5, D + 0.9, '#a9b8a0');
+        k(W * 0.42, W * 0.58, 0, H * 0.6, 0, D - 16, '#3a2e25');
         break;
       }
-      case 'tablo': case 'ayna_duvar': k(0, W, 0, H, 0, D, r); break;
-      case 'kahve': case 'airfryer': case 'robot': case 'cay': case 'tost': case 'ekmek': {
-        k(0, W, 0, H * 0.12, 0, D, koyu(r, 0.9));
-        k(0, W, H * 0.12, H, 0, D * 0.8, r);
-        if (g.nesne === 'kahve' || g.nesne === 'cay') k(W * 0.3, W * 0.7, H * 0.12, H * 0.2, D * 0.8, D, '#aaaaaa');
+      case 'tablo': {
+        // İnce çerçeve, tuval ve soyut kemer / daire kompozisyonu
+        ykOn(0, W, 0, H, 0, D, '#2b2622', 2);
+        k(14, W - 14, 14, H - 14, D, D + 1, '#efe8dc');
+        const cx = W * 0.42;
+        const kw = W * 0.34;
+        const yol = [['M', 0, 0], ['L', kw, 0], ['L', kw, H * 0.35], ['A', kw / 2, kw / 2, 0, H * 0.35], ['Z']];
+        ekle(prizma(yolNoktalari(yol, 8), (u, v, w) => [cx - kw / 2 + u, H * 0.18 + v, w], Z(D + 1), Z(D + 2), 'nesne'), r);
+        silZ(W * 0.7, H * 0.66, Math.min(W, H) * 0.12, D + 1, D + 2.5, '#d9b28a');
+        k(W * 0.18, W * 0.82, H * 0.16, H * 0.18, D + 1, D + 2, '#5b5048');
         break;
       }
-      default: k(0, W, 0, H, 0, D, r);
+      case 'ayna_duvar': {
+        ykOn(0, W, 0, H, 0, D, '#b08d57', Math.min(W, H) * 0.12);
+        ykOn(16, W - 16, 16, H - 16, D, D + 1, r, Math.min(W, H) * 0.1);
+        break;
+      }
+      case 'kahve': case 'cay': {
+        // Espresso / çay makinesi: yuvarlatılmış gövde, damlama tablası, fincan veya demlik
+        yk(0, W, 0, H * 0.1, 0, D, koyu(r, 0.85), 18);
+        yk(0, W, H * 0.1, H, 0, D * 0.62, r, 24);
+        ykOn(W * 0.12, W * 0.88, H * 0.1, H * 0.8, D * 0.62, D * 0.66, koyu(r, 0.7), 12);
+        if (n0 === 'kahve') {
+          k(W * 0.2, W * 0.8, H * 0.1, H * 0.13, D * 0.62, D * 0.98, '#8d9196');
+          don(W * 0.5, D * 0.8, [[H * 0.13, 0.7], [H * 0.13 + 50, 1]], 32, 32, '#f4f1ea');
+          yk(W * 0.36, W * 0.64, H * 0.62, H * 0.72, D * 0.62, D * 0.85, '#5b5e63', 10);
+          silZ(W * 0.8, H * 0.88, 10, D * 0.62, D * 0.62 + 6, '#2a2d31');
+        } else {
+          don(W * 0.5, D * 0.5, [[H, 0.75], [H + 60, 1], [H + 110, 0.85], [H + 120, 0.3]], W * 0.3, W * 0.3, '#f4f1ea');
+        }
+        break;
+      }
+      case 'airfryer': case 'robot': case 'tost': case 'ekmek': {
+        if (n0 === 'airfryer') {
+          yk(0, W, 0, H, 0, D, r, W * 0.35);
+          ykOn(W * 0.15, W * 0.85, H * 0.08, H * 0.55, D - 1, D + 8, koyu(r, 0.85), 30);
+          ykOn(W * 0.38, W * 0.62, H * 0.28, H * 0.36, D + 8, D + 34, koyu(r, 0.7), 8);
+          ykOn(W * 0.3, W * 0.7, H * 0.68, H * 0.86, D - 1, D + 2, '#0f1a12', 10);
+        } else if (n0 === 'robot') {
+          yk(W * 0.1, W * 0.9, 0, H * 0.3, 0, D * 0.75, r, 40);
+          yk(W * 0.1, W * 0.9, H * 0.3, H, 0, D * 0.32, r, 30);
+          ykOn(W * 0.1, W * 0.9, H * 0.78, H, D * 0.32, D * 0.95, r, 40, null, [40, 40, 50, 0]);
+          don(W / 2, D * 0.6, [[H * 0.3, 0.75], [H * 0.36, 0.88], [H * 0.74, 1]], W * 0.3, W * 0.3, CELIK);
+        } else {
+          yk(0, W, 0, H, 0, D, r, n0 === 'ekmek' ? 40 : 30);
+          for (const f of n0 === 'ekmek' ? [0.32, 0.68] : []) k(W * 0.15, W * 0.85, H - 0.5, H + 0.5, D * f - 15, D * f + 15, '#2b2c2f');
+          if (n0 === 'tost') k(4, W - 4, H * 0.55, H * 0.6, D - 1, D + 1, koyu(r, 0.7));
+          ykOn(W * 0.7, W * 0.9, H * 0.15, H * 0.3, D, D + 18, '#2b2c2f', 6);
+        }
+        break;
+      }
+      case 'sepet': {
+        yk(0, W, 0, H, 0, D, r, 40, { doku: 'ahsap' });
+        yk(-3, W + 3, H - 20, H, -3, D + 3, koyu(r, 0.82), 42);
+        break;
+      }
+      case 'kutu': {
+        yk(0, W, 0, H * 0.85, 0, D, r, 8);
+        yk(-2, W + 2, H * 0.85, H, -2, D + 2, koyu(r, 1.06), 9);
+        break;
+      }
+      case 'tahta': {
+        ykOn(0, W, 0, H, 0, D, r, 30, { doku: 'ahsap' });
+        silZ(W / 2, H * 0.85, 12, D, D + 0.5, koyu(r, 0.6));
+        break;
+      }
+      case 'saat': {
+        const R2 = Math.min(W, H) / 2;
+        silZ(W / 2, R2, R2, 0, D, r);
+        silZ(W / 2, R2, R2 * 0.84, D, D + 1, '#f6f3ec');
+        k(W / 2 - 1.5, W / 2 + 1.5, R2, R2 + R2 * 0.6, D + 1, D + 2, '#2b2c2f');
+        k(W / 2, W / 2 + R2 * 0.45, R2 - 1.5, R2 + 1.5, D + 1, D + 2, '#2b2c2f');
+        break;
+      }
+      case 'utu': {
+        // Ütü: önü sivri taban (üstten), gövde ve tutamak
+        const ayak = (f) => [[W * (0.5 - 0.42 * f), 0], [W * (0.5 + 0.42 * f), 0], [W * (0.5 + 0.42 * f), D * 0.55], [W / 2, D * (0.55 + 0.45 * f)], [W * (0.5 - 0.42 * f), D * 0.55]].map(([x, z]) => [x, Z(z)]);
+        ekle(prizma(ayak(1), (u, v, w) => [u, w, v], 0, 12, 'nesne'), CELIK);
+        ekle(prizma(ayak(0.86), (u, v, w) => [u, w, v], 12, H * 0.4, 'nesne'), r);
+        ykYan(W * 0.38, W * 0.62, H * 0.62, H, D * 0.1, D * 0.75, koyu(r, 0.8), 30);
+        k(W * 0.42, W * 0.58, H * 0.38, H * 0.66, D * 0.12, D * 0.22, koyu(r, 0.8));
+        break;
+      }
+      case 'kombi': case 'klima': case 'modem': case 'konsol': case 'yazici': case 'supurge': case 'robot_supurge': {
+        if (n0 === 'robot_supurge') { don(W / 2, D / 2, [[0, 0.98], [6, 1], [H - 8, 1], [H, 0.94]], W / 2, D / 2, r); silZ(W / 2, H * 0.6, 12, D * 0.9, D * 0.95, '#7a7f86'); break; }
+        if (n0 === 'supurge') { yk(W * 0.1, W * 0.9, 0, 50, 0, D, '#2b2c2f', 20); sil(W / 2, D / 2, 14, 14, 50, H * 0.85, r); yk(W * 0.3, W * 0.7, H * 0.55, H * 0.8, D * 0.3, D * 0.8, koyu(r, 0.8), 30); ykOn(W / 2 - 15, W / 2 + 15, H * 0.85, H, D / 2 - 12, D / 2 + 12, '#2b2c2f', 12); break; }
+        if (n0 === 'klima') { ykYan(0, W, 0, H, 0, D, r, D * 0.45); k(W * 0.05, W * 0.95, H * 0.1, H * 0.16, D - 4, D + 0.5, '#9a9ea3'); break; }
+        yk(0, W, 0, H, 0, D, r, Math.min(W, D) * 0.12);
+        if (n0 === 'kombi') { ykOn(W * 0.25, W * 0.75, H * 0.12, H * 0.22, D, D + 2, '#2a2d31', 6); for (const x of [0.3, 0.7]) silZ(W * x, H * 0.3, 12, D, D + 10, '#c7cacd'); }
+        else if (n0 === 'konsol' || n0 === 'modem') k(W * 0.1, W * 0.9, H * 0.45, H * 0.5, D, D + 0.5, '#7ab8e8');
+        else if (n0 === 'yazici') k(W * 0.15, W * 0.85, H * 0.6, H * 0.64, D, D + 0.5, '#2a2d31');
+        break;
+      }
+      case 'ocak': {
+        // Cam seramik ocak: siyah cam, dört pişirme halkası
+        yk(0, W, 0, H, 0, D, '#16171a', 8);
+        for (const [fx, fz, rr] of [[0.28, 0.3, 0.17], [0.72, 0.3, 0.13], [0.28, 0.72, 0.12], [0.72, 0.72, 0.17]]) {
+          don(W * fx, D * fz, [[H, 1], [H + 0.6, 1]], Math.min(W, D) * rr, Math.min(W, D) * rr, '#3c3f45');
+          don(W * fx, D * fz, [[H + 0.6, 0.86], [H + 0.9, 0.86]], Math.min(W, D) * rr, Math.min(W, D) * rr, '#16171a');
+        }
+        k(W * 0.35, W * 0.65, H, H + 0.6, D * 0.9, D * 0.96, '#3c3f45');
+        break;
+      }
+      default: yk(0, W, 0, H, 0, D, r, Math.min(W, D) * 0.1);
     }
     return P;
   }
@@ -761,7 +1055,7 @@
     if (g.ledArka && P.length) {
       // Panel duvardan 30 mm takozla uzak; LED arada kalır
       const it = (q) => [q[0], q[1], q[2] + 30];
-      P = P.map((p) => Object.assign({}, p, { k: p.k.map(it) }, p.sk ? { sk: { v: p.sk.v.map(it), f: p.sk.f } } : {}));
+      P = P.map((p) => parcaDonustur(p, it));
       // Arkadan LED: panelin arkasında, kenardan 30 mm içeride çevre boyunca (duvara hare)
       const p = P[0];
       const v = p.sk ? p.sk.v.slice(0, p.sk.v.length / 2) : null;
@@ -838,7 +1132,126 @@
         return [p[2], y.montaj + p[1], y.bas + y.W - p[0]];
       };
       const kaynak = y.kaynak || y.modul;
-      for (const q of yerel) P.push(Object.assign({}, q, { k: q.k.map(donustur), modul: y.modul.ad, modulId: kaynak.id }, q.sk ? { sk: { v: q.sk.v.map(donustur), f: q.sk.f } } : {}, q.ledA ? { ledA: donustur(q.ledA), ledB: donustur(q.ledB) } : {}));
+      for (const q of yerel) P.push(Object.assign(parcaDonustur(q, donustur), { modul: y.modul.ad, modulId: kaynak.id }));
+    }
+    const tz = secenek && secenek.tezgah;
+    if (tz !== false && !(tz && tz.acik === false)) for (const q of tezgahParcalari(yer, Object.assign({}, TEZGAH_VARS, tz || {}))) P.push(q);
+    return P;
+  }
+
+  const TEZGAH_VARS = { renk: '#ece9e3', doku: 'mermer', kalinlik: 30, tasma: 20, arasi: true };
+  /**
+   * Mutfak tezgahı: zemindeki tezgah altı dolapların (kuşaklı alt dolap, L köşe, bulaşık makinesi) üstünde
+   * duvar boyunca kesintisiz tabla; önden taşmalı. Evye dolabında evye ve batarya, ocak dolabında ankastre
+   * ocak; isteğe bağlı tezgah arası kaplama (üst dolapların altına kadar). Parçalar "__tezgah" kimliğiyle
+   * işaretlenir (3B'de tıklayınca tezgah ayarları açılır).
+   */
+  function tezgahParcalari(yer, T) {
+    const P = [];
+    const kal = T.kalinlik;
+    const ek = { modulId: '__tezgah', modul: 'Tezgah', renk: T.renk, doku: T.doku || null };
+    const altMi = (y) => {
+      const g = y.geo;
+      if (!g || y.nesne || g.nesne || y.sira === 'duvar') return false;
+      if (g.panel) return (g.tur === 'bulasik' || (g.tur === 'bosluk' && g.H >= 650 && g.H <= 960)) && (y.montaj || 0) <= 150;
+      if ((y.montaj || 0) > 30) return false;
+      if (g.lkose) return g.H >= 700 && g.H <= 960;
+      return g.ust === 'kusak' && g.H >= 700 && g.H <= 960;
+    };
+    const dolapMi = (y) => !y.geo.panel;
+    const derin = (y) => y.geo.D + (y.geo.kapakTipi === 'ic' ? 0 : y.geo.tk || 18) + T.tasma;
+    // Duvar ekseni: s duvar boyunca, d duvardan öne; A (ve düz) → [s, y, d], B → [d, y, s]
+    const harita = (duvar) => (duvar === 'B' && yer.tip === 'L' ? ([a, b, c]) => [c, b, a] : (q) => q);
+    const kutuW = (duvar, s1, s2, y1, y2, d1, d2) => parcaDonustur(kutu(s1, s2, y1, y2, d1, d2, 'tezgah'), harita(duvar));
+    const ust = yer.yerler.filter((y) => y.sira === 'duvar' && y.geo && !y.geo.panel && !y.nesne);
+    const arasiUst = (duvar, s1, s2, alt) => {
+      const L = ust.filter((y) => (y.duvar === duvar || (duvar === 'A' && yer.tip !== 'L')) && y.bas < s2 && y.bas + y.W > s1 && y.montaj > alt + 200);
+      return L.length ? Math.min(...L.map((y) => y.montaj)) : alt + 600;
+    };
+    const ekleP = (p, ek2) => P.push(Object.assign(p, ek, ek2 || {}));
+    // Evye + batarya ve ocak: duvar ekseninde kurulur, sonra dünyaya taşınır
+    const evye = (duvar, s0, w, top, dep) => {
+      const ew = Math.min(780, w - 140);
+      const ed = Math.min(440, dep - 160);
+      if (ew < 300 || ed < 250) return;
+      const sm = s0 + w / 2;
+      const dm = dep * 0.5;
+      const h = harita(duvar);
+      const R = 40;
+      const cerceve = prizma(yuvarlakDikdortgen(sm - ew / 2, sm + ew / 2, dm - ed / 2, dm + ed / 2, [R, R, R, R], 4), (u, v, ww) => [u, ww, v], top, top + 1.5, 'tezgah');
+      ekleP(parcaDonustur(cerceve, h), { renk: '#c3c7cb', doku: null, yumusak: true });
+      const ic = prizma(yuvarlakDikdortgen(sm - ew / 2 + 22, sm + ew / 2 - 22, dm - ed / 2 + 22, dm + ed / 2 - 22, [R - 15, R - 15, R - 15, R - 15], 4), (u, v, ww) => [u, ww, v], top + 1.5, top + 2, 'tezgah');
+      ekleP(parcaDonustur(ic, h), { renk: '#6d7277', doku: null, yumusak: true });
+      // Batarya: gövde, kuğu boyun, ağız
+      const bd = Math.max(35, dm - ed / 2 - 45);
+      const govde = donel(sm, bd, [[top, 1], [top + 40, 1], [top + 48, 0.7], [top + 300, 0.55], [top + 312, 0.3]], 'tezgah', null, 24, 24);
+      const bat = { renk: '#c9cdd1', doku: null, grup: 'batarya' };
+      ekleP(parcaDonustur(govde, h), bat);
+      ekleP(parcaDonustur(kutu(sm - 8, sm + 8, top + 288, top + 304, bd, bd + 190, 'tezgah'), h), bat);
+      ekleP(parcaDonustur(donel(sm, bd + 182, [[top + 230, 0.8], [top + 292, 1]], 'tezgah', null, 12, 12), h), bat);
+      ekleP(parcaDonustur(kutu(sm + 22, sm + 30, top + 60, top + 150, bd - 6, bd + 6, 'tezgah'), h), bat);
+    };
+    const ocak = (duvar, s0, w, top, dep) => {
+      const ow = Math.min(590, w - 20);
+      const od = Math.min(520, dep - 60);
+      if (ow < 400) return;
+      const g = { nesne: 'ocak', W: ow, H: 5, D: od, renk: '#16171a', zGeri: 0 };
+      const ds = s0 + (w - ow) / 2;
+      const dd = Math.max(30, (dep - od) / 2);
+      for (const q of nesneParcalari(g)) ekleP(parcaDonustur(q, (p2) => harita(duvar)([ds + p2[0], top + p2[1], dd + p2[2]])), { renk: q.renk, doku: null, grup: 'ocak' });
+    };
+    // Duvar gruplarına ayır (ardışık, aynı yükseklikte)
+    const gruplar = [];
+    for (const duvar of yer.tip === 'L' ? ['A', 'B'] : ['A']) {
+      const L = yer.yerler.filter((y) => altMi(y) && y.duvar !== 'kose' && (yer.tip !== 'L' || y.duvar === duvar)).sort((a, b) => a.bas - b.bas);
+      let g = null;
+      for (const y of L) {
+        const top = y.montaj + y.geo.H;
+        if (g && y.bas <= g.s2 + 5 && (!dolapMi(y) || !g.top || Math.abs(top - g.top) <= 40)) {
+          g.s2 = Math.max(g.s2, y.bas + y.W); g.uyeler.push(y);
+          if (dolapMi(y)) { g.top = Math.max(g.top || 0, top); g.dep = Math.max(g.dep, derin(y)); }
+        } else {
+          g = { duvar, s1: y.bas, s2: y.bas + y.W, uyeler: [y], top: dolapMi(y) ? top : 0, dep: dolapMi(y) ? derin(y) : 0 };
+          gruplar.push(g);
+        }
+      }
+    }
+    // Köşe dolabı: L tabla (iki kol)
+    const koseler = yer.yerler.filter((y) => altMi(y) && y.duvar === 'kose' && y.geo.lkose);
+    for (const y of koseler) {
+      const g = y.geo;
+      const top = y.montaj + g.H;
+      const dep = g.D + (g.tk || 18) + T.tasma;
+      ekleP(kutu(0, g.W, top, top + kal, 0, dep, 'tezgah'));
+      ekleP(kutu(0, dep, top, top + kal, dep, g.W2, 'tezgah'));
+      if (T.arasi) {
+        const yU = arasiUst('A', 0, g.W, top + kal);
+        ekleP(kutu(0, g.W, top + kal, yU, 0, 8, 'tezgah'));
+        ekleP(kutu(0, 8, top + kal, arasiUst('B', 0, g.W2, top + kal), 8, g.W2, 'tezgah'));
+      }
+    }
+    for (const g of gruplar) {
+      if (!g.top || !g.uyeler.some(dolapMi)) continue;
+      const dep = g.dep || 600;
+      P.push(Object.assign(kutuW(g.duvar, g.s1, g.s2, g.top, g.top + kal, 0, dep), ek));
+      if (T.arasi) {
+        // Tezgah arası: üst dolapların altına kadar, üst dolap yoksa 600 mm
+        const kesitler = [];
+        const sinirlar = [...new Set([g.s1, g.s2].concat(ust.filter((y) => (yer.tip !== 'L' || y.duvar === g.duvar)).flatMap((y) => [y.bas, y.bas + y.W])).filter((x) => x > g.s1 && x < g.s2 || x === g.s1 || x === g.s2))].sort((a, b) => a - b);
+        for (let i = 0; i + 1 < sinirlar.length; i++) {
+          const a = sinirlar[i];
+          const b = sinirlar[i + 1];
+          if (b - a < 1) continue;
+          kesitler.push([a, b, arasiUst(g.duvar, a + 0.5, b - 0.5, g.top + kal)]);
+        }
+        for (const [a, b, yU] of kesitler) P.push(Object.assign(kutuW(g.duvar, a, b, g.top + kal, yU, 0, 8), ek));
+      }
+      for (const y of g.uyeler) {
+        if (!dolapMi(y)) continue;
+        const ad = String(y.modul.ad || '');
+        if (/evye/i.test(ad)) evye(g.duvar, y.bas, y.W, g.top + kal, dep);
+        else if (/ocak|fırın altı/i.test(ad)) ocak(g.duvar, y.bas, y.W, g.top + kal, dep);
+      }
     }
     return P;
   }
@@ -963,7 +1376,13 @@
     const isik = (() => { const v = [0.35, 0.75, 0.55]; const n = Math.hypot(...v); return v.map((a) => a / n); })();
     const ogeler = [];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    // Dönel cisimler çizim görünümünde dışbükey bantlarına ayrılır (ressam sıralaması için)
+    const acik = [];
     for (const p of parcalar) {
+      if (p.alt) for (const a of p.alt) acik.push(Object.assign({}, a, { renk: p.renk, saydam: p.saydam, kenarsiz: true }));
+      else acik.push(p);
+    }
+    for (const p of acik) {
       if (p.ayrinti || p.gizli) continue; // küçük ayrıntılar (kulp ayakları) ve gizli ışık şeritleri yalnız gerçekçi görünümde
       const v = (p.sk ? p.sk.v : p.k).map(don);
       let ex1 = Infinity, ex2 = -Infinity, ey1 = Infinity, ey2 = -Infinity;
@@ -987,7 +1406,7 @@
         const parlak = 0.62 + 0.38 * Math.max(0, n[0] * isik[0] + n[1] * isik[1] + n[2] * isik[2]);
         yuzler.push({ pts, renk: `rgb(${Math.round(r * parlak)},${Math.round(g * parlak)},${Math.round(bb * parlak)})` });
       }
-      ogeler.push({ derinlik, yuzler, saydam: p.saydam, b, ex1, ex2, ey1, ey2, zarf: zarf(v.map((q) => [q[0], q[1]])) });
+      ogeler.push({ derinlik, yuzler, saydam: p.saydam, kenarsiz: p.kenarsiz, b, ex1, ex2, ey1, ey2, zarf: zarf(v.map((q) => [q[0], q[1]])) });
     }
     if (!ogeler.length) return '<p class="bos">Gösterilecek parça yok.</p>';
     const f = (x) => Math.round(x * 10) / 10;
@@ -995,7 +1414,7 @@
     for (const i of siraBul(ogeler, bakis)) {
       const p = ogeler[i];
       for (const y of p.yuzler) {
-        s += `<polygon points="${y.pts.map((q) => `${f(q[0])},${f(-q[1])}`).join(' ')}" fill="${y.renk}"${p.saydam ? ` fill-opacity="${p.saydam}"` : ''} stroke="rgba(40,32,22,.45)" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
+        s += `<polygon points="${y.pts.map((q) => `${f(q[0])},${f(-q[1])}`).join(' ')}" fill="${y.renk}"${p.saydam ? ` fill-opacity="${p.saydam}"` : ''} stroke="${p.kenarsiz ? y.renk : 'rgba(40,32,22,.45)'}" stroke-width="${p.kenarsiz ? 0.4 : 0.6}" vector-effect="non-scaling-stroke"/>`;
       }
     }
     const w = maxX - minX;
@@ -1009,5 +1428,5 @@
     return `<svg class="uc-svg" viewBox="${f(cx - vw / 2)} ${f(cyy - vh / 2)} ${f(vw)} ${f(vh)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
   }
 
-  return { modulParcalari, projeParcalari, ciz, kutu, prizma, yolNoktalari, yuvarlakDikdortgen, newell, siraBul, zarf, cokgenOrtusur, RENK };
+  return { modulParcalari, projeParcalari, ciz, kutu, prizma, donel, kure, parcaDonustur, yolNoktalari, yuvarlakDikdortgen, newell, siraBul, zarf, cokgenOrtusur, RENK };
 });
