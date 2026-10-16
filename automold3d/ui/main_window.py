@@ -154,13 +154,13 @@ class MainWindow(QMainWindow):
         self._add_action(file_menu, "Proje Aç…", self.on_open_project, QKeySequence.Open)
         self.recent_menu = file_menu.addMenu("Son Projeler")
         self.recent_menu.aboutToShow.connect(self._fill_recent_menu)
-        self._add_action(file_menu, "Farklı Kaydet…", self.on_save_as, QKeySequence.SaveAs)
+        self._add_action(file_menu, "Farklı Kaydet…", self.on_save_as, QKeySequence("Ctrl+Shift+S"))
         file_menu.addSeparator()
         self._add_action(file_menu, "Çıkış", self.close, QKeySequence("Ctrl+Q"))
 
         edit = self.menus["Düzenle"]
         self.undo_action = self._add_action(edit, "Geri Al", self.on_undo, QKeySequence.Undo)
-        self.redo_action = self._add_action(edit, "Yinele", self.on_redo, QKeySequence.Redo)
+        self.redo_action = self._add_action(edit, "Yinele", self.on_redo, QKeySequence("Ctrl+Y"))
 
         self._add_action(self.menus["Model"], "Modeli Onar", self.on_repair)
         self.menus["Kalıp"].addSeparator()

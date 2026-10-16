@@ -4,7 +4,7 @@
 
 Kalıp boşluğu, modelin etrafına kutu çizilerek değil, Boolean fark işlemiyle (`Dış gövde − Model`, manifold3d) hesaplanır. Her işlemden sonra geometri kontrol edilir.
 
-> **Durum:** Aşama 0–7 tamamlandı: içe aktarma, doğrulama, negatif kalıp, iki ve çok parçalı bölme, pimler, döküm ağzı ve hava kanalları, dışa aktarma ve arayüz.
+> **Durum:** Aşama 0–8 tamamlandı. Ayrıntılı kullanım için **[KULLANIM_KILAVUZU.md](KULLANIM_KILAVUZU.md)** dosyasına bakın.
 
 ## Gereksinimler
 
@@ -37,6 +37,20 @@ Ubuntu/Debian'da Qt ve VTK için gereken sistem kütüphaneleri:
 ```bash
 sudo apt install libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
 ```
+
+### Kurulumu doğrulama
+
+```bat
+.venv\Scripts\python.exe -m automold3d.main --self-test
+```
+
+Bu komut arayüz açmadan örnek bir kalıp üretir, böler, pim ekler ve dışa aktarır. Son satırda `KENDİ KENDİNİ TEST BAŞARILI` yazmalıdır.
+
+### Windows paketi (PyInstaller)
+
+`build_windows.bat` komutu `dist\AutoMold3D\AutoMold3D.exe` içeren tek klasörlük bir paket üretir (yaklaşık 1 GB). Paket Python kurulumu gerektirmez. Hedef makinede `AutoMold3D.exe --self-test` komutuyla doğrulayın. Paketli sürüm kayıtları `%LOCALAPPDATA%\AutoMold3D\logs` klasörüne yazar.
+
+Paket tanımı `packaging/AutoMold3D.spec` dosyasındadır. Aynı tanım Linux'ta derlenip `--self-test` ile doğrulandı. Windows'ta derleme bu ortamda denenemedi.
 
 ## Kullanım (kısa)
 
@@ -129,4 +143,4 @@ Dosyalar 2 MB'de döner ve 5 yedek tutulur. Farklı bir klasör için `AUTOMOLD_
 | 5 | Arayüz entegrasyonu, geri al/yinele, proje kaydetme | Tamam |
 | 6 | Döküm ağzı ve hava kanalları | Tamam |
 | 7 | Çok parçalı kalıplar | Tamam |
-| 8 | Kullanım kılavuzu ve Windows paketi | — |
+| 8 | Kullanım kılavuzu ve Windows paketi | Tamam |

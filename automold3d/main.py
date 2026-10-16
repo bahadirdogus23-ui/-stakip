@@ -36,7 +36,16 @@ def main() -> int:
     import multiprocessing
 
     multiprocessing.freeze_support()  # geometry worker process in frozen (PyInstaller) builds
+    if "--version" in sys.argv:
+        from automold3d import __version__
+
+        print(f"{APP_NAME} {__version__}")
+        return 0
     log_path = setup_logging()
+    if "--self-test" in sys.argv:
+        from automold3d.self_test import run_self_test
+
+        return run_self_test()
     log.info("Starting %s, log file: %s", APP_NAME, log_path)
     _install_excepthook()
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -15,10 +16,16 @@ _FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
 
 
 def default_log_dir() -> Path:
-    """Return `<project root>/logs`, overridable with AUTOMOLD_LOG_DIR."""
+    """`<project root>/logs` when run from source; in a packaged (frozen) build the install
+    folder may be read-only, so logs go to %LOCALAPPDATA%\\AutoMold3D\\logs (Windows) or
+    ~/.automold3d/logs. Overridable with AUTOMOLD_LOG_DIR."""
     override = os.environ.get(LOG_DIR_ENV)
     if override:
         return Path(override)
+    if getattr(sys, "frozen", False):
+        base = os.environ.get("LOCALAPPDATA")
+        root = Path(base) / "AutoMold3D" if base else Path.home() / ".automold3d"
+        return root / "logs"
     return Path(__file__).resolve().parents[2] / "logs"
 
 
