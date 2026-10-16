@@ -56,12 +56,16 @@ def require_solid(model: trimesh.Trimesh) -> float:
 
 
 def cavity_model(model: trimesh.Trimesh, params: MoldParams) -> trimesh.Trimesh:
-    """The shape actually subtracted. Identical to the model unless shrinkage is set."""
-    cavity = model.copy()
+    """The shape actually subtracted: the model itself unless shrinkage is set.
+
+    Meshes are treated as immutable throughout the core, so sharing is safe.
+    """
     factor = 1.0 + params.shrinkage_percent / 100.0
-    if factor != 1.0:
-        center = model.bounds.mean(axis=0)
-        cavity.apply_transform(trimesh.transformations.scale_matrix(factor, center))
+    if factor == 1.0:
+        return model
+    cavity = model.copy()
+    center = model.bounds.mean(axis=0)
+    cavity.apply_transform(trimesh.transformations.scale_matrix(factor, center))
     return cavity
 
 

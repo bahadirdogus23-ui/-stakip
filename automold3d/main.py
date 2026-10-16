@@ -33,6 +33,9 @@ def _install_excepthook() -> None:
 
 
 def main() -> int:
+    import multiprocessing
+
+    multiprocessing.freeze_support()  # geometry worker process in frozen (PyInstaller) builds
     log_path = setup_logging()
     log.info("Starting %s, log file: %s", APP_NAME, log_path)
     _install_excepthook()

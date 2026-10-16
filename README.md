@@ -1,20 +1,22 @@
 # AutoMold 3D
 
-3D yazıcıdan çıkan bir modelden (STL/OBJ/3MF) **gerçek negatif kalıp boşluğu** üreten, kalıbı parçalara bölen, hizalama pimleri ekleyen ve her parçayı ayrı dosya olarak dışa aktaran çevrimdışı masaüstü uygulaması. Taş tozu, jesmonite, alçı, reçine ve beton dökümleri için silikon kalıp / ana kalıp hazırlamaya yöneliktir.
+3D yazıcıdan çıkan bir modelden (STL/OBJ/3MF) **gerçek negatif kalıp boşluğu** üreten çevrimdışı bir masaüstü uygulaması. Kalıbı parçalara böler, hizalama pimleri ekler ve her parçayı ayrı dosya olarak dışa aktarır. Taş tozu, jesmonite, alçı, reçine ve beton dökümleri için silikon kalıp / ana kalıp hazırlamaya yöneliktir.
 
-> **Durum: Aşama 0 (kurulum).** Şu an yalnızca boş ana pencere açılıyor. Araç çubuğundaki düğmeler devre dışıdır ve üzerlerinde hangi aşamada ekleneceği yazar.
+Kalıp boşluğu, modelin etrafına kutu çizilerek değil, Boolean fark işlemiyle (`Dış gövde − Model`, manifold3d) hesaplanır. Her işlemden sonra geometri kontrol edilir.
+
+> **Durum:** Aşama 0–5 tamamlandı: içe aktarma, doğrulama, negatif kalıp, bölme, pimler, dışa aktarma ve arayüz. Döküm ağzı ve hava kanalları (Aşama 6) ile çok parçalı kalıplar (Aşama 7) henüz yok; ilgili düğmeler devre dışıdır.
 
 ## Gereksinimler
 
-- Windows 10/11 (veya test için Linux)
-- [Python 3.12](https://www.python.org/downloads/) — kurulumda "Add python.exe to PATH" ve "py launcher" seçili olmalı
-- İnternet yalnızca ilk kurulumda (paketleri indirmek için) gerekir; uygulama tamamen çevrimdışı çalışır.
+- Windows 10/11 (testler Linux'ta da çalışır)
+- [Python 3.12](https://www.python.org/downloads/). Kurulumda "Add python.exe to PATH" ve "py launcher" seçili olmalı.
+- İnternet yalnızca ilk kurulumda, paketleri indirmek için gerekir. Uygulama tamamen çevrimdışı çalışır.
 
 ## Kurulum ve çalıştırma
 
 ### Windows
 
-`run.bat` dosyasına çift tıklayın. İlk çalıştırmada `.venv` sanal ortamını oluşturur ve paketleri yükler (birkaç dakika sürebilir), sonra uygulamayı açar.
+`run.bat` dosyasına çift tıklayın. İlk çalıştırmada `.venv` sanal ortamını oluşturur ve paketleri yükler (birkaç dakika sürebilir), ardından uygulamayı açar.
 
 Elle kurmak isterseniz:
 
@@ -36,6 +38,44 @@ Ubuntu/Debian'da Qt ve VTK için gereken sistem kütüphaneleri:
 sudo apt install libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
 ```
 
+## Kullanım (kısa)
+
+1. **Model İçe Aktar** (Ctrl+I): STL, OBJ, 3MF veya PLY dosyası seçin. STL ve OBJ birim bilgisi taşımaz; açılan pencerede birimi onaylayın. Model yalnızca mm'ye çevrilir, başka ölçeklenmez. Kaynak dosyaya hiçbir şey yazılmaz.
+2. Model kapalı (su geçirmez) değilse hacmi hesaplanamaz. Uygulama onarım yapılıp yapılmayacağını sorar. Onarmazsanız kalıp üretilemez.
+3. **Modeli Analiz Et**: tam doğrulamayı yapar (kendi kendini kesme dahil) ve ters açı (undercut) alanı en küçük olan ayırma düzlemini önerip parametrelere yazar.
+4. Sağ panelde ayarları yapın:
+   - **Kullanım**: "Silikon kalıp" veya "İçine döküm kalıbı". Yalnızca varsayılan değerleri değiştirir.
+   - **Kalıp gövdesi**: otomatik kutu, kutu veya silindir.
+   - **Paylar**: model ile dış duvar arası mesafe.
+   - **Min. duvar**: kontrol edilen en küçük malzeme kalınlığı.
+   - **Çekme payı**: varsayılan 0.
+   - **Kalıp modu**: A (tek parça açık) veya B (iki parça).
+   - **Ayırma düzlemi**: X/Y/Z ekseni ya da açılı düzlem, artı ofset.
+   - **Pimler**: adet, çap, boy ve çap boşluğu (varsayılan 0,2 mm).
+5. **Negatif Kalıp Oluştur**: Boolean öncesinde dış gövde tel kafes olarak önizlenir. Mod A'da tek parçalı açık kalıp doğrudan oluşur.
+6. Mod B'de **Kalıbı Böl** ile kalıbı ikiye ayırın veya **Pimleri Oluştur** ile bölüp pim ve yuva ekleyin. Pimler 1. parçada, yuvalar 2. parçadadır. Elle konum girmek için "Konumlar" alanına düzlem koordinatı yazın, örneğin `22, 22; -22, -22`. Kurala uymayan konumlar reddedilir ve nedeni yazılır.
+7. **Geometriyi Doğrula**: tüm kontroller "Kontroller" sekmesinde BAŞARILI / UYARI / HATA / MANUEL İNCELEME olarak listelenir. "Üretime hazır" ifadesi yalnızca bütün kontroller geçtiğinde kullanılır.
+8. **Dışa Aktar**: STL / OBJ / 3MF, PNG önizleme ve `kalip_raporu.json` üretir. Dosya adları birimi içerir (`kalip_parca_1_mm.stl`). Her dosya yazıldıktan sonra geri okunur ve kontrol edilir: kapalı mı, üçgen sayısı ve hacim aynı mı.
+9. **Projeyi Kaydet** (`.amproj`, JSON): ayarlar ve kaynak dosya yolu kaydedilir. Kalıp geometrisi kaydedilmez; proje açıldığında model yeniden yüklenir ve işlemler yeniden çalıştırılır. Son projeler: Dosya → Son Projeler.
+
+**Geri Al / Yinele** (Ctrl+Z / Ctrl+Y) her işlem ve parametre değişikliği için çalışır. Görünüm menüsünden şunları açıp kapatabilirsiniz: pozitif model, negatif boşluk, dış gövde, patlatılmış görünüm, kesit, şeffaf, tel kafes, ölçüler, pim/kanal. Kalıptan çıkmayı engelleyen yüzeyler kırmızıyla işaretlenir.
+
+Uzun işlemler ayrı bir hesaplama sürecinde çalışır, bu yüzden arayüz donmaz. **İptal** düğmesi işlemi gerçekten durdurur.
+
+## Elle duman testi (smoke test)
+
+Her sürümden önce şu adımları uygulayın:
+
+1. `run.bat` ile uygulamayı açın. Pencere başlığında "AutoMold 3D" yazmalı; menüler Dosya, Düzenle, Model, Kalıp, Görünüm, Araçlar, Yardım olmalı.
+2. Bir STL içe aktarın ve birim olarak mm seçin. Sağdaki "Ölçüler" bölümünde nesne boyutları dilimleyicideki ölçülerle aynı olmalı.
+3. Ortasından delik bir STL deneyin. Uygulama onarım yapılıp yapılmayacağını sormalı. "Hayır" derseniz "Negatif Kalıp Oluştur" devre dışı kalmalı.
+4. Modeli Analiz Et → Negatif Kalıp Oluştur. "Kontroller" sekmesinde "Negatif boşluk hacmi" BAŞARILI olmalı.
+5. Pimleri Oluştur. Nesne ağacında "Kalıp parçaları (2)" ve "Pimler (4)" görünmeli. Görünüm → Patlatılmış görünüm açıldığında parçalar ayrılmalı.
+6. Yan payı değiştirin. Kalıp silinmeli ve tel kafes önizleme güncellenmeli. Ctrl+Z eski kalıbı geri getirmeli.
+7. Yaklaşık 500 bin üçgenli bir model içe aktarın ve kalıp oluşturun. İşlem sürerken pencere taşınabilmeli, menüler açılabilmeli. İptal'e basınca işlem birkaç saniye içinde durmalı.
+8. Dışa Aktar: klasörde `kalip_parca_1_mm.stl`, `kalip_parca_2_mm.stl`, `kalip_onizleme.png` ve `kalip_raporu.json` oluşmalı. Aynı klasöre yeniden aktarırken üzerine yazma onayı sorulmalı.
+9. Projeyi kaydedin, Dosya → Yeni Proje, ardından Dosya → Son Projeler'den açın. Parametreler geri gelmeli, model yeniden yüklenmeli.
+
 ## Testler
 
 ```bash
@@ -44,24 +84,33 @@ sudo apt install libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 
 xvfb-run -a .venv/bin/pytest -q  # ekransız Linux (CI) için sanal ekran
 ```
 
-Ekran bulunmayan Linux ortamında arayüz testleri atlanır; geometri testleri her zaman çalışır.
+Ekran bulunmayan Linux ortamında arayüz testleri atlanır; geometri testleri her zaman çalışır. Arayüz testleri içe aktarma, kalıp, pim, dışa aktarma, geri al/yinele, proje kaydetme/açma ve iptal akışlarını kapsar. Ayrıca 500 bin üçgenlik modelde arayüzün tepki süresini ölçer.
 
 ## Kayıtlar (log)
 
-Uygulama kayıtları `logs/automold.log` dosyasına yazılır (2 MB'de döner, 5 yedek). Farklı bir klasör için `AUTOMOLD_LOG_DIR` ortam değişkenini kullanın.
+- Uygulama: `logs/automold.log`
+- Hesaplama süreci: `logs/automold_worker.log`
+
+Dosyalar 2 MB'de döner ve 5 yedek tutulur. Farklı bir klasör için `AUTOMOLD_LOG_DIR` ortam değişkenini kullanın. Son projeler listesi `%APPDATA%\AutoMold3D\recent.sqlite` dosyasında tutulur (Linux'ta `~/.automold3d/`).
+
+## Bilinen sınırlar
+
+- STEP içe aktarma kapalıdır: isteğe bağlı CadQuery paketi gerektirir ve bu kurulumda yoktur.
+- Kalıp çıkma açısı (draft) parametresi henüz uygulanmadı; 0 dışındaki değerler reddedilir.
+- Kendi kendini kesme kontrolü, aynı köşeyi paylaşan üçgen çiftlerini ve tam düzlemsel çakışmaları algılamaz. 600 bin üçgenin üzerinde bu kontrol atlanır ve "manuel inceleme" olarak raporlanır.
+- Ayırma düzlemi önerisi, 20 binden fazla üçgenli modellerde alana göre ağırlıklı örnekleme kullanır.
+- Akış simülasyonu yapılmaz.
 
 ## Yol haritası
 
 | Aşama | İçerik | Durum |
 |---|---|---|
 | 0 | Kurulum, iskelet, loglama, boş pencere | Tamam |
-| 1 | Model içe aktarma ve doğrulama | — |
-| 2 | Negatif kalıp boşluğu (Boolean fark) | — |
-| 3 | Kalıbı bölme, ayırma yüzeyi, pimler | — |
-| 4 | Dışa aktarma (STL/OBJ/3MF, rapor, PNG) | — |
-| 5 | Arayüz entegrasyonu, geri al/yinele, proje kaydetme | — |
+| 1 | Model içe aktarma ve doğrulama | Tamam |
+| 2 | Negatif kalıp boşluğu (Boolean fark) | Tamam |
+| 3 | Kalıbı bölme, ayırma yüzeyi, pimler | Tamam |
+| 4 | Dışa aktarma (STL/OBJ/3MF, rapor, PNG) | Tamam |
+| 5 | Arayüz entegrasyonu, geri al/yinele, proje kaydetme | Tamam |
 | 6 | Döküm ağzı ve hava kanalları | — |
 | 7 | Çok parçalı kalıplar | — |
 | 8 | Kullanım kılavuzu ve Windows paketi | — |
-
-STEP desteği isteğe bağlıdır (CadQuery); henüz eklenmedi.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 
 import numpy as np
@@ -134,9 +134,35 @@ class PinParams:
 
 
 @dataclass
-class ProjectSettings:
-    """Project-wide settings stored in the .amproj file."""
+class PouringParams:
+    """Pour spout and air vents. Both are off by default.
 
-    cast_mode: CastMode = CastMode.SILICONE_MOLD
-    unit: str = UNIT
-    mold: MoldParams = field(default_factory=MoldParams)
+    pour_dir points "up" while casting: the spout and vents run from the cavity to the outer
+    surface along it. Positions are world points on the cavity surface; None = automatic.
+    """
+
+    spout_enabled: bool = False
+    spout_diameter: float = 10.0
+    spout_position: tuple[float, float, float] | None = None
+    vents_enabled: bool = False
+    vent_diameter: float = 2.0
+    vent_count: int = 2
+    vent_positions: list[tuple[float, float, float]] | None = None
+    pour_dir: tuple[float, float, float] = (0.0, 0.0, 1.0)
+    sections: int = 32
+
+    @classmethod
+    def for_cast_mode(cls, mode: CastMode) -> PouringParams:
+        if mode is CastMode.SILICONE_MOLD:
+            return cls(spout_diameter=12.0, vent_diameter=3.0, vent_count=2)
+        return cls(spout_diameter=15.0, vent_diameter=3.0, vent_count=4)
+
+    def validate(self) -> list[str]:
+        errors: list[str] = []
+        if self.spout_diameter <= 0 or self.vent_diameter <= 0:
+            errors.append("Döküm ağzı ve hava kanalı çapı sıfırdan büyük olmalı.")
+        if self.vent_count < 0:
+            errors.append("Hava kanalı sayısı negatif olamaz.")
+        if self.sections < 8:
+            errors.append("Kanal bölüm sayısı en az 8 olmalı.")
+        return errors

@@ -22,11 +22,20 @@ def default_log_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "logs"
 
 
-def setup_logging(log_dir: Path | None = None, level: int = logging.INFO) -> Path:
-    """Configure the root logger once and return the log file path."""
+def setup_logging(
+    log_dir: Path | None = None,
+    level: int = logging.INFO,
+    file_name: str = LOG_FILE_NAME,
+    console: bool = True,
+) -> Path:
+    """Configure the root logger once and return the log file path.
+
+    The geometry worker process logs to its own file so two processes never rotate the
+    same file.
+    """
     target_dir = log_dir or default_log_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
-    log_path = target_dir / LOG_FILE_NAME
+    log_path = target_dir / file_name
 
     root = logging.getLogger()
     root.setLevel(level)
@@ -38,8 +47,10 @@ def setup_logging(log_dir: Path | None = None, level: int = logging.INFO) -> Pat
     file_handler = RotatingFileHandler(
         log_path, maxBytes=_MAX_BYTES, backupCount=_BACKUP_COUNT, encoding="utf-8"
     )
-    console_handler = logging.StreamHandler()
-    for handler in (file_handler, console_handler):
+    handlers: list[logging.Handler] = [file_handler]
+    if console:
+        handlers.append(logging.StreamHandler())
+    for handler in handlers:
         handler.setFormatter(logging.Formatter(_FORMAT))
         handler._automold = True  # type: ignore[attr-defined]
         root.addHandler(handler)
