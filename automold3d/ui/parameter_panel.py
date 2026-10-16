@@ -93,6 +93,7 @@ class ParameterPanel(QScrollArea):
         self._build_body()
         self._build_mode()
         self._build_plane()
+        self._build_multi()
         self._build_pins()
         self._build_pouring()
         self._build_view()
@@ -169,6 +170,7 @@ class ParameterPanel(QScrollArea):
         self.mode = QComboBox()
         self.mode.addItem("A — Tek parça açık kalıp", "A")
         self.mode.addItem("B — İki parçalı kalıp", "B")
+        self.mode.addItem("C — Çok parçalı kalıp", "C")
         self.pull_dir = QComboBox()
         for label, vec in PULL_DIRECTIONS.items():
             self.pull_dir.addItem(label, vec)
@@ -197,6 +199,20 @@ class ParameterPanel(QScrollArea):
         form.addRow("Ofset:", self.plane_offset)
         form.addRow(self.suggestion_label)
         self._watch(self.plane_axis, self.plane_azimuth, self.plane_elevation, self.plane_offset)
+
+    def _build_multi(self) -> None:
+        form = self._group("Çok parçalı kalıp (Mod C)")
+        self.planes_edit = QLineEdit()
+        self.planes_edit.setPlaceholderText("nx, ny, nz, ofset; nx, ny, nz, ofset")
+        self.planes_edit.setToolTip(
+            "Her düzlem kalıbın tamamını keser. Örnek: 0, 0, 1, -24; 0, 0, 1, -10"
+        )
+        self.n_parts = QSpinBox()
+        self.n_parts.setRange(2, 8)
+        self.n_parts.setValue(3)
+        form.addRow("Düzlemler:", self.planes_edit)
+        form.addRow("Hedef parça (öneri):", self.n_parts)
+        self._watch(self.planes_edit, self.n_parts)
 
     def _build_pins(self) -> None:
         form = self._group("Hizalama pimleri")
@@ -309,22 +325,24 @@ class ParameterPanel(QScrollArea):
             w.setEnabled(is_box)
         for w in (self.margin_side, self.margin_top, self.margin_bottom):
             w.setEnabled(not is_box)
-        mode_a = self.mode.currentData() == "A"
+        mode = self.mode.currentData()
+        mode_a = mode == "A"
         self.pull_dir.setEnabled(mode_a)
         self.opening_auto.setEnabled(mode_a)
         self.opening_offset.setEnabled(mode_a and not self.opening_auto.isChecked())
         angled = self.plane_axis.currentText() == ANGLED
         for w in (self.plane_azimuth, self.plane_elevation):
-            w.setEnabled(not mode_a and angled)
+            w.setEnabled(mode == "B" and angled)
+        for w in (self.plane_axis, self.plane_offset, self.pin_positions):
+            w.setEnabled(mode == "B")
+        for w in (self.planes_edit, self.n_parts):
+            w.setEnabled(mode == "C")
         for w in (
-            self.plane_axis,
-            self.plane_offset,
             self.pin_count,
             self.pin_diameter,
             self.pin_length,
             self.pin_clearance,
             self.pin_depth_clearance,
-            self.pin_positions,
         ):
             w.setEnabled(not mode_a)
 
@@ -355,6 +373,10 @@ class ParameterPanel(QScrollArea):
             self.pin_clearance.setValue(p.clearance)
             self.pin_depth_clearance.setValue(p.depth_clearance)
             self.pin_positions.setText(format_positions(state.pin_positions))
+            self.planes_edit.setText(
+                format_positions([(*p.normal, p.offset) for p in state.planes])
+            )
+            self.n_parts.setValue(state.n_parts_target)
             q = state.pouring
             self._set_combo(self.pour_dir, tuple(q.pour_dir))
             self.spout_diameter.setValue(q.spout_diameter)
@@ -420,6 +442,16 @@ class ParameterPanel(QScrollArea):
             clearance=self.pin_clearance.value(),
             depth_clearance=self.pin_depth_clearance.value(),
         )
+        planes = self._positions(
+            self.planes_edit, 4, "Düzlemler", [(*p.normal, p.offset) for p in base.planes]
+        )
+        values = planes or []
+        if any(math.hypot(a, b, c) == 0 for a, b, c, _ in values):
+            self.input_error = "Düzlem normali sıfır olamaz."
+            state.planes = list(base.planes)
+        else:
+            state.planes = [PartingPlane((a, b, c), d) for a, b, c, d in values]
+        state.n_parts_target = self.n_parts.value()
         state.pin_positions = self._positions(
             self.pin_positions, 2, "Pim konumları", base.pin_positions
         )

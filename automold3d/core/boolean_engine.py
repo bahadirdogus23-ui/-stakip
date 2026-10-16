@@ -135,6 +135,11 @@ def intersection(a: trimesh.Trimesh, b: trimesh.Trimesh) -> BooleanResult:
     return boolean(a, b, BooleanOp.INTERSECTION)
 
 
+def overlap_volume(a: trimesh.Trimesh, b: trimesh.Trimesh) -> float:
+    """Volume shared by two solids (0 for disjoint or merely touching solids)."""
+    return float((to_manifold(a) ^ to_manifold(b)).volume())
+
+
 def union_meshes(meshes: Sequence[trimesh.Trimesh]) -> trimesh.Trimesh:
     """Union of several solids; raises GeometryError on failure."""
     if not meshes:

@@ -17,7 +17,7 @@ import numpy as np
 import trimesh
 
 from automold3d.core import geometry_checks as qa
-from automold3d.core.boolean_engine import difference, from_manifold, intersection, to_manifold
+from automold3d.core.boolean_engine import difference, from_manifold, overlap_volume, to_manifold
 from automold3d.core.errors import GeometryError
 from automold3d.core.frames import align_to_z, as_3x4, unit
 from automold3d.core.params import PouringParams
@@ -283,8 +283,7 @@ def check_pin_clearance(channels: Sequence[Channel], result: SplitResult) -> qa.
     clashes = 0
     for channel in channels:
         for solid in [*layout.pins, *layout.sockets]:
-            overlap = intersection(channel.mesh, solid).unwrap()
-            if len(overlap.faces) and overlap.volume > _MIN_OVERLAP:
+            if overlap_volume(channel.mesh, solid) > _MIN_OVERLAP:
                 clashes += 1
     if clashes:
         return qa.CheckResult(

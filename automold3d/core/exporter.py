@@ -171,6 +171,15 @@ def build_report(
         "hava_kapani_onerileri": [
             {"konum_mm": list(t.point), "not": "öneri"} for t in result.air_traps
         ],
+        "parca_bilgisi": [
+            {
+                "parca": i.part_id,
+                "cikarma_yonu": list(i.pull_dir),
+                "ters_aci_mm2": round(i.undercut_area, 3),
+            }
+            for i in result.part_info
+        ],
+        "montaj_sirasi": list(result.assembly_order),
         "ters_aci": {
             "alan_mm2": round(result.undercut.undercut_area, 3),
             "oran": round(result.undercut.undercut_fraction, 5),

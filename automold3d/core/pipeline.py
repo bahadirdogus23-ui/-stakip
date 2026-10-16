@@ -11,7 +11,12 @@ from pathlib import Path
 import trimesh
 
 from automold3d.core import geometry_checks as qa
-from automold3d.core.demold_analysis import PlaneScore, suggest_parting_planes
+from automold3d.core.demold_analysis import (
+    AutoPlanesResult,
+    PlaneScore,
+    auto_parting_planes,
+    suggest_parting_planes,
+)
 from automold3d.core.errors import GeometryError
 from automold3d.core.exporter import ExportedFile, export_all
 from automold3d.core.importer import ImportResult, load_model, to_mm
@@ -19,7 +24,7 @@ from automold3d.core.mesh_validation import repair_mesh, validate_mesh
 from automold3d.core.mold_generator import generate_mold
 from automold3d.core.pouring import apply_channels
 from automold3d.core.project_manager import ProjectState, Session
-from automold3d.core.splitter import SplitResult, one_part_open, two_part
+from automold3d.core.splitter import SplitResult, n_part, one_part_open, two_part
 
 log = logging.getLogger(__name__)
 
@@ -93,21 +98,32 @@ def build_mold(session: Session) -> Session:
 
 
 def split(session: Session, with_pins: bool = False) -> Session:
-    if session.state.mode != "B":
-        raise GeometryError("Bölme yalnızca iki parçalı kalıp (Mod B) için geçerli.", "mode A")
+    state = session.state
+    if state.mode not in ("B", "C"):
+        raise GeometryError("Bölme yalnızca Mod B ve Mod C için geçerli.", "mode A")
     if session.mold is None:
         raise GeometryError("Önce negatif kalıbı oluşturun.", "no mold")
-    state = session.state
     out = session.snapshot("Pim ekleme" if with_pins else "Kalıbı bölme")
-    out.split_base = two_part(
-        session.mold,
-        state.plane,
-        state.mold,
-        state.pins if with_pins else None,
-        state.pin_positions if with_pins else None,
-    )
+    pins = state.pins if with_pins else None
+    if state.mode == "C":
+        out.split_base = n_part(session.mold, state.planes, state.mold, pins)
+    else:
+        out.split_base = two_part(
+            session.mold, state.plane, state.mold, pins, state.pin_positions if with_pins else None
+        )
     out.split = _with_channels(out.split_base, state)
     return out
+
+
+def suggest_planes(session: Session) -> tuple[Session, AutoPlanesResult]:
+    """Best-effort N-part plane suggestion; the planes are written into the state."""
+    model = _require_model(session)
+    result = auto_parting_planes(model, session.state.n_parts_target)
+    out = session.snapshot("Çok parçalı düzlem önerisi")
+    if result.planes:
+        out.state.planes = list(result.planes)
+        out.split = out.split_base = None
+    return out, result
 
 
 def add_channels(session: Session, spout: bool | None = None, vents: bool | None = None) -> Session:

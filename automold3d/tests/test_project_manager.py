@@ -26,6 +26,8 @@ def test_save_load_roundtrip(tmp_path):
         opening_offset=12.5,
         plane=PartingPlane((0.0, 1.0, 0.0), -3.0),
         pin_positions=[(1.0, 2.0), (3.0, 4.0)],
+        planes=[PartingPlane((0.0, 0.0, 1.0), -24.0), PartingPlane((1.0, 0.0, 0.0), 2.0)],
+        n_parts_target=4,
     )
     path = save_project(state, tmp_path / "proje")
     assert path.suffix == ".amproj"
@@ -109,3 +111,20 @@ def test_pipeline_mode_a_and_repair(tmp_path):
     assert built.split is not None and built.split.mode == "A"
     with pytest.raises(Exception, match="Mod B"):
         pipeline.split(built)
+
+
+def test_pipeline_mode_c(tmp_path):
+    path = fx.write_mesh(fx.inverted_mushroom(), tmp_path / "m.stl")
+    session = pipeline.import_model(path, "mm")
+    session.state.mode = "C"
+    suggested, auto = pipeline.suggest_planes(session)
+    assert auto.success and suggested.state.planes
+    suggested.state.planes = [
+        PartingPlane((0.0, 0.0, 1.0), -24.0),
+        PartingPlane((0.0, 0.0, 1.0), -10.0),
+    ]
+    parts = pipeline.split(pipeline.build_mold(suggested), with_pins=True)
+    assert len(parts.split.parts) == 3
+    report, _ = pipeline.export(parts, tmp_path / "out", ["stl"], overwrite=False, snapshot=False)
+    assert sorted(report["montaj_sirasi"]) == [1, 2, 3]
+    assert len(report["parca_bilgisi"]) == 3

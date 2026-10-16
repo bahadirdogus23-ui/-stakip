@@ -315,3 +315,33 @@ def test_spout_and_vents_buttons(qtbot, window, tmp_path):
     window.panel.flush()
     assert window.session.split.channels == []
     assert not window.session.state.pouring.spout_enabled
+
+
+def test_mode_c_three_parts_and_auto_fallback(qtbot, window, tmp_path):
+    import_file(qtbot, window, fx.write_mesh(fx.inverted_mushroom(), tmp_path / "m.stl"))
+    window.panel.mode.setCurrentIndex(2)  # Mode C
+    window.panel.planes_edit.setText("0, 0, 1, -24; 0, 0, 1, -10")
+    window.panel.planes_edit.editingFinished.emit()
+    window.panel.flush()
+    assert len(window.session.state.planes) == 2
+    assert len(window.viewport.scene.planes) == 2
+    window.on_generate()
+    wait_idle(qtbot, window)
+    window.on_pins()
+    wait_idle(qtbot, window)
+    split = window.session.split
+    assert split.mode == "C" and len(split.parts) == 3
+    assert any(
+        c.name == "Parçalar arası çakışma" and c.status is qa.CheckStatus.PASSED
+        for c in split.checks
+    )
+
+    window.on_new()
+    import_file(qtbot, window, fx.write_mesh(fx.hollow_sphere(), tmp_path / "bos.stl"))
+    window.panel.mode.setCurrentIndex(2)
+    window.panel.flush()
+    window.suggest_action.trigger()
+    wait_idle(qtbot, window)
+    assert window.prompts.infos and "elle" in window.prompts.infos[-1][1]
+    assert window.session.state.planes  # best-effort planes are kept as a starting point
+    assert window.panel.planes_edit.text()

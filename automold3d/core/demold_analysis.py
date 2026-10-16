@@ -152,3 +152,131 @@ def _scoring_sample(areas: np.ndarray, seed: int) -> np.ndarray:
         return np.arange(len(areas))
     rng = np.random.default_rng(seed)
     return np.sort(rng.choice(len(areas), MAX_SCORING_FACES, replace=False, p=areas / areas.sum()))
+
+
+# ---------------------------------------------------------------- N-part (Mode C)
+
+
+@dataclass
+class CellReport:
+    """Model faces touched by one cell of the plane arrangement, and how it demolds."""
+
+    signs: tuple[bool, ...]
+    face_ids: np.ndarray
+    pull_dir: tuple[float, float, float]
+    undercut_area: float
+
+
+@dataclass
+class AutoPlanesResult:
+    planes: list[PartingPlane]
+    undercut_area: float
+    success: bool
+    message: str
+
+
+def face_cells(centers: np.ndarray, planes: list[PartingPlane]) -> np.ndarray:
+    """Bool matrix (faces x planes): which side of each plane a face centre lies on."""
+    if not planes:
+        return np.zeros((len(centers), 0), dtype=bool)
+    normals = np.array([p.unit_normal() for p in planes])
+    offsets = np.array([p.offset for p in planes])
+    return centers @ normals.T >= offsets
+
+
+def analyze_n_part(model: trimesh.Trimesh, planes: list[PartingPlane]) -> list[CellReport]:
+    """For each cell: pick the bounding-plane direction (±n) with the least undercut area."""
+    centers = np.asarray(model.triangles_center)
+    areas = np.asarray(model.area_faces)
+    sides = face_cells(centers, planes)
+    cache: dict[tuple[float, ...], np.ndarray] = {}
+    reports = []
+    for signs in {tuple(row) for row in sides}:
+        ids = np.flatnonzero(np.all(sides == np.array(signs, dtype=bool), axis=1))
+        best: tuple[float, tuple[float, float, float]] | None = None
+        for plane, positive in zip(planes, signs, strict=True):
+            d = np.asarray(plane.unit_normal()) * (1 if positive else -1)
+            key = tuple(np.round(d, 9))
+            if key not in cache:
+                cache[key] = blocked_faces(model, d)
+            area = float(areas[ids][cache[key][ids]].sum())
+            if best is None or area < best[0]:
+                best = (area, (float(d[0]), float(d[1]), float(d[2])))
+        assert best is not None
+        reports.append(CellReport(signs, ids, best[1], best[0]))
+    return reports
+
+
+def auto_parting_planes(
+    model: trimesh.Trimesh, max_parts: int = 3, offsets_per_direction: int = 21
+) -> AutoPlanesResult:
+    """Best-effort greedy plane selection for up to `max_parts` slabs/cells.
+
+    Adds one plane at a time (from the same candidates as the two-part suggestion) while it
+    lowers the total undercut area. Reports failure honestly when undercuts remain.
+    """
+    areas = np.asarray(model.area_faces)
+    ids = _scoring_sample(areas, seed=0)
+    sampled = len(ids) < len(areas)
+    weights = np.full(len(ids), areas.sum() / len(ids)) if sampled else areas
+    centers = np.asarray(model.triangles_center)[ids]
+    blocked: dict[tuple[float, ...], np.ndarray] = {}
+    candidates: list[PartingPlane] = []
+    for n in candidate_directions():
+        for d in (n, -n):
+            blocked[tuple(np.round(d, 9))] = blocked_faces(model, d, ids)
+        heights = centers @ n
+        lo, hi = float(heights.min()), float(heights.max())
+        for t in np.linspace(0.05, 0.95, offsets_per_direction):
+            candidates.append(PartingPlane(tuple(float(x) for x in n), lo + t * (hi - lo)))
+
+    def score(planes: list[PartingPlane]) -> float:
+        sides = face_cells(centers, planes)
+        total = 0.0
+        for signs in {tuple(row) for row in sides}:
+            mask = np.all(sides == np.array(signs, dtype=bool), axis=1)
+            options = [
+                float(
+                    weights[
+                        mask
+                        & blocked[
+                            tuple(np.round(np.asarray(p.unit_normal()) * (1 if s else -1), 9))
+                        ]
+                    ].sum()
+                )
+                for p, s in zip(planes, signs, strict=True)
+            ]
+            total += min(options)
+        return total
+
+    chosen: list[PartingPlane] = []
+    current = float("inf")
+    for _ in range(max(max_parts - 1, 1)):
+        best_plane, best_score = None, current
+        for plane in candidates:
+            if plane in chosen:
+                continue
+            value = score([*chosen, plane])
+            if value < best_score - 1e-9:
+                best_plane, best_score = plane, value
+        if best_plane is None:
+            break
+        chosen.append(best_plane)
+        current = best_score
+        if current <= 1e-9:
+            break
+    if not chosen:
+        return AutoPlanesResult(
+            [], float("inf"), False, "Otomatik bölme düzlem bulamadı; düzlemleri elle girin."
+        )
+    if current > 1e-9:
+        return AutoPlanesResult(
+            chosen,
+            current,
+            False,
+            f"Otomatik bölme ters açıları gideremedi (kalan {current:.1f} mm²). Önerilen "
+            "düzlemler başlangıç olarak yazıldı; düzlemleri elle düzenleyin.",
+        )
+    return AutoPlanesResult(
+        chosen, 0.0, True, f"{len(chosen)} düzlemle ters açısız bölme bulundu (öneri)."
+    )

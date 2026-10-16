@@ -12,9 +12,24 @@ import numpy as np
 import trimesh
 
 from automold3d.core import geometry_checks as qa
-from automold3d.core.alignment import PinLayout, plan_pins
-from automold3d.core.boolean_engine import difference, intersection, split_by_plane, union
-from automold3d.core.demold_analysis import UndercutReport, analyze_open_mold, analyze_two_part
+from automold3d.core.alignment import PinLayout, pin_solid, plan_pins
+from automold3d.core.boolean_engine import (
+    difference,
+    from_manifold,
+    intersection,
+    overlap_volume,
+    split_by_plane,
+    to_manifold,
+    union,
+)
+from automold3d.core.demold_analysis import (
+    CellReport,
+    UndercutReport,
+    analyze_n_part,
+    analyze_open_mold,
+    analyze_two_part,
+    blocked_faces,
+)
 from automold3d.core.errors import GeometryError
 from automold3d.core.frames import align_to_z, transformed, unit
 from automold3d.core.mesh_validation import count_components
@@ -48,6 +63,9 @@ class SplitResult:
     # Filled by pouring.apply_channels (Channel / AirTrapSuggestion objects).
     channels: list[Any] = field(default_factory=list)
     air_traps: list[Any] = field(default_factory=list)
+    # Mode C only.
+    part_info: list[Any] = field(default_factory=list)
+    assembly_order: list[int] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------- Mode A
@@ -234,8 +252,7 @@ def check_pins(layout: PinLayout, socket_part: trimesh.Trimesh) -> qa.CheckResul
     rejected = [p for p in layout.placements if not p.valid]
     clashes = 0
     for pin in layout.pins:
-        overlap = intersection(pin, socket_part).unwrap()
-        if len(overlap.faces) and overlap.volume > 1e-6:
+        if overlap_volume(pin, socket_part) > 1e-6:
             clashes += 1
     data = {"pins": len(layout.pins), "rejected": len(rejected), "clashes": clashes}
     if clashes:
@@ -287,3 +304,263 @@ def _check_single_piece(mesh: trimesh.Trimesh, label: str = "Kalıp") -> qa.Chec
         f"{label} {solids} ayrı parçaya bölünmüş.",
         {"solids": solids, "components": count_components(mesh)},
     )
+
+
+# ---------------------------------------------------------------- Mode C
+
+
+@dataclass
+class PartInfo:
+    """Per-part metadata for N-part molds."""
+
+    part_id: int
+    signs: tuple[bool, ...]
+    pull_dir: tuple[float, float, float]
+    undercut_area: float
+
+
+def n_part(
+    mold: MoldResult,
+    planes: Sequence[PartingPlane],
+    params: MoldParams,
+    pin_params: PinParams | None = None,
+) -> SplitResult:
+    """Cut the closed mold with every plane; each connected piece becomes a part."""
+    planes = list(planes)
+    if not planes:
+        raise GeometryError("Çok parçalı kalıp için en az bir ayırma düzlemi girin.", "no planes")
+    model_heights = [
+        np.asarray(mold.cavity_model.vertices) @ np.asarray(p.unit_normal()) for p in planes
+    ]
+    for plane, heights in zip(planes, model_heights, strict=True):
+        if not heights.min() < plane.offset < heights.max():
+            raise GeometryError(
+                f"Düzlem (ofset {plane.offset:.2f}) modeli kesmiyor; kaldırın veya taşıyın.",
+                f"plane {plane} misses model",
+            )
+    pieces = [mold.mold]
+    for plane in planes:
+        next_pieces = []
+        for piece in pieces:
+            positive, negative = split_by_plane(piece, plane.unit_normal(), plane.offset)
+            next_pieces.extend(p for p in (negative, positive) if p is not None)
+        pieces = next_pieces
+    solids = [s for piece in pieces for s in _solids(piece)]
+    raw_volume = float(sum(s.volume for s in solids))
+    solids.sort(key=lambda s: tuple(np.round(s.bounds.mean(axis=0), 6)))
+
+    cells = analyze_n_part(mold.cavity_model, planes)
+    parts, infos = [], []
+    for index, solid in enumerate(solids, start=1):
+        signs = _signs(solid, planes)
+        cell = next((c for c in cells if c.signs == signs), None)
+        pull = cell.pull_dir if cell is not None else _default_pull(solid, planes, signs)
+        area = cell.undercut_area if cell is not None else 0.0
+        parts.append(MoldPart(index, f"kalip_parca_{index}", solid))
+        infos.append(PartInfo(index, signs, pull, area))
+
+    pins, pin_check = None, None
+    if pin_params is not None and pin_params.count > 0:
+        parts, pins, pin_check = _n_part_pins(parts, planes, mold, params, pin_params)
+
+    undercut = UndercutReport(
+        planes[0].unit_normal(),
+        _undercut_mask(mold.cavity_model, cells),
+        float(sum(c.undercut_area for c in cells)),
+        float(mold.cavity_model.area),
+    )
+    result = SplitResult(
+        "C", parts, mold.model, mold.cavity_model, undercut, planes=planes, pins=pins
+    )
+    result.part_info = infos
+    result.assembly_order = assembly_order(parts, planes)
+    result.checks = n_part_checks(result, mold, raw_volume, pin_check)
+    return result
+
+
+def _solids(mesh: trimesh.Trimesh) -> list[trimesh.Trimesh]:
+    """Split into connected solids (an outer shell plus any voids inside it)."""
+    pieces = to_manifold(mesh).decompose()
+    return [from_manifold(p) for p in pieces if not p.is_empty()]
+
+
+def _signs(solid: trimesh.Trimesh, planes: Sequence[PartingPlane]) -> tuple[bool, ...]:
+    centre = np.asarray(solid.center_mass)
+    return tuple(bool(centre @ np.asarray(p.unit_normal()) >= p.offset) for p in planes)
+
+
+def _default_pull(
+    solid: trimesh.Trimesh, planes: Sequence[PartingPlane], signs: tuple[bool, ...]
+) -> tuple[float, float, float]:
+    n = np.asarray(planes[0].unit_normal()) * (1 if signs[0] else -1)
+    return (float(n[0]), float(n[1]), float(n[2]))
+
+
+def _undercut_mask(model: trimesh.Trimesh, cells: Sequence[CellReport]) -> np.ndarray:
+    """Faces that are blocked for their own cell's pull direction."""
+    mask = np.zeros(len(model.faces), dtype=bool)
+    for cell in cells:
+        if cell.undercut_area > 0:
+            mask[cell.face_ids] = blocked_faces(model, np.asarray(cell.pull_dir), cell.face_ids)
+    return mask
+
+
+def assembly_order(parts: Sequence[MoldPart], planes: Sequence[PartingPlane]) -> list[int]:
+    """Heuristic order: by part centre along the first plane normal (bottom/first side up)."""
+    n = np.asarray(planes[0].unit_normal())
+    return [p.part_id for p in sorted(parts, key=lambda p: float(p.mesh.center_mass @ n))]
+
+
+def check_interference(parts: Sequence[MoldPart]) -> qa.CheckResult:
+    """No two parts may share volume."""
+    name = "Parçalar arası çakışma"
+    clashes = []
+    for i, a in enumerate(parts):
+        for b in parts[i + 1 :]:
+            if np.any(a.mesh.bounds[1] < b.mesh.bounds[0]) or np.any(
+                b.mesh.bounds[1] < a.mesh.bounds[0]
+            ):
+                continue
+            shared = overlap_volume(a.mesh, b.mesh)
+            if shared > 1e-6:
+                clashes.append(f"{a.part_id}-{b.part_id} ({shared:.3f} mm³)")
+    if clashes:
+        return qa.CheckResult(
+            name,
+            qa.CheckStatus.ERROR,
+            "Çakışan parçalar: " + ", ".join(clashes),
+            {"pairs": clashes},
+        )
+    return qa.CheckResult(name, qa.CheckStatus.PASSED, "Hiçbir parça diğerine girmiyor.")
+
+
+def n_part_checks(
+    result: SplitResult,
+    mold: MoldResult,
+    raw_volume: float,
+    pin_check: qa.CheckResult | None = None,
+) -> list[qa.CheckResult]:
+    checks = [qa.check_part_count([p.mesh for p in result.parts], len(result.parts))]
+    for part in result.parts:
+        checks.append(qa.check_watertight(part.mesh, part.name))
+    checks.append(check_reunion(raw_volume, float(mold.mold.volume)))
+    checks.append(check_interference(result.parts))
+    if pin_check is not None:
+        checks.append(pin_check)
+    for info in result.part_info:
+        status = qa.CheckStatus.PASSED if info.undercut_area <= 1e-9 else qa.CheckStatus.WARNING
+        direction = ", ".join(f"{c:.2f}" for c in info.pull_dir)
+        message = (
+            f"Parça {info.part_id}: çıkarma yönü ({direction}), "
+            f"ters açı {info.undercut_area:.1f} mm²."
+        )
+        checks.append(qa.CheckResult(f"Parça {info.part_id} kalıptan çıkma", status, message))
+    order = " → ".join(str(i) for i in result.assembly_order)
+    checks.append(
+        qa.CheckResult(
+            "Montaj sırası",
+            qa.CheckStatus.MANUAL,
+            f"Önerilen montaj sırası: {order} (sezgisel; kontrol edin).",
+        )
+    )
+    return checks
+
+
+def _n_part_pins(
+    parts: list[MoldPart],
+    planes: Sequence[PartingPlane],
+    mold: MoldResult,
+    params: MoldParams,
+    pin_params: PinParams,
+) -> tuple[list[MoldPart], PinLayout, qa.CheckResult]:
+    """Pins per plane; a pin is kept only if its pin and socket regions each lie inside a
+    single part (so it never straddles another plane)."""
+    meshes = {p.part_id: p.mesh for p in parts}
+    placements, pins, sockets, socket_parts = [], [], [], []
+    wall = params.min_wall_thickness
+    for plane in planes:
+        layout = plan_pins(plane, mold.cavity_model, mold.body, pin_params, wall)
+        r_keep = pin_params.socket_diameter / 2 + wall
+        for placement in layout.placements:
+            if not placement.valid:
+                placements.append(placement)
+                continue
+            z = plane.offset
+            lower = pin_solid(plane, placement.xy, r_keep, z - wall, z, 32)
+            upper = pin_solid(
+                plane, placement.xy, r_keep, z, z + pin_params.socket_depth + wall, 32
+            )
+            low_id = _containing_part(meshes, lower)
+            up_id = _containing_part(meshes, upper)
+            if low_id is None or up_id is None:
+                placements.append(
+                    dataclasses.replace(
+                        placement,
+                        valid=False,
+                        reason="Pim başka bir ayırma düzlemini kesiyor veya tek parçaya sığmıyor.",
+                    )
+                )
+                continue
+            pin = pin_solid(
+                plane,
+                placement.xy,
+                pin_params.diameter / 2,
+                z - wall / 2,
+                z + pin_params.length,
+                pin_params.sections,
+            )
+            socket = pin_solid(
+                plane,
+                placement.xy,
+                pin_params.socket_diameter / 2,
+                z - 1.0,
+                z + pin_params.socket_depth,
+                pin_params.sections,
+            )
+            meshes[low_id] = union(meshes[low_id], pin).unwrap()
+            meshes[up_id] = difference(meshes[up_id], socket).unwrap()
+            placements.append(placement)
+            pins.append(pin)
+            sockets.append(socket)
+            socket_parts.append(up_id)
+    new_parts = [MoldPart(p.part_id, p.name, meshes[p.part_id]) for p in parts]
+    layout = PinLayout(planes[0], pin_params, placements, pins, sockets)
+    return new_parts, layout, _n_part_pin_check(pins, socket_parts, meshes, placements)
+
+
+def _n_part_pin_check(
+    pins: list[trimesh.Trimesh],
+    socket_parts: list[int],
+    meshes: dict[int, trimesh.Trimesh],
+    placements: list[object],
+) -> qa.CheckResult:
+    """Each pin must clear the part that holds its socket."""
+    name = "Pim/yuva eşleşmesi"
+    clashes = 0
+    for pin, up_id in zip(pins, socket_parts, strict=True):
+        if overlap_volume(pin, meshes[up_id]) > 1e-6:
+            clashes += 1
+    rejected = [p for p in placements if not p.valid]  # type: ignore[attr-defined]
+    if clashes:
+        return qa.CheckResult(name, qa.CheckStatus.ERROR, f"{clashes} pim yuvasına sığmıyor.")
+    if not pins:
+        return qa.CheckResult(
+            name,
+            qa.CheckStatus.ERROR,
+            "Geçerli pim konumu yok; payları büyütün veya düzlemleri değiştirin.",
+        )
+    if rejected:
+        return qa.CheckResult(
+            name,
+            qa.CheckStatus.WARNING,
+            f"{len(pins)} pim eklendi, {len(rejected)} konum reddedildi.",
+        )
+    return qa.CheckResult(name, qa.CheckStatus.PASSED, f"{len(pins)} pim eklendi.")
+
+
+def _containing_part(meshes: dict[int, trimesh.Trimesh], region: trimesh.Trimesh) -> int | None:
+    volume = float(region.volume)
+    for part_id, mesh in meshes.items():
+        if abs(overlap_volume(region, mesh) - volume) <= 1e-6 * max(volume, 1):
+            return part_id
+    return None

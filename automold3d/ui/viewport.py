@@ -49,7 +49,7 @@ class Scene:
     pins: list[trimesh.Trimesh] = field(default_factory=list)
     channels: list[trimesh.Trimesh] = field(default_factory=list)
     undercut_mask: np.ndarray | None = None
-    plane: PartingPlane | None = None
+    planes: list[PartingPlane] = field(default_factory=list)
     markers: list[tuple[float, float, float]] = field(default_factory=list)
 
 
@@ -140,8 +140,9 @@ class Viewport(QWidget):
                     name=f"marker_{i}",
                     render=False,
                 )
-        if s.plane is not None and not s.parts:
-            self._add_plane(s.plane)
+        if not s.parts:
+            for i, plane in enumerate(s.planes):
+                self._add_plane(plane, f"plane_{i}")
         if o.dimensions and (s.model is not None or s.parts):
             p.show_bounds(
                 grid=False,
@@ -184,7 +185,7 @@ class Viewport(QWidget):
             render=False,
         )
 
-    def _add_plane(self, plane: PartingPlane) -> None:
+    def _add_plane(self, plane: PartingPlane, name: str) -> None:
         ref = _first(self.scene.body_preview, self.scene.mold, self.scene.model)
         if ref is None:
             return
@@ -196,7 +197,7 @@ class Viewport(QWidget):
             pv.Plane(center=centre, direction=n, i_size=size, j_size=size),
             color=PLANE_COLOR,
             opacity=0.35,
-            name="plane",
+            name=name,
             render=False,
         )
 

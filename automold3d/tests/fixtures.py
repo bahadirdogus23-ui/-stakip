@@ -116,3 +116,12 @@ def two_towers() -> trimesh.Trimesh:
     short = cylinder(radius=5, height=20, sections=32)
     short.apply_translation((10, 0, 10))
     return union_meshes([base, tall, short])
+
+
+def hollow_sphere(outer: float = 20.0, inner: float = 10.0) -> trimesh.Trimesh:
+    """A sphere with a sealed internal void: no plane arrangement can demold the void."""
+    from automold3d.core.boolean_engine import difference
+
+    return difference(
+        icosphere(subdivisions=3, radius=outer), icosphere(subdivisions=3, radius=inner)
+    ).unwrap()

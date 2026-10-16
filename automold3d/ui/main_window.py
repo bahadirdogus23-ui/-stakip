@@ -163,6 +163,10 @@ class MainWindow(QMainWindow):
         self.redo_action = self._add_action(edit, "Yinele", self.on_redo, QKeySequence.Redo)
 
         self._add_action(self.menus["Model"], "Modeli Onar", self.on_repair)
+        self.menus["Kalıp"].addSeparator()
+        self.suggest_action = self._add_action(
+            self.menus["Kalıp"], "Çok parçalı düzlemleri öner", self.on_suggest_planes
+        )
 
         view = self.menus["Görünüm"]
         defaults = ViewOptions()
@@ -366,7 +370,7 @@ class MainWindow(QMainWindow):
         session.state = new
         if _mold_inputs(old) != _mold_inputs(new):
             session.mold = session.split = session.split_base = None
-        elif _split_inputs(old) != _split_inputs(new) and session.state.mode == "B":
+        elif _split_inputs(old) != _split_inputs(new) and session.state.mode in ("B", "C"):
             session.split = session.split_base = None
         elif old.pouring != new.pouring and session.split is not session.split_base:
             # Channel geometry is stale: drop it; the user re-adds it with the new values.
@@ -484,6 +488,18 @@ class MainWindow(QMainWindow):
         self.panel.flush()
         session = self.session
         self.run_task("Pimler", pipeline.split, (session, True), self._built)
+
+    def on_suggest_planes(self) -> None:
+        self.panel.flush()
+
+        def done(result: object) -> None:
+            session, auto = result  # type: ignore[misc]
+            self.push(session)
+            (self.log_status if auto.success else self.log_warning)(auto.message)
+            if not auto.success:
+                self.prompts.info("Otomatik bölme", auto.message)
+
+        self.run_task("Düzlem önerisi", pipeline.suggest_planes, (self.session,), done)
 
     def on_spout(self) -> None:
         self.panel.flush()
@@ -669,8 +685,11 @@ class MainWindow(QMainWindow):
                 scene.body_preview = preview_body(s.model, s.state.mold)
             except GeometryError as exc:
                 self.log_warning(exc.user_message)
-        if s.model is not None and s.state.mode == "B" and s.split is None:
-            scene.plane = s.state.plane
+        if s.model is not None and s.split is None:
+            if s.state.mode == "B":
+                scene.planes = [s.state.plane]
+            elif s.state.mode == "C":
+                scene.planes = list(s.state.planes)
         return scene
 
     def _refresh(self, reset_camera: bool = False) -> None:
@@ -724,7 +743,7 @@ class MainWindow(QMainWindow):
             and s.validation.is_watertight
             and s.validation.volume
         )
-        mode_b = s.state.mode == "B"
+        mode_b = s.state.mode in ("B", "C")  # modes that split a closed mold
         enabled = {
             "Model İçe Aktar": idle,
             "Modeli Analiz Et": idle and has_model,
@@ -739,6 +758,7 @@ class MainWindow(QMainWindow):
         }
         for label, value in enabled.items():
             self.toolbar_actions[label].setEnabled(value)
+        self.suggest_action.setEnabled(idle and solid and s.state.mode == "C")
         self.undo_action.setEnabled(idle and self.history.can_undo())
         self.redo_action.setEnabled(idle and self.history.can_redo())
         self.undo_action.setText(
@@ -773,7 +793,7 @@ def _mold_inputs(state: ProjectState) -> tuple[object, ...]:
 
 
 def _split_inputs(state: ProjectState) -> tuple[object, ...]:
-    return (state.plane, state.pins, state.pin_positions)
+    return (state.plane, state.pins, state.pin_positions, state.planes)
 
 
 def _cast_label(mode: CastMode) -> str:

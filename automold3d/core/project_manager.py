@@ -59,6 +59,9 @@ class ProjectState:
     pins: PinParams = field(default_factory=PinParams)
     pin_positions: list[tuple[float, float]] | None = None
     pouring: PouringParams = field(default_factory=PouringParams)
+    # Mode C: every plane cuts the mold; n_parts_target is for the automatic suggestion.
+    planes: list[PartingPlane] = field(default_factory=list)
+    n_parts_target: int = 3
 
 
 @dataclass
@@ -166,6 +169,11 @@ def state_from_dict(data: dict[str, object]) -> ProjectState:
             pins=PinParams(**dict(data.get("pins", {}))),  # type: ignore[arg-type]
             pin_positions=[tuple(p) for p in positions] if positions else None,  # type: ignore[union-attr]
             pouring=_pouring_from_dict(dict(data.get("pouring", {}))),  # type: ignore[arg-type]
+            planes=[
+                PartingPlane(tuple(p["normal"]), float(p["offset"]))  # type: ignore[index]
+                for p in data.get("planes", [])  # type: ignore[union-attr]
+            ],
+            n_parts_target=int(data.get("n_parts_target", 3)),  # type: ignore[arg-type]
         )
     except (TypeError, ValueError, KeyError) as exc:
         raise ProjectError("Proje dosyasındaki ayarlar okunamadı.", repr(exc)) from exc

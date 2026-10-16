@@ -3,7 +3,7 @@ import pytest
 
 from automold3d.core import geometry_checks as qa
 from automold3d.core.alignment import pin_solid
-from automold3d.core.boolean_engine import intersection, union
+from automold3d.core.boolean_engine import overlap_volume, union
 from automold3d.core.errors import GeometryError
 from automold3d.core.mold_generator import generate_mold
 from automold3d.core.params import MoldParams, PartingPlane, PinParams
@@ -12,8 +12,7 @@ from automold3d.tests import fixtures as fx
 
 
 def _overlap(a, b):
-    mesh = intersection(a, b).unwrap()
-    return float(mesh.volume) if len(mesh.faces) else 0.0
+    return overlap_volume(a, b)
 
 
 def _check(result, prefix):

@@ -4,7 +4,7 @@
 
 Kalıp boşluğu, modelin etrafına kutu çizilerek değil, Boolean fark işlemiyle (`Dış gövde − Model`, manifold3d) hesaplanır. Her işlemden sonra geometri kontrol edilir.
 
-> **Durum:** Aşama 0–6 tamamlandı: içe aktarma, doğrulama, negatif kalıp, bölme, pimler, döküm ağzı ve hava kanalları, dışa aktarma ve arayüz. Çok parçalı kalıplar (Aşama 7) henüz yok.
+> **Durum:** Aşama 0–7 tamamlandı: içe aktarma, doğrulama, negatif kalıp, iki ve çok parçalı bölme, pimler, döküm ağzı ve hava kanalları, dışa aktarma ve arayüz.
 
 ## Gereksinimler
 
@@ -49,11 +49,19 @@ sudo apt install libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 
    - **Paylar**: model ile dış duvar arası mesafe.
    - **Min. duvar**: kontrol edilen en küçük malzeme kalınlığı.
    - **Çekme payı**: varsayılan 0.
-   - **Kalıp modu**: A (tek parça açık) veya B (iki parça).
+   - **Kalıp modu**: A (tek parça açık), B (iki parça) veya C (çok parça).
    - **Ayırma düzlemi**: X/Y/Z ekseni ya da açılı düzlem, artı ofset.
    - **Pimler**: adet, çap, boy ve çap boşluğu (varsayılan 0,2 mm).
 5. **Negatif Kalıp Oluştur**: Boolean öncesinde dış gövde tel kafes olarak önizlenir. Mod A'da tek parçalı açık kalıp doğrudan oluşur.
 6. Mod B'de **Kalıbı Böl** ile kalıbı ikiye ayırın veya **Pimleri Oluştur** ile bölüp pim ve yuva ekleyin. Pimler 1. parçada, yuvalar 2. parçadadır. Elle konum girmek için "Konumlar" alanına düzlem koordinatı yazın, örneğin `22, 22; -22, -22`. Kurala uymayan konumlar reddedilir ve nedeni yazılır.
+   - **Mod C**: "Düzlemler" alanına her düzlemi `nx, ny, nz, ofset` biçiminde, aralarına `;` koyarak yazın.
+     - Örnek: `0, 0, 1, -24; 0, 0, 1, -10` modeli üç dilime ayırır.
+     - Her düzlem kalıbın tamamını keser ve her bağlı parça ayrı bir kimlik alır.
+     - Her parçanın çıkarma yönü, parçanın sınır düzlemlerinin normalleri arasından ters açısı en az olan seçilerek belirlenir.
+     - Parçalar ikişer ikişer çakışma için kontrol edilir.
+     - Önerilen montaj sırası sezgiseldir ve her zaman "MANUEL İNCELEME" olarak işaretlenir.
+     - Bir pim başka bir ayırma düzlemini kesiyorsa reddedilir.
+   - **Kalıp → Çok parçalı düzlemleri öner**: düzlemleri tek tek ekleyerek ters açı alanını azaltmaya çalışır. Bu öneri en iyi çaba esaslıdır. Ters açıları gideremezse bunu açıkça söyler; bulduğu düzlemleri başlangıç olarak yazar ve düzlemleri elle düzenlemenizi ister.
 7. İsteğe bağlı **Döküm Ağzı Ekle** / **Hava Kanalları Ekle** (varsayılan: kapalı). "Döküm yönü (yukarı)" ayarı döküm sırasında yukarıyı gösteren yöndür.
    - Döküm ağzı boşluğun en yüksek noktasına açılır.
    - Hava kanalları **hava kapanı önerilerine** açılır. Öneriler, boşluk yüzeyinin döküm yönüne göre yerel en yüksek noktalarıdır; akış simülasyonu yapılmaz.
@@ -80,7 +88,8 @@ Her sürümden önce şu adımları uygulayın:
 7. Yaklaşık 500 bin üçgenli bir model içe aktarın ve kalıp oluşturun. İşlem sürerken pencere taşınabilmeli, menüler açılabilmeli. İptal'e basınca işlem birkaç saniye içinde durmalı.
 8. Dışa Aktar: klasörde `kalip_parca_1_mm.stl`, `kalip_parca_2_mm.stl`, `kalip_onizleme.png` ve `kalip_raporu.json` oluşmalı. Aynı klasöre yeniden aktarırken üzerine yazma onayı sorulmalı.
 9. Döküm Ağzı Ekle ve Hava Kanalları Ekle'ye basın. Turkuaz kanallar ve öneri küreleri görünmeli; "Kontroller" sekmesinde her kanal için "bağlantısı" satırı BAŞARILI olmalı. "Kanal konumları" alanına modelin dışında kalan bir nokta girip kanalları yeniden ekleyin: o kanal HATA vermeli.
-10. Projeyi kaydedin, Dosya → Yeni Proje, ardından Dosya → Son Projeler'den açın. Parametreler geri gelmeli, model yeniden yüklenmeli.
+10. Mod C seçin, düzlemlere `0, 0, 1, -24; 0, 0, 1, -10` yazın ve kalıbı oluşturup bölün. Ağaçta 3 parça görünmeli. "Parçalar arası çakışma" BAŞARILI olmalı.
+11. Projeyi kaydedin, Dosya → Yeni Proje, ardından Dosya → Son Projeler'den açın. Parametreler geri gelmeli, model yeniden yüklenmeli.
 
 ## Testler
 
@@ -106,6 +115,7 @@ Dosyalar 2 MB'de döner ve 5 yedek tutulur. Farklı bir klasör için `AUTOMOLD_
 - Kendi kendini kesme kontrolü, aynı köşeyi paylaşan üçgen çiftlerini ve tam düzlemsel çakışmaları algılamaz. 600 bin üçgenin üzerinde bu kontrol atlanır ve "manuel inceleme" olarak raporlanır.
 - Ayırma düzlemi önerisi, 20 binden fazla üçgenli modellerde alana göre ağırlıklı örnekleme kullanır.
 - Akış simülasyonu yapılmaz.
+- Mod C'de çıkarma yönü yalnızca modele karşı kontrol edilir. Parçaların birbirine göre sökülebilirliği (montaj sırası) sezgiseldir ve elle kontrol edilmelidir.
 
 ## Yol haritası
 
@@ -118,5 +128,5 @@ Dosyalar 2 MB'de döner ve 5 yedek tutulur. Farklı bir klasör için `AUTOMOLD_
 | 4 | Dışa aktarma (STL/OBJ/3MF, rapor, PNG) | Tamam |
 | 5 | Arayüz entegrasyonu, geri al/yinele, proje kaydetme | Tamam |
 | 6 | Döküm ağzı ve hava kanalları | Tamam |
-| 7 | Çok parçalı kalıplar | — |
+| 7 | Çok parçalı kalıplar | Tamam |
 | 8 | Kullanım kılavuzu ve Windows paketi | — |
