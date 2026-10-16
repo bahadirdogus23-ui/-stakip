@@ -22,7 +22,7 @@ def run_self_test() -> int:
         with tempfile.TemporaryDirectory(prefix="automold_selftest_") as tmp:
             folder = Path(tmp)
             model_path = folder / "test_kure.stl"
-            model_path.write_bytes(trimesh.creation.icosphere(3, radius=20.0).export("stl"))
+            model_path.write_bytes(trimesh.creation.icosphere(3, radius=20.0).export(file_type="stl"))
             session = executor.call(pipeline.import_model, (model_path, "mm"))
             print(f"[1/4] İçe aktarma: {len(session.model.faces)} üçgen")
             session = executor.call(pipeline.build_mold, (session,))
