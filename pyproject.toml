@@ -1,0 +1,20 @@
+[project]
+name = "automold3d"
+version = "0.1.0"
+description = "AutoMold 3D - offline silicone/cast mold generator"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ANN"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"automold3d/tests/*" = ["ANN"]
+
+[tool.pytest.ini_options]
+testpaths = ["automold3d/tests"]
+qt_api = "pyside6"
