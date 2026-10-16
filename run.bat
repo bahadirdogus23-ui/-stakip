@@ -15,23 +15,23 @@ if not exist "automold3d\main.py" (
 if exist ".venv\.installed" goto :run
 
 set "PY="
-where py >nul 2>&1 && (
-  py -3.12 -c "import sys" >nul 2>&1 && set "PY=py -3.12"
-)
-if not defined PY where py >nul 2>&1 && (
-  py -3.13 -c "import sys" >nul 2>&1 && set "PY=py -3.13"
-)
-if not defined PY (
-  python -c "import sys; sys.exit(0 if sys.version_info[:2] in ((3, 12), (3, 13)) else 1)" >nul 2>&1 && set "PY=python"
+REM Supported: Python 3.12, 3.13 and 3.14 (newest first).
+for %%V in (3.14 3.13 3.12) do (
+  if not defined PY (
+    py -%%V -c "import sys" >nul 2>&1 && set "PY=py -%%V"
+  )
 )
 if not defined PY (
-  echo [HATA] Python 3.12 veya 3.13 bulunamadi.
+  python -c "import sys; sys.exit(0 if (3, 12) <= sys.version_info[:2] <= (3, 14) else 1)" >nul 2>&1 && set "PY=python"
+)
+if not defined PY (
+  echo [HATA] Uygun Python bulunamadi ^(3.12, 3.13 veya 3.14 gerekli^).
   echo.
   echo Bu bilgisayarda bulunan Python surumleri:
   py -0 2>nul
   python --version 2>nul
   echo.
-  echo Cozum: https://www.python.org/downloads/ adresinden Python 3.12 kurun.
+  echo Cozum: https://www.python.org/downloads/ adresinden en son Python 3 surumunu kurun.
   echo Kurulumun ilk ekraninda "Add python.exe to PATH" kutusunu isaretleyin.
   echo Kurulumdan sonra bu pencereyi kapatip run.bat'i yeniden calistirin.
   goto :fail

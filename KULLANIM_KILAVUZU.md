@@ -20,7 +20,7 @@ Bu kılavuz AutoMold 3D 0.1.0 içindir. Kurulum ve geliştirici bilgileri için 
 
 ## 2. Kurulum ve ilk kontrol
 
-1. Python 3.12 veya 3.13'ü kurun (3.14 desteklenmez). Kurulumda "Add python.exe to PATH" kutusunu işaretleyin.
+1. Python'u kurun: python.org'daki en son sürüm (3.14) uygundur; 3.12 ve 3.13 de çalışır. Kurulumda "Add python.exe to PATH" kutusunu işaretleyin.
 2. Proje klasöründe `run.bat` dosyasına çift tıklayın. İlk açılış birkaç dakika sürer, çünkü paketler indirilir. Sonraki açılışlarda internet gerekmez.
 3. Paketlenmiş sürümü kullanıyorsanız `dist\AutoMold3D\AutoMold3D.exe` dosyasını çalıştırın. Paketi kendiniz oluşturmak için `build_windows.bat` dosyasını kullanın.
 
