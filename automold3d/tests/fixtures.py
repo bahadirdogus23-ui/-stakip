@@ -8,6 +8,8 @@ import numpy as np
 import trimesh
 from trimesh.creation import annulus, box, cylinder, icosphere, torus, uv_sphere
 
+from automold3d.core.boolean_engine import union_meshes
+
 
 def cube(size: float = 30.0) -> trimesh.Trimesh:
     return box(extents=(size, size, size))
@@ -64,6 +66,27 @@ def inverted_cube(size: float = 30.0) -> trimesh.Trimesh:
 def high_poly_sphere(radius: float = 40.0) -> trimesh.Trimesh:
     """About 500k triangles."""
     return uv_sphere(radius=radius, count=(355, 355))
+
+
+def mushroom(
+    stem_radius: float = 6.0,
+    stem_height: float = 20.0,
+    cap_radius: float = 15.0,
+    cap_height: float = 8.0,
+) -> trimesh.Trimesh:
+    """Stem standing on the XY plane with a wider cap on top (z from 0 to stem+cap)."""
+    stem = cylinder(radius=stem_radius, height=stem_height, sections=48)
+    stem.apply_translation((0, 0, stem_height / 2))
+    cap = cylinder(radius=cap_radius, height=cap_height, sections=48)
+    cap.apply_translation((0, 0, stem_height + cap_height / 2))
+    return union_meshes([stem, cap])
+
+
+def inverted_mushroom() -> trimesh.Trimesh:
+    """Cap at the bottom: an undercut for a one-part mold opened toward +Z."""
+    mesh = mushroom()
+    mesh.apply_transform(trimesh.transformations.rotation_matrix(np.pi, (1, 0, 0)))
+    return mesh
 
 
 def write_mesh(mesh: trimesh.Trimesh, path: Path, file_type: str | None = None) -> Path:

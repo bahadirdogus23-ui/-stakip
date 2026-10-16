@@ -43,11 +43,14 @@ class BodySpec:
             return mesh
         return trimesh.creation.box(bounds=np.vstack([lo, hi]))
 
-    def inside_distance(self, points: np.ndarray) -> np.ndarray:
-        """Distance from each point to the outer wall; negative when the point is outside."""
+    def inside_distance(self, points: np.ndarray, open_top: bool = False) -> np.ndarray:
+        """Distance from each point to the outer wall; negative when the point is outside.
+
+        open_top ignores the top face (one-part open molds).
+        """
         pts = np.asarray(points, dtype=float)
         lo, hi = np.asarray(self.lo), np.asarray(self.hi)
-        z_dist = np.minimum(pts[:, 2] - lo[2], hi[2] - pts[:, 2])
+        z_dist = pts[:, 2] - lo[2] if open_top else np.minimum(pts[:, 2] - lo[2], hi[2] - pts[:, 2])
         if self.is_cylinder:
             # The polygonal cylinder is inscribed; its apothem is the true minimum radius.
             apothem = self.radius * np.cos(np.pi / self.sections)

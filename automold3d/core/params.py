@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+import numpy as np
+
 UNIT = "mm"
 
 
@@ -72,6 +74,62 @@ class MoldParams:
             errors.append("Kutu ölçüleri sıfırdan büyük olmalı.")
         if self.cylinder_sections < 16:
             errors.append("Silindir bölüm sayısı en az 16 olmalı.")
+        return errors
+
+
+@dataclass(frozen=True)
+class PartingPlane:
+    """Plane normal·x = offset. Normal need not be unit length; offset is along the unit normal."""
+
+    normal: tuple[float, float, float] = (0.0, 0.0, 1.0)
+    offset: float = 0.0
+
+    def unit_normal(self) -> tuple[float, float, float]:
+        n = np.asarray(self.normal, dtype=float)
+        n = n / np.linalg.norm(n)
+        return (float(n[0]), float(n[1]), float(n[2]))
+
+    @classmethod
+    def from_angles(cls, azimuth_deg: float, elevation_deg: float, offset: float) -> PartingPlane:
+        """Normal from azimuth (around Z, from +X) and elevation (from the XY plane)."""
+        az, el = np.radians(azimuth_deg), np.radians(elevation_deg)
+        normal = (np.cos(el) * np.cos(az), np.cos(el) * np.sin(az), np.sin(el))
+        return cls((float(normal[0]), float(normal[1]), float(normal[2])), offset)
+
+
+@dataclass
+class PinParams:
+    """Registration pins on one half, matching sockets in the other.
+
+    clearance is on the diameter (socket Ø = pin Ø + clearance); depth_clearance is the
+    extra socket depth so the pin never bottoms out.
+    """
+
+    diameter: float = 5.0
+    length: float = 5.0
+    clearance: float = 0.2
+    depth_clearance: float = 0.5
+    count: int = 4
+    sections: int = 32
+
+    @property
+    def socket_diameter(self) -> float:
+        return self.diameter + self.clearance
+
+    @property
+    def socket_depth(self) -> float:
+        return self.length + self.depth_clearance
+
+    def validate(self) -> list[str]:
+        errors: list[str] = []
+        if self.diameter <= 0 or self.length <= 0:
+            errors.append("Pim çapı ve boyu sıfırdan büyük olmalı.")
+        if self.clearance < 0 or self.depth_clearance < 0:
+            errors.append("Pim boşlukları negatif olamaz.")
+        if self.count < 0:
+            errors.append("Pim sayısı negatif olamaz.")
+        if self.sections < 8:
+            errors.append("Pim bölüm sayısı en az 8 olmalı.")
         return errors
 
 
