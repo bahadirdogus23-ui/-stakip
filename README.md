@@ -9,7 +9,7 @@ Kalıp boşluğu, modelin etrafına kutu çizilerek değil, Boolean fark işlemi
 ## Gereksinimler
 
 - Windows 10/11 (testler Linux'ta da çalışır)
-- [Python 3.12](https://www.python.org/downloads/). Kurulumda "Add python.exe to PATH" ve "py launcher" seçili olmalı.
+- [Python 3.12 veya 3.13](https://www.python.org/downloads/). Kurulumda "Add python.exe to PATH" ve "py launcher" seçili olmalı. (3.14 desteklenmez.)
 - İnternet yalnızca ilk kurulumda, paketleri indirmek için gerekir. Uygulama tamamen çevrimdışı çalışır.
 
 ## Kurulum ve çalıştırma
