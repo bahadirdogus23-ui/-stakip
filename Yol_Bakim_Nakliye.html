@@ -1036,6 +1036,8 @@ table.t.program td.bos-kutu { width: 54px; }
 .cz-it .btn { flex: none; }
 .km-tablo { max-height: 42vh; overflow: auto; border: 1px solid var(--ln); border-radius: var(--r); margin-top: 6px; }
 .km-tablo td small { display: block; color: var(--mt); }
+.km-klasor { max-height: 22vh; overflow: auto; border: 1px solid var(--ln); border-radius: var(--r); padding: 6px 8px; margin: 6px 0; display: grid; gap: 2px; }
+.km-klasor .chk { margin: 0; font-size: 12.5px; }
 .km-tablo .km-y { width: 100%; min-width: 180px; font-size: 12px; padding: 3px 5px; }
 </style>
 </head>
@@ -2589,8 +2591,10 @@ const Model = {
       if (ad) {
         yol = Model.yolBul(ad) || '';
         if (!yol) {
-          D.y[ad] = Model.yolNormal({tip: cesit || '', ilce: Model.yakinIlce(x.n[Math.floor(x.n.length / 2)])});
+          const kodVar = x.kod && Object.values(D.y).some(y => norm(y.kod) === norm(x.kod));
+          D.y[ad] = Model.yolNormal({tip: cesit || '', ilce: Model.yakinIlce(x.n[Math.floor(x.n.length / 2)]), kod: kodVar ? '' : x.kod, kaplama: x.kaplama});
           Model.listeyeEkle(D.yt, D.y[ad].tip);
+          Model.listeyeEkle(D.kp, D.y[ad].kaplama);
           yol = ad;
           r.yeniYol.push(ad);
         }
@@ -2605,6 +2609,12 @@ const Model = {
     Model.log('KML içe aktarıldı', `${kat}: ${r.cizimler.length} çizim${r.yeniYol.length ? ', ' + r.yeniYol.length + ' yeni yol' : ''}`);
     Model.kaydet();
     return r;
+  },
+  /* Yalnız bu katmanın çizimlerine bağlı, seferi, işi ve talebi olmayan yollar */
+  katmanYollari(kat) {
+    const baska = new Set(D.c.filter(c => c.kat !== kat && c.yol).map(c => c.yol));
+    const kullanilan = new Set([...D.k.map(r => r.yol), ...D.i.map(i => i.yol), ...D.tl.map(t => t.yol)]);
+    return [...new Set(D.c.filter(c => c.kat === kat && c.yol).map(c => c.yol))].filter(ad => D.y[ad] && !baska.has(ad) && !kullanilan.has(ad));
   },
   yolCizimKm(ad) {
     return D.c.filter(c => c.yol === ad && c.tip === 'cizgi').reduce((s, c) => s + Model.cizimOlcu(c), 0) / 1000;
@@ -4634,36 +4644,51 @@ const C = {
     const oz = veri.ozellikler;
     if (!oz.length) return toast(`${dosya.name} içinde nokta, hat ya da alan bulunamadı.`, 'wrn', 6000);
     const katAd0 = dosya.name.replace(/\.(kml|kmz)$/i, '').trim() || 'KML katmanı', varMi = D.c.some(c => c.kat === katAd0);
-    const eslesen = x => Model.yolBul(x.ad) || yolAdlari().find(a => x.ad && norm(D.y[a].kod) === norm(x.ad)) || (x.klasor ? Model.yolBul(x.klasor) : '') || '';
-    oz.forEach(x => { x.yol0 = eslesen(x); x.sec = true; });
+    const kodlu = kod => kod && yolAdlari().find(a => norm(D.y[a].kod) === norm(kod));
+    const eslesen = x => Model.yolBul(x.yolAd || x.ad) || Model.yolBul(x.ad) || kodlu(x.kod) || kodlu(x.ad) || (x.klasor ? Model.yolBul(x.klasor) : '') || '';
+    const disla = k => /haric/.test(norm(k));
+    oz.forEach(x => { x.yol0 = eslesen(x); x.sec = !disla(x.klasor); });
     const say = t => oz.filter(x => x.tip === t).length, km = oz.filter(x => x.tip === 'cizgi').reduce((s, x) => s + Model.cizimOlcu(x), 0) / 1000;
+    const klasorler = [...oz.reduce((m, x) => m.set(x.klasor, (m.get(x.klasor) || 0) + 1), new Map())];
     const GOSTER = 400, gor = oz.slice(0, GOSTER), yolOto = !Object.keys(D.y).length;
-    const yolDeger = (x, oto) => x.yol0 || (oto && x.tip === 'cizgi' && x.ad ? x.ad : '');
-    const satir = (x, i) => `<tr data-i="${i}"><td><input type="checkbox" class="km-s" checked></td><td>${{cizgi: '╱', alan: '⬠', nokta: '●'}[x.tip]}</td><td><b>${esc(x.ad || TIP_AD[x.tip])}</b>${x.klasor ? `<small>${esc(x.klasor)}</small>` : ''}</td><td class="n">${x.tip === 'cizgi' ? uzunlukMetni(Model.cizimOlcu(x)) : x.tip === 'alan' ? fmt(Model.cizimOlcu(x)) + ' m²' : ''}</td><td><input class="km-y" list="yolAdListe" value="${esc(yolDeger(x, yolOto))}" placeholder="— yola atanmaz —"></td></tr>`;
+    const yolDeger = (x, oto) => x.yol0 || (oto && x.tip === 'cizgi' && (x.yolAd || x.ad) && !/sinir/.test(norm(x.yolAd || x.ad)) ? x.yolAd || x.ad : '');
+    const satir = (x, i) => `<tr data-i="${i}"><td><input type="checkbox" class="km-s"${x.sec ? ' checked' : ''}></td><td>${{cizgi: '╱', alan: '⬠', nokta: '●'}[x.tip]}</td><td><b>${esc(x.ad || TIP_AD[x.tip])}</b>${x.klasor ? `<small>${esc(x.klasor)}</small>` : ''}</td><td class="n">${x.tip === 'cizgi' ? uzunlukMetni(Model.cizimOlcu(x)) : x.tip === 'alan' ? fmt(Model.cizimOlcu(x)) + ' m²' : ''}</td><td><input class="km-y" list="yolAdListe" value="${esc(yolDeger(x, yolOto))}" placeholder="— yola atanmaz —"></td></tr>`;
+    const birlesti = veri.hamParca > say('cizgi') ? ` Yol başına bölünmüş <b>${fmt(veri.hamParca)}</b> hat parçası uç uca eklenerek <b>${fmt(say('cizgi'))}</b> hatta birleştirildi.` : '';
+    const klasorHtml = klasorler.length > 1 ? `<div class="km-klasor"><b>Klasörler</b>${klasorler.map(([k, n], j) => `<label class="chk"><input type="checkbox" class="km-k" data-j="${j}"${oz.some(x => x.klasor === k && x.sec) ? ' checked' : ''}> ${esc(k || '(klasörsüz)')} <span class="mt">(${n})</span></label>`).join('')}</div>` : '';
     let sonuc = null;
     await modal({
       baslik: `KML / KMZ içe aktar · ${dosya.name}`, genis: true,
-      govde: `<p><b>${oz.length}</b> öğe bulundu: ${[say('cizgi') ? `${say('cizgi')} hat (${fmt(km, 1)} km)` : '', say('alan') ? `${say('alan')} alan` : '', say('nokta') ? `${say('nokta')} nokta` : ''].filter(Boolean).join(', ')}. <b>${oz.filter(x => x.yol0).length}</b> tanesi adından tanımlı bir yolla eşleşti.</p>
+      govde: `<p><b>${oz.length}</b> öğe bulundu: ${[say('cizgi') ? `${say('cizgi')} hat (${fmt(km, 1)} km)` : '', say('alan') ? `${say('alan')} alan` : '', say('nokta') ? `${say('nokta')} nokta` : ''].filter(Boolean).join(', ')}. <b>${oz.filter(x => x.yol0).length}</b> tanesi adından ya da kodundan tanımlı bir yolla eşleşti.${birlesti}</p>
+        ${klasorHtml}
         <div class="row2"><div class="fld"><label>Katman adı</label><input name="kat" value="${esc(katAd0)}"></div>
         <div class="fld"><label>Yeni yolların çeşidi</label><select name="cesit">${opt(D.yt, D.yt.includes('Köy Yolu') ? 'Köy Yolu' : D.yt[0] || '', '— seçilmedi —')}</select></div></div>
         <label class="chk"><input type="checkbox" name="yeniYol"${yolOto ? ' checked' : ''}> Eşleşmeyen <b>hatlar</b> için hattın adıyla <b>yeni yol oluştur</b> (uzunluk ve ilçe otomatik)</label>
         ${varMi ? `<label class="chk"><input type="checkbox" name="eskiSil" checked> Aynı adlı eski katmanı (${D.c.filter(c => c.kat === katAd0).length} çizim) sil, yerine bunu koy</label>` : ''}
         <p class="mt">Yol sütunu: tanımlı bir yol adı yazılırsa çizim o yola atanır; listede olmayan bir ad yazılırsa o adla yeni yol açılır; boş bırakılırsa çizim yalnız haritada durur. Sonradan haritada çizime tıklayıp değiştirebilirsiniz.</p>
-        <div class="km-tablo"><table class="t"><thead><tr><th><input type="checkbox" class="km-hep" checked title="Hepsini seç / kaldır"></th><th></th><th>Ad</th><th class="n">Ölçü</th><th>Yol</th></tr></thead><tbody>${gor.map(satir).join('')}</tbody></table>${oz.length > GOSTER ? `<p class="mt">İlk ${GOSTER} öğe gösteriliyor; kalan ${oz.length - GOSTER} öğe yukarıdaki seçeneklere göre eklenir.</p>` : ''}</div>`,
+        <div class="km-tablo"><table class="t"><thead><tr><th><input type="checkbox" class="km-hep"${oz.every(x => x.sec) ? ' checked' : ''} title="Hepsini seç / kaldır"></th><th></th><th>Ad</th><th class="n">Ölçü</th><th>Yol</th></tr></thead><tbody>${gor.map(satir).join('')}</tbody></table>${oz.length > GOSTER ? `<p class="mt">İlk ${GOSTER} öğe gösteriliyor; kalan ${oz.length - GOSTER} öğe yukarıdaki seçeneklere göre eklenir.</p>` : ''}</div>`,
       butonlar: [{k: 'ok', t: 'İçe aktar', c: 'pri'}, {k: 'iptal', t: 'Vazgeç'}],
       onAc: bg => {
-        const sayac = () => { $('.mdl-f [data-k="ok"]', bg).textContent = `İçe aktar (${oz.length - $$('.km-s', bg).filter(x => !x.checked).length})`; };
+        const sayac = () => { $('.mdl-f [data-k="ok"]', bg).textContent = `İçe aktar (${oz.filter(x => x.sec).length})`; };
+        const kutular = () => {
+          $$('tbody tr', bg).forEach(tr => { $('.km-s', tr).checked = oz[+tr.dataset.i].sec; });
+          $$('.km-k', bg).forEach(k => { k.checked = oz.some(x => x.klasor === klasorler[+k.dataset.j][0] && x.sec); });
+          $('.km-hep', bg).checked = oz.every(x => x.sec);
+        };
         sayac();
         bg.addEventListener('change', e => {
-          if (e.target.classList.contains('km-hep')) $$('.km-s', bg).forEach(x => { x.checked = e.target.checked; });
-          if (e.target.name === 'yeniYol') $$('tbody tr', bg).forEach(tr => { const x = oz[+tr.dataset.i], inp = $('.km-y', tr); if (!x.yol0 && x.tip === 'cizgi' && (!inp.value || inp.value === x.ad)) inp.value = e.target.checked ? x.ad : ''; });
+          const c = e.target.classList;
+          if (c.contains('km-s')) oz[+e.target.closest('tr').dataset.i].sec = e.target.checked;
+          if (c.contains('km-hep')) oz.forEach(x => { x.sec = e.target.checked; });
+          if (c.contains('km-k')) { const k = klasorler[+e.target.dataset.j][0]; oz.forEach(x => { if (x.klasor === k) x.sec = e.target.checked; }); }
+          if (c.contains('km-s') || c.contains('km-hep') || c.contains('km-k')) kutular();
+          if (e.target.name === 'yeniYol') $$('tbody tr', bg).forEach(tr => { const x = oz[+tr.dataset.i], inp = $('.km-y', tr); const ad = x.yolAd || x.ad; if (!x.yol0 && x.tip === 'cizgi' && (!inp.value || inp.value === ad)) inp.value = e.target.checked ? ad : ''; });
           sayac();
         });
       },
       onBas: (k, bg) => {
         if (k !== 'ok') return true;
         const kat = $('[name=kat]', bg).value.trim() || katAd0, yeniYol = $('[name=yeniYol]', bg).checked;
-        $$('tbody tr', bg).forEach(tr => { const x = oz[+tr.dataset.i]; x.sec = $('.km-s', tr).checked; x.yol = $('.km-y', tr).value.trim(); });
+        $$('tbody tr', bg).forEach(tr => { oz[+tr.dataset.i].yol = $('.km-y', tr).value.trim(); });
         oz.slice(GOSTER).forEach(x => { x.yol = yolDeger(x, yeniYol); });
         sonuc = {kat, cesit: $('[name=cesit]', bg).value, eskiSil: !!$('[name=eskiSil]', bg)?.checked};
         return true;
@@ -4687,11 +4712,19 @@ const C = {
     toast('KML indirildi. Google Earth ya da telefondaki harita uygulamalarıyla açabilirsiniz.', 'ok', 4000);
   },
   async katmanSil(kat) {
-    const n = D.c.filter(c => c.kat === kat).length;
-    if (!await onayla('Katmanı sil', `<b>${esc(kat)}</b> katmanındaki ${n} çizim silinsin mi? Bu katmandan oluşturulan yollar silinmez.`)) return;
+    const n = D.c.filter(c => c.kat === kat).length, yollar = Model.katmanYollari(kat);
+    let tamam = false, yolSil = false;
+    await modal({
+      baslik: 'Katmanı sil',
+      govde: `<p><b>${esc(kat)}</b> katmanındaki ${fmt(n)} çizim silinsin mi?</p>${yollar.length ? `<label class="chk"><input type="checkbox" name="yolSil" checked> Bu katmanın açtığı <b>${fmt(yollar.length)} yolu</b> da sil (yalnız seferi, iş emri ve talebi olmayanlar)</label><p class="mt">Seferi, iş emri ya da talebi olan yollar ve başka çizimi olan yollar korunur.</p>` : '<p class="mt">Bu katmandan oluşturulan yollar silinmez.</p>'}`,
+      butonlar: [{k: 'ok', t: 'Sil', c: 'dan-f'}, {k: 'iptal', t: 'Vazgeç'}],
+      onBas: (k, bg) => { if (k === 'ok') { tamam = true; yolSil = !!$('[name=yolSil]', bg)?.checked; } return true; }
+    });
+    if (!tamam) return;
     C.geriAlHazirla(`Katman silindi: ${kat}`);
     D.c = D.c.filter(c => c.kat !== kat);
-    Model.log('KML katmanı silindi', `${kat} (${n} çizim)`);
+    if (yolSil) yollar.forEach(ad => { delete D.y[ad]; if (D.s.yol === ad) D.s.yol = ''; });
+    Model.log('KML katmanı silindi', `${kat} (${n} çizim${yolSil && yollar.length ? ', ' + yollar.length + ' yol' : ''})`);
     Model.kaydet();
     Harita.goster();
     C.geriAlToast();
@@ -5827,14 +5860,17 @@ const H = {
   arac: 'gez', taslak: null, imlec: null, sec: '', suruk: null,
   karo: new Map(), yuklenen: 0, hatali: 0,
   yolF: '', hedefYol: '', ilk: true,
-  konumMod: null, secO: null, lst: 'tl', gizli: null, kutu: new WeakMap()
+  konumMod: null, secO: null, lst: 'tl', gizli: null, kutu: new WeakMap(), raf: 0
 };
 
 const Harita = {
-  renkOn: {anahtar: '', m: new Map()},
+  renkOn: {anahtar: '', m: new Map(), taze: false},
   yolRenk(ad) {
-    const anahtar = Object.keys(D.y).join('\u0001');
-    if (Harita.renkOn.anahtar !== anahtar) Harita.renkOn = {anahtar, m: new Map(yolAdlari().map((a, i) => [a, RENKLER[i % RENKLER.length]]))};
+    if (!Harita.renkOn.taze || Harita.renkOn.z !== D.z) {
+      const anahtar = Object.keys(D.y).join('\u0001');
+      if (Harita.renkOn.anahtar !== anahtar) Harita.renkOn = {anahtar, m: new Map(yolAdlari().map((a, i) => [a, RENKLER[i % RENKLER.length]]))};
+      Object.assign(Harita.renkOn, {taze: true, z: D.z});
+    }
     return (ad && Harita.renkOn.m.get(ad)) || '#607d8b';
   },
   renk: c => c.renk || Harita.yolRenk(c.yol),
@@ -5908,6 +5944,10 @@ const Harita = {
     Harita.olcek();
     $('#hrAtif').textContent = ALTLIK[altlikAdi()].atif;
   },
+  cizIstek() {
+    if (H.raf) return;
+    H.raf = requestAnimationFrame(() => { H.raf = 0; Harita.ciz(); });
+  },
   konumKaydet() {
     try { localStorage.setItem(ANAHTAR + '_harita', JSON.stringify({la: H.la, lo: H.lo, z: H.z})); } catch (e) { /* yok */ }
   },
@@ -5972,8 +6012,15 @@ const Harita = {
   etiket(x, y, metin, cls = 'lbl') {
     return `<text class="${cls}" x="${(x + 9).toFixed(1)}" y="${(y + 4).toFixed(1)}">${esc(metin)}</text>`;
   },
+  seyrelt(pts) {
+    if (pts.length < 3) return pts;
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) { const s = out[out.length - 1]; if (Math.abs(pts[i][0] - s[0]) + Math.abs(pts[i][1] - s[1]) >= 1.5) out.push(pts[i]); }
+    out.push(pts[pts.length - 1]);
+    return out;
+  },
   cizimSvg(c, etiketli = true) {
-    const pts = Harita.noktalar(c.n), renk = Harita.renk(c), sel = c.id === H.sec, P = Harita.sv(pts);
+    const pts = Harita.noktalar(c.n), renk = Harita.renk(c), sel = c.id === H.sec, P = Harita.sv(sel || c.tip === 'nokta' ? pts : Harita.seyrelt(pts));
     const baslik = `<title>${esc(c.ad)}${c.yol ? ' · ' + esc(c.yol) : ''}${c.kat ? ' · ' + esc(c.kat) : ''}</title>`;
     let g = '', lx, ly;
     if (c.tip === 'nokta') {
@@ -6009,6 +6056,7 @@ const Harita = {
   },
   katman() {
     if (!H.w) return;
+    Harita.renkOn.taze = false;
     let h = '';
     const icinde = (x, y) => x > -50 && y > -50 && x < H.w + 50 && y < H.h + 50;
     if (Harita.gorunur('ilce')) ILCE_MERKEZ.forEach(([ad, la, lo]) => {
@@ -6382,7 +6430,7 @@ const Harita = {
           }
           const [cx, cy] = proj(s.la, s.lo, H.z);
           [H.la, H.lo] = unproj(cx - (x - s.x), cy - (y - s.y), H.z);
-          return Harita.ciz();
+          return Harita.cizIstek();
         }
       }
       if (H.taslak || H.konumMod || H.arac === 'talep' || H.arac === 'is') Harita.katman();
@@ -6975,6 +7023,38 @@ const Kml = {
     });
     return out;
   },
+  /* Uç uca değen hat parçalarını tek hatta birleştirir; dallanma noktalarında hat bölünür */
+  birlestir(hatlar) {
+    const k = p => p[0].toFixed(6) + ',' + p[1].toFixed(6), uc = new Map(), derece = new Map();
+    const ekle = (key, i) => { if (!uc.has(key)) uc.set(key, []); uc.get(key).push(i); derece.set(key, (derece.get(key) || 0) + 1); };
+    hatlar.forEach((n, i) => { ekle(k(n[0]), i); ekle(k(n[n.length - 1]), i); });
+    const kul = new Uint8Array(hatlar.length), out = [];
+    const uzat = z => {
+      for (;;) {
+        const key = k(z[z.length - 1]);
+        if (derece.get(key) !== 2) return z;
+        const j = uc.get(key).find(x => !kul[x]);
+        if (j === undefined) return z;
+        kul[j] = 1;
+        const n = hatlar[j];
+        z.push(...(k(n[0]) === key ? n.slice(1) : n.slice(0, -1).reverse()));
+      }
+    };
+    const ucta = i => derece.get(k(hatlar[i][0])) !== 2 || derece.get(k(hatlar[i][hatlar[i].length - 1])) !== 2;
+    const sira = hatlar.map((_, i) => i);
+    [...sira.filter(ucta), ...sira.filter(i => !ucta(i))].forEach(i => {
+      if (kul[i]) return;
+      kul[i] = 1;
+      out.push(uzat(uzat(hatlar[i].slice()).reverse()));
+    });
+    return out;
+  },
+  /* "ARP-K-001 Aktaş bağlantı yolu" → ARP-K-001; açıklamadaki "Kaplama (OSM): Asfalt (tahmini)" → Asfalt */
+  kodBul: ad => (String(ad || '').match(/^([A-ZÇĞİÖŞÜ]{2,}(?:-[A-Z0-9ÇĞİÖŞÜ]+)+)\s/) || [])[1] || '',
+  kaplamaBul(acik) {
+    const m = String(acik || '').match(/kaplama[^:\n]*:\s*([^\n(]+)/i), v = m ? m[1].trim() : '';
+    return /^(belirsiz|-|yok|bilinmiyor)$/i.test(v) ? '' : v;
+  },
   temizMetin(html) {
     const d = document.createElement('div');
     d.innerHTML = String(html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li)>/gi, '\n');
@@ -6999,6 +7079,7 @@ const Kml = {
       if (id && p) stil['#' + id] = stil[cocukMetin(p, 'styleUrl').replace(/^[^#]*/, '')] || {};
     });
     const out = [];
+    let hamParca = 0;
     et(doc, 'Placemark').forEach(pm => {
       const ad = cocukMetin(pm, 'name');
       const klasor = [];
@@ -7023,13 +7104,18 @@ const Kml = {
         if (n.length >= 3) parca.push({tip: 'alan', n});
       });
       et(pm, 'Track').forEach(g => { const n = et(g, 'coord').flatMap(c => Kml.koord(c.textContent, true)); if (n.length >= 2) parca.push({tip: 'cizgi', n}); });
-      parca.forEach((x, i) => {
+      const hatlar = parca.filter(x => x.tip === 'cizgi');
+      hamParca += hatlar.length;
+      const birlesik = hatlar.length > 1 ? Kml.birlestir(hatlar.map(x => x.n)).map(n => ({tip: 'cizgi', n})) : hatlar;
+      const tum = [...parca.filter(x => x.tip === 'nokta'), ...birlesik, ...parca.filter(x => x.tip === 'alan')];
+      const kod = Kml.kodBul(ad), kaplama = Kml.kaplamaBul(acik);
+      tum.forEach((x, i) => {
         const n = x.tip === 'nokta' ? x.n : Kml.sadele(x.n);
         if (n.length < {cizgi: 2, alan: 3, nokta: 1}[x.tip]) return;
-        out.push({tip: x.tip, n, ad: ad + (parca.length > 1 && ad ? ` (${i + 1})` : ''), klasor: klasor.join(' › '), acik, renk: x.tip === 'cizgi' ? st.cizgi : x.tip === 'alan' ? st.alan || st.cizgi : st.ikon});
+        out.push({tip: x.tip, n, ad: ad + (tum.length > 1 && ad ? ` (${i + 1})` : ''), yolAd: ad, kod, kaplama, klasor: klasor.join(' › '), acik, renk: x.tip === 'cizgi' ? st.cizgi : x.tip === 'alan' ? st.alan || st.cizgi : st.ikon});
       });
     });
-    return {ozellikler: out};
+    return {ozellikler: out, hamParca};
   },
   /* Haritadaki her şeyi KML olarak verir (Google Earth, telefondaki harita uygulamaları) */
   disa() {
