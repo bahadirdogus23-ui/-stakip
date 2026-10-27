@@ -1365,6 +1365,7 @@ table.t.program td.bos-kutu { width: 54px; }
             <button type="button" class="btn" data-ka="yukle">Klasördeki dosyadan yükle</button>
             <button type="button" class="btn dan" data-ka="kaldir">Bağlantıyı kaldır</button>
           </div>
+          <p class="mt" style="margin-top:8px"><b>İzin sorulmadan çalışmak için</b> programı klasördeki <b>Baslat.bat</b> ile açın: kayıtlar tarayıcı izni gerekmeden doğrudan program klasörüne yazılır. Açılan küçük pencere program kullanıldığı sürece açık kalmalıdır (simge durumunda bekler).</p>
           <p class="mt" style="margin-top:8px">Program doğrudan Masaüstü'nde ya da İndirilenler'de duruyorsa tarayıcı o klasörü seçtirmez. Programı kendi klasörüne koyun (örn. Masaüstü\Kantar). Bu özellik Chrome ve Edge'de çalışır.</p>
         </div>
       </section>
@@ -5664,6 +5665,54 @@ function programKlasoru() {
   return p.slice(0, Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/')));
 }
 
+/* Program Baslat.bat ile açıldıysa (http://localhost) kayıtlar tarayıcı izni olmadan
+   yerel PowerShell sunucusu üzerinden doğrudan program klasörüne yazılır.
+   Nesne, File System Access klasör tutamağının kullanılan kısmıyla aynı arayüzü sunar. */
+const Sunucu = {
+  aktif: false,
+  klasorAdi: '',
+  async kontrol() {
+    if (!/^https?:$/.test(location.protocol)) return false;
+    try {
+      const j = await (await fetch('api/durum', {cache: 'no-store', headers: {'X-Kantar': '1'}})).json();
+      Sunucu.aktif = j.uygulama === 'kantar';
+      Sunucu.klasorAdi = j.klasor || 'Program klasörü';
+    } catch (e) { Sunucu.aktif = false; }
+    return Sunucu.aktif;
+  },
+  async istek(yol, o = {}) {
+    let r;
+    try { r = await fetch(yol, {cache: 'no-store', ...o, headers: {'X-Kantar': '1', ...(o.headers || {})}}); }
+    catch (e) { throw Object.assign(new Error('Program sunucusu kapalı (Baslat.bat penceresi kapatılmış olabilir)'), {name: 'SunucuKapali'}); }
+    if (r.status === 404) throw Object.assign(new Error('Dosya bulunamadı'), {name: 'NotFoundError'});
+    if (!r.ok) throw Object.assign(new Error(`Program sunucusu yazamadı: ${(await r.text().catch(() => '')) || r.status}`), {name: 'SunucuHata'});
+    return r;
+  },
+  dizin(alt = '') {
+    const yol = ad => encodeURIComponent((alt ? alt + '/' : '') + ad);
+    const dosya = ad => ({
+      async getFile() {
+        const r = await Sunucu.istek('api/oku?ad=' + yol(ad)), metin = await r.text();
+        return {lastModified: Number(r.headers.get('X-Mod')) || 0, text: async () => metin};
+      },
+      async createWritable() {
+        const parca = [];
+        return {write: async v => { parca.push(v); }, close: () => Sunucu.istek('api/yaz?ad=' + yol(ad), {method: 'POST', headers: {'Content-Type': 'text/plain; charset=utf-8'}, body: parca.join('')})};
+      }
+    });
+    return {
+      name: alt || Sunucu.klasorAdi,
+      sunucu: true,
+      queryPermission: async () => 'granted',
+      requestPermission: async () => 'granted',
+      async getFileHandle(ad, o = {}) { if (!o.create) await Sunucu.istek('api/var?ad=' + yol(ad)); return dosya(ad); },
+      getDirectoryHandle: async ad => Sunucu.dizin((alt ? alt + '/' : '') + ad),
+      async *entries() { for (const n of await (await Sunucu.istek('api/liste?klasor=' + encodeURIComponent(alt))).json()) yield [n, dosya(n)]; },
+      removeEntry: ad => Sunucu.istek('api/sil?ad=' + yol(ad), {method: 'POST'})
+    };
+  }
+};
+
 const zamanMetni = z => {
   if (!z) return 'bilinmiyor';
   const d = new Date(z);
@@ -5690,6 +5739,7 @@ const Klasor = {
 
   async baslat() {
     try { Klasor.gec = localStorage.getItem(ANAHTAR + '_klasorGec') === '1'; } catch (e) { /* yok */ }
+    if (await Sunucu.kontrol()) { Klasor.dir = Sunucu.dizin(); return Klasor.hazirla(); }
     if (!Klasor.destek()) { Klasor.durum = 'desteksiz'; return Klasor.goster(); }
     try { Klasor.dir = await Idb.al('klasor'); } catch (e) { Klasor.dir = null; }
     if (!Klasor.dir) { Klasor.durum = 'yok'; return Klasor.goster(); }
@@ -5892,7 +5942,7 @@ const Klasor = {
   },
   hata(e) {
     Klasor.durum = e.name === 'NotAllowedError' || e.name === 'SecurityError' ? 'izin' : 'hata';
-    Klasor.hataMesaj = e.name === 'NotFoundError' ? 'Klasör bulunamadı (taşınmış ya da silinmiş olabilir)' : Klasor.durum === 'izin' ? 'tarayıcı izni yenilemek istiyor' : (e.message || e.name);
+    Klasor.hataMesaj = e.name === 'NotFoundError' && !Klasor.dir?.sunucu ? 'Klasör bulunamadı (taşınmış ya da silinmiş olabilir)' : Klasor.durum === 'izin' ? 'tarayıcı izni yenilemek istiyor' : (e.message || e.name);
     Klasor.goster();
     /* Geçici hata (dosya Excel/antivirüs tarafından kilitli vb.): artan aralıkla yeniden dene */
     if (Klasor.durum === 'hata' && e.name !== 'NotFoundError' && Klasor.deneme < 5) {
@@ -5949,7 +5999,7 @@ const Klasor = {
       bagliyor: ['gri', 'Bağlanıyor…', 'Klasör okunuyor'],
       desteksiz: ['gri', 'Sadece tarayıcı', 'Bu tarayıcı klasöre kaydı desteklemiyor. Chrome veya Edge kullanın.'],
       yok: ['yel', 'Klasör seç', 'Veriler henüz klasöre kaydedilmiyor'],
-      izin: ['yel', 'İzin ver', `"${ad}" klasörüne yazmak için tarayıcı izni gerekiyor (ilk tıklamada sorulur). Veriler tarayıcıda güvende.`],
+      izin: ['yel', 'İzin ver', `"${ad}" klasörüne yazmak için tarayıcı izni gerekiyor (ilk tıklamada sorulur). Veriler tarayıcıda güvende. İzin sorulmasın istiyorsanız programı Baslat.bat ile açın.`],
       hazir: ['yesil', Klasor.son ? `Kaydedildi ${Klasor.son}` : 'Klasör bağlı', `Veriler "${ad}\\${VERI_DOSYASI}" dosyasına da kaydediliyor`],
       hata: ['red', 'Yazılamadı', Klasor.hataMesaj]
     }[d];
@@ -5960,7 +6010,7 @@ const Klasor = {
     const s = $('#klasorSerit');
     let h = '';
     if (d === 'yok' && !Klasor.gec) h = `<span>Veriler şu an yalnızca tarayıcıda. Program klasörüne de kaydedilmesi için klasörü bir kez seçin${yol ? `: <b>${esc(yol)}</b>` : ''}.</span><button type="button" class="btn pri" data-ka="sec">Klasörü seç</button><button type="button" class="btn" data-ka="gec">Şimdilik geç</button>`;
-    else if (d === 'izin' && Klasor.reddedildi) h = `<span>Klasöre yazma izni verilmedi. Veriler tarayıcıda iki ayrı kopya halinde güvende${D.a.otoIndir !== false ? '; günün yedeği ayrıca İndirilenler\'e alınacak' : ''}. <b>${esc(ad)}</b> klasörüne de yazılması için:</span><button type="button" class="btn pri" data-ka="izin">İzin ver</button>`;
+    else if (d === 'izin' && Klasor.reddedildi) h = `<span>Klasöre yazma izni verilmedi. Veriler tarayıcıda iki ayrı kopya halinde güvende${D.a.otoIndir !== false ? '; günün yedeği ayrıca İndirilenler\'e alınacak' : ''}. İzin hiç sorulmasın istiyorsanız programı klasördeki <b>Baslat.bat</b> ile açın.</span><button type="button" class="btn pri" data-ka="izin">İzin ver</button>`;
     else if (d === 'hata') h = `<span>Klasöre yazılamadı: ${esc(Klasor.hataMesaj)}. Veriler tarayıcıda güvende.</span><button type="button" class="btn pri" data-ka="izin">Yeniden dene</button><button type="button" class="btn" data-ka="sec">Başka klasör seç</button>`;
     s.innerHTML = h;
     s.classList.toggle('on', !!h);
