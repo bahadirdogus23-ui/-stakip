@@ -1376,6 +1376,7 @@ table.t.program td.bos-kutu { width: 54px; }
           <div class="ayar-sat"><span>Aynı plaka uyarı süresi (dk, 0 = kapalı)</span><input type="number" min="0" max="120" data-a="onDk"></div>
           <div class="ayar-sat"><span>Varsayılan araç kapasitesi (ton)</span><input type="number" min="1" max="100" step="0.5" data-a="kap"></div>
           <div class="ayar-sat"><span>Klasörde tutulacak günlük yedek (gün)</span><input type="number" min="3" max="365" data-a="yedekGun"></div>
+          <div class="ayar-sat"><span>Klasöre yazılamayan günlerde yedeği İndirilenler'e indir</span><input type="checkbox" data-a="otoIndir"></div>
         </div>
       </section>
       <section class="box">
@@ -1395,10 +1396,11 @@ table.t.program td.bos-kutu { width: 54px; }
       <section class="box">
         <div class="box-h">Yedek</div>
         <div class="box-b">
-          <p>Veriler tarayıcının hafızasında ve (bağlıysa) program klasöründe durur. Başka bilgisayara taşımak ya da arşivlemek için JSON yedek alın.</p>
+          <p>Veriler tarayıcıda iki ayrı kopya halinde ve (bağlıysa) program klasöründe durur. Tarayıcı ayrıca kendiliğinden günlük (60 gün), saatlik (72 saat) ve toplu silme öncesi kopyalar saklar (<b>Otomatik kopyalar</b>). Başka bilgisayara taşımak ya da arşivlemek için JSON yedek alın.</p>
           <div class="frm-btn">
             <button type="button" class="btn pri" id="yedekAl">JSON yedek indir</button>
             <button type="button" class="btn" id="yedekYukleBtn">Yedekten geri yükle</button>
+            <button type="button" class="btn" id="guvenceBtn" title="Tarayıcının kendiliğinden sakladığı günlük, saatlik ve silme öncesi kopyalar">Otomatik kopyalar</button>
             <input type="file" id="yedekDosya" accept=".json,application/json" hidden>
           </div>
           <p class="mt" id="depoBilgi" style="margin-top:10px"></p>
@@ -1682,7 +1684,7 @@ const malNormal = x => ({
 });
 const PERIYOT = {'Haftalık': ['g', 7], '15 Günlük': ['g', 15], 'Aylık': ['a', 1], '3 Aylık': ['a', 3], '6 Aylık': ['a', 6], 'Yıllık': ['a', 12]};
 const AYAR0 = {yaklasan: 3, popup: true, hizli: true, onDk: 10, kap: 35, haftaTatil: [],
-  kurum: 'Malatya Büyükşehir Belediyesi', daire: 'Kırsal Hizmetler Dairesi Başkanlığı', sube: '', imza1: '', imza2: '', imza3: '', yedekGun: 30};
+  kurum: 'Malatya Büyükşehir Belediyesi', daire: 'Kırsal Hizmetler Dairesi Başkanlığı', sube: '', imza1: '', imza2: '', imza3: '', yedekGun: 30, otoIndir: true};
 const VERSIYON = 3;
 const DURUM_AD = {plan: 'Planlandı', devam: 'Devam ediyor', tamam: 'Tamamlandı', acil: 'Acil', gecik: 'Gecikmiş', per: 'Periyodik', iptal: 'İptal'};
 const IKON = {plan: '◷', devam: '▶', tamam: '✓', acil: '!', gecik: '⚠', per: '↻', iptal: '–'};
@@ -1703,29 +1705,32 @@ const Model = {
     catch (e) { Model.bozukMetin = metin || ''; D = Model.bos(); }
     if (raw && Number(raw.ver) > VERSIYON) Model.yeniSurum = true;
   },
-  kayitliMi: () => Model.bozukMetin === null && (depoOK || Klasor.durum === 'hazir'),
+  kayitliMi: () => Model.bozukMetin === null && (depoOK || Guvence.ok || Klasor.durum === 'hazir'),
   kaydet(degisti = true) {
     if (degisti) D.z = Date.now();
     if (Model.bozukMetin !== null) return false;
     let json = '';
     try { json = JSON.stringify(D); localStorage.setItem(ANAHTAR, json); depoOK = true; }
     catch (e) { depoOK = false; }
+    if (json) Guvence.planla(json, kayitSayisi(D));
+    if (degisti && Klasor.durum !== 'hazir') Guvence.indirPlanla();
     Model.boyut = json.length;
     if (depoOK && json.length > 4e6 && !Model.doluluk) {
       Model.doluluk = true;
-      toast(`Tarayıcı hafızasının yaklaşık %${Math.round(json.length / 5e4)}'i dolu. Veri kaybı yaşamamak için Yedek & Ayarlar'dan klasöre kaydı açın ve JSON yedek alın.`, 'wrn', 12000);
+      toast(`Tarayıcı hafızasının yaklaşık %${Math.round(json.length / 5e4)}'i dolu. Veriler tarayıcının büyük deposuna da yazılıyor; yine de klasöre kaydı açık tutun.`, 'wrn', 12000);
     }
-    if (!depoOK && Klasor.durum !== 'hazir' && Date.now() - (Model.sonHata || 0) > 20000) {
+    const guvende = depoOK || Guvence.ok || Klasor.durum === 'hazir';
+    if (!guvende && Date.now() - (Model.sonHata || 0) > 20000) {
       Model.sonHata = Date.now();
       toast('KAYDEDİLEMEDİ: tarayıcı hafızası dolu. Kapatmadan önce JSON yedek alın ya da klasör seçin.', 'err', 12000);
     }
-    $('#depoUyari').classList.toggle('on', !depoOK && Klasor.durum !== 'hazir');
-    if (!depoOK && Klasor.durum === 'hazir' && !Klasor.doluUyari) {
+    $('#depoUyari').classList.toggle('on', !guvende);
+    if (!depoOK && (Klasor.durum === 'hazir' || Guvence.ok) && !Klasor.doluUyari) {
       Klasor.doluUyari = true;
-      toast('Tarayıcı hafızası doldu. Veriler klasördeki dosyaya kaydedilmeye devam ediyor.', 'wrn', 8000);
+      toast(`Tarayıcının küçük hafızası doldu. Veriler ${Klasor.durum === 'hazir' ? 'klasördeki dosyaya ve ' : ''}tarayıcının büyük deposuna kaydedilmeye devam ediyor.`, 'wrn', 8000);
     }
     if (degisti) Klasor.planla();
-    return depoOK || Klasor.durum === 'hazir';
+    return guvende;
   },
   bosMu: d => !d.k.length && !d.i.length && !d.e.length && !d.c.length && !d.p.length && !d.tl.length && !d.h.length &&
     !Object.keys(d.y).length && !Object.keys(d.v).length && !Object.keys(d.mk).length && !Object.keys(d.pt).length,
@@ -5286,6 +5291,32 @@ const C = {
   },
 
   /* ---------- Yedek ve içe aktarma ---------- */
+  async gunlukKopyalar() {
+    let l = [];
+    try { l = await Guvence.gunler(); } catch (e) { return toast('Tarayıcı deposu açılamadı: ' + e.message, 'err', 7000); }
+    if (!l.length) return toast('Henüz günlük kopya yok. İlk kayıttan sonra oluşur.', 'wrn');
+    let secilen = '';
+    await modal({
+      baslik: 'Tarayıcıdaki günlük kopyalar', genis: true,
+      govde: `<p>Tarayıcı kendiliğinden şu kopyaları saklar: her günün son hali (${GUVENCE_GUN} gün), her saatin son hali (${GUVENCE_SAAT} saat) ve kayıt sayısı birden düştüğünde (toplu silme) önceki hal. Bir kopyayı geri yüklerseniz şimdiki veriler önce JSON yedek olarak indirilir.</p>
+        <div class="km-tablo"><table class="t"><thead><tr><th>Tür</th><th>Kayıt zamanı</th><th class="n">Sefer</th><th class="n">İş emri</th><th class="n">Yol</th><th></th></tr></thead><tbody>${l.map(x => x.bozuk
+          ? `<tr><td>${KOPYA_TUR[x.tur]}</td><td colspan="5">okunamadı</td></tr>`
+          : `<tr><td>${x.tur === 'azalma' ? '<b>' + KOPYA_TUR[x.tur] + '</b>' : KOPYA_TUR[x.tur]}</td><td>${zamanMetni(x.z)}</td><td class="n">${fmt(x.sefer)}</td><td class="n">${fmt(x.is)}</td><td class="n">${fmt(x.yol)}</td><td><button type="button" class="btn sm" data-gk="${esc(x.a)}">Geri yükle</button></td></tr>`).join('')}</tbody></table></div>`,
+      butonlar: [{k: 'iptal', t: 'Kapat'}],
+      onAc: bg => bg.addEventListener('click', e => { const b = e.target.closest('[data-gk]'); if (b) { secilen = b.dataset.gk; $('.mdl-f [data-k="iptal"]', bg).click(); } })
+    });
+    if (!secilen) return;
+    let veri;
+    try { veri = Model.donustur(JSON.parse(await Guvence.al(secilen))); } catch (e) { return toast('Kopya okunamadı', 'err'); }
+    const ad = zamanMetni(veri.z);
+    if (!await onayla('Kopyayı geri yükle', `${ad} tarihli kopya (${fmt(veri.k.length)} sefer, ${fmt(veri.i.length)} iş emri) yüklenecek. Şimdiki veriler önce JSON yedek olarak İndirilenler'e kaydedilir.`, 'Evet, geri yükle')) return;
+    C.yedekAl();
+    await Klasor.ozelYedek('gunluk_kopyadan_once');
+    Klasor.uygula(veri);
+    Model.kaydet();
+    Model.log('Tarayıcı kopyası geri yüklendi', ad);
+    toast(`${ad} tarihli kopya geri yüklendi.`, 'ok', 6000);
+  },
   yedekAl() {
     indir(new Blob([JSON.stringify(D, null, 1)], {type: 'application/json'}), `Kantar_Yedek_${dosyaTarih()}.json`);
     Model.log('Yedek alındı', `${D.k.length} sefer, ${D.i.length} iş`);
@@ -5520,6 +5551,111 @@ const Idb = {
   sil: k => Idb.islem('readwrite', s => s.delete(k))
 };
 
+/* ================= GÜVENCE KOPYASI (klasör izninden bağımsız) =================
+   Her kayıt tarayıcının IndexedDB deposuna da yazılır (localStorage'dan büyük ve kalıcı);
+   her günün son hali 60 gün, her saatin son hali 72 saat saklanır; kayıt sayısı birden
+   belirgin düşerse (toplu silme) önceki hal ayrıca saklanır. Açılışta hangi kopya yeniyse o kullanılır. */
+const GUVENCE_GUN = 60, GUVENCE_SAAT = 72;
+const KOPYA_TUR = {gun: 'Gün sonu', saat: 'Saatlik', azalma: 'Toplu silmeden önce'};
+const kayitSayisi = d => d.k.length + d.i.length + d.tl.length + d.c.length + d.p.length + Object.keys(d.y).length;
+const lsAl = k => { try { return localStorage.getItem(ANAHTAR + k); } catch (e) { return null; } };
+const lsYaz = (k, v) => { try { localStorage.setItem(ANAHTAR + k, v); } catch (e) { /* yok */ } };
+
+const Guvence = {
+  p: null,
+  ok: true,
+  bekleyen: null,
+  zaman: 0,
+  indirZaman: 0,
+  ac() {
+    if (!Guvence.p) Guvence.p = new Promise((res, rej) => {
+      const r = indexedDB.open('kantar_guvence', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('v');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }).catch(e => { Guvence.p = null; throw e; });
+    return Guvence.p;
+  },
+  async islem(tip, f) {
+    const db = await Guvence.ac();
+    return new Promise((res, rej) => {
+      const t = db.transaction('v', tip), q = f(t.objectStore('v'));
+      t.oncomplete = () => res(q && q.result);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error);
+    });
+  },
+  al: k => Guvence.islem('readonly', s => s.get(k)),
+  anahtarlar: () => Guvence.islem('readonly', s => s.getAllKeys()),
+  planla(json, sayi) {
+    Guvence.bekleyen = json;
+    Guvence.sayi = sayi;
+    clearTimeout(Guvence.zaman);
+    Guvence.zaman = setTimeout(Guvence.yaz, 300);
+  },
+  async yaz() {
+    clearTimeout(Guvence.zaman);
+    const json = Guvence.bekleyen, sayi = Guvence.sayi;
+    if (!json) return;
+    Guvence.bekleyen = null;
+    try {
+      const an = simdi(), saat = an.slice(0, 13), gunSinir = gunEkle(bugun(), -GUVENCE_GUN);
+      const ds = new Date(Date.now() - GUVENCE_SAAT * 36e5), saatSinir = `${isoD(ds)}T${pad(ds.getHours())}`;
+      const anahtar = (await Guvence.anahtarlar()).map(String);
+      if (Guvence.sonSayi === undefined) Guvence.sonSayi = Number(await Guvence.al('sayi')) || 0;
+      const azalma = Guvence.sonSayi - sayi >= 5 && sayi < Guvence.sonSayi * 0.8;
+      const onceki = azalma ? await Guvence.al('son') : null;
+      await Guvence.islem('readwrite', s => {
+        if (onceki) s.put(onceki, 'azalma_' + an);
+        s.put(json, 'son');
+        s.put(sayi, 'sayi');
+        if (sayi) { s.put(json, 'gun_' + bugun()); s.put(json, 'saat_' + saat); }
+        anahtar.forEach(k => {
+          const [t, z] = [k.slice(0, k.indexOf('_')), k.slice(k.indexOf('_') + 1)];
+          if ((t === 'gun' || t === 'azalma') && z.slice(0, 10) < gunSinir) s.delete(k);
+          if (t === 'saat' && z < saatSinir) s.delete(k);
+        });
+      });
+      Guvence.sonSayi = sayi;
+      Guvence.ok = true;
+    } catch (e) { Guvence.ok = false; }
+  },
+  /* Açılış: tarayıcı kaydı boş, bozuk ya da daha eskiyse güvence kopyasını kullan */
+  async kurtar() {
+    let json = null, veri;
+    try { json = await Guvence.al('son'); } catch (e) { return; }
+    if (!json) return;
+    try { veri = Model.donustur(JSON.parse(json)); } catch (e) { return; }
+    if (Model.bosMu(veri)) return;
+    const yerelBozuk = Model.bozukMetin !== null, yerelBos = !yerelBozuk && Model.bosMu(D);
+    if (!yerelBozuk && !yerelBos && (veri.z || 0) <= (D.z || 0)) return;
+    D = veri;
+    Model.bozukMetin = null;
+    try { localStorage.setItem(ANAHTAR, json); } catch (e) { /* güvence kopyası kullanılmaya devam eder */ }
+    Guvence.kurtarildi = yerelBozuk ? 'bozuk' : yerelBos ? 'bos' : 'eski';
+  },
+  async gunler() {
+    const k = (await Guvence.anahtarlar()).map(String).filter(x => KOPYA_TUR[x.split('_')[0]]);
+    const l = await Promise.all(k.map(async a => {
+      const tur = a.split('_')[0];
+      try { const v = JSON.parse(await Guvence.al(a)); return {a, tur, z: v.z || 0, sefer: (v.k || []).length, is: (v.i || []).length, yol: Object.keys(v.y || {}).length}; }
+      catch (e) { return {a, tur, z: 0, bozuk: true}; }
+    }));
+    return l.sort((x, y) => y.z - x.z || y.a.localeCompare(x.a));
+  },
+  /* Klasöre yazılamayan günlerde günün yedeğini İndirilenler'e bir kez indir */
+  indirPlanla() {
+    if (Guvence.indirZaman || D.a.otoIndir === false || lsAl('_indirGun') === bugun()) return;
+    Guvence.indirZaman = setTimeout(() => {
+      Guvence.indirZaman = 0;
+      if (Klasor.durum === 'hazir' || D.a.otoIndir === false || lsAl('_indirGun') === bugun() || Model.bosMu(D)) return;
+      lsYaz('_indirGun', bugun());
+      indir(new Blob([JSON.stringify(D, null, 1)], {type: 'application/json'}), `Kantar_Yedek_${dosyaTarih()}.json`);
+      toast('Bugün klasöre yazılamadığı için günün yedeği İndirilenler klasörüne kaydedildi.', 'ok', 7000);
+    }, 120000);
+  }
+};
+
 function programKlasoru() {
   if (location.protocol !== 'file:') return '';
   let p = decodeURIComponent(location.pathname);
@@ -5560,7 +5696,24 @@ const Klasor = {
     let izin = 'prompt';
     try { izin = await Klasor.dir.queryPermission({mode: 'readwrite'}); } catch (e) { /* izin sorulacak */ }
     if (izin === 'granted') await Klasor.hazirla();
-    else { Klasor.durum = 'izin'; Klasor.goster(); }
+    else { Klasor.durum = 'izin'; Klasor.goster(); Klasor.ilkDokunusta(); }
+  },
+  /* Tarayıcı, dosyadan açılan sayfanın klasör iznini her açılışta sıfırlar ve yeniden sormak için
+     kullanıcı hareketi ister: izni ilk tıklama/tuşta sessizce iste, şerit gösterme */
+  ilkDokunusta() {
+    const olaylar = ['pointerdown', 'keydown'];
+    const kapat = () => olaylar.forEach(t => document.removeEventListener(t, f, true));
+    const f = async () => {
+      kapat();
+      if (Klasor.durum !== 'izin' || !Klasor.dir) return;
+      let s = 'denied';
+      try { s = await Klasor.dir.requestPermission({mode: 'readwrite'}); }
+      catch (e) { if (e.name === 'SecurityError') return Klasor.ilkDokunusta(); }
+      if (s === 'granted') return Klasor.hazirla();
+      Klasor.reddedildi = true;
+      Klasor.goster();
+    };
+    olaylar.forEach(t => document.addEventListener(t, f, true));
   },
   async sec() {
     if (!Klasor.destek()) return toast('Bu tarayıcı klasöre kaydı desteklemiyor. Programı Chrome ya da Edge ile açın.', 'wrn', 7000);
@@ -5796,7 +5949,7 @@ const Klasor = {
       bagliyor: ['gri', 'Bağlanıyor…', 'Klasör okunuyor'],
       desteksiz: ['gri', 'Sadece tarayıcı', 'Bu tarayıcı klasöre kaydı desteklemiyor. Chrome veya Edge kullanın.'],
       yok: ['yel', 'Klasör seç', 'Veriler henüz klasöre kaydedilmiyor'],
-      izin: ['yel', 'İzin ver', `"${ad}" klasörüne yazmak için izin gerekiyor`],
+      izin: ['yel', 'İzin ver', `"${ad}" klasörüne yazmak için tarayıcı izni gerekiyor (ilk tıklamada sorulur). Veriler tarayıcıda güvende.`],
       hazir: ['yesil', Klasor.son ? `Kaydedildi ${Klasor.son}` : 'Klasör bağlı', `Veriler "${ad}\\${VERI_DOSYASI}" dosyasına da kaydediliyor`],
       hata: ['red', 'Yazılamadı', Klasor.hataMesaj]
     }[d];
@@ -5807,7 +5960,7 @@ const Klasor = {
     const s = $('#klasorSerit');
     let h = '';
     if (d === 'yok' && !Klasor.gec) h = `<span>Veriler şu an yalnızca tarayıcıda. Program klasörüne de kaydedilmesi için klasörü bir kez seçin${yol ? `: <b>${esc(yol)}</b>` : ''}.</span><button type="button" class="btn pri" data-ka="sec">Klasörü seç</button><button type="button" class="btn" data-ka="gec">Şimdilik geç</button>`;
-    else if (d === 'izin') h = `<span>Verilerin <b>${esc(ad)}</b> klasörüne kaydedilmesi için izin verin.${Klasor.hataMesaj ? ' (' + esc(Klasor.hataMesaj) + ')' : ''}</span><button type="button" class="btn pri" data-ka="izin">İzin ver</button>`;
+    else if (d === 'izin' && Klasor.reddedildi) h = `<span>Klasöre yazma izni verilmedi. Veriler tarayıcıda iki ayrı kopya halinde güvende${D.a.otoIndir !== false ? '; günün yedeği ayrıca İndirilenler\'e alınacak' : ''}. <b>${esc(ad)}</b> klasörüne de yazılması için:</span><button type="button" class="btn pri" data-ka="izin">İzin ver</button>`;
     else if (d === 'hata') h = `<span>Klasöre yazılamadı: ${esc(Klasor.hataMesaj)}. Veriler tarayıcıda güvende.</span><button type="button" class="btn pri" data-ka="izin">Yeniden dene</button><button type="button" class="btn" data-ka="sec">Başka klasör seç</button>`;
     s.innerHTML = h;
     s.classList.toggle('on', !!h);
@@ -7657,6 +7810,7 @@ function bagla() {
     toast('Ayar kaydedildi', 'ok', 1200);
   }));
   $('#yedekAl').addEventListener('click', () => C.yedekAl());
+  $('#guvenceBtn').addEventListener('click', () => C.gunlukKopyalar());
   $('#yedekYukleBtn').addEventListener('click', () => $('#yedekDosya').click());
   $('#yedekDosya').addEventListener('change', e => { const d = e.target.files[0]; e.target.value = ''; if (d) C.yedekYukle(d); });
   $('#xlsxIceBtn').addEventListener('click', () => $('#xlsxDosya').click());
@@ -7680,7 +7834,9 @@ function bagla() {
     window.addEventListener('afterprint', () => t.classList.remove('yazdirilir'), {once: true});
   });
   document.addEventListener('click', e => { const b = e.target.closest('[data-ka]'); if (b && !b.disabled) Klasor.eylem(b.dataset.ka); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) Guvence.yaz(); });
   window.addEventListener('beforeunload', e => {
+    Guvence.yaz();
     if (Klasor.bekliyor() || (!Model.kayitliMi()) || UI.formKirli || UI.tlKirli) { e.preventDefault(); e.returnValue = ''; }
   });
 
@@ -7714,6 +7870,8 @@ async function baslat() {
   try { if (localStorage.getItem(ANAHTAR + '_dar')) document.body.classList.add('dar'); } catch (e) { /* yok */ }
   try { if (localStorage.getItem(ANAHTAR + '_kart') === '0') UI.kartAcik = false; } catch (e) { /* yok */ }
   Model.yukle();
+  await Guvence.kurtar();
+  navigator.storage?.persist?.().catch(() => {});
   if (!D.s.ts || D.s.ts < bugun()) D.s.ts = bugun();
   if (Model.bozukMetin === null) Model.kaydet(false);
   kFormDoldur();
@@ -7726,6 +7884,7 @@ async function baslat() {
   Klasor.goster();
   await Klasor.baslat();
   if (Model.bozukMetin !== null) return C.bozukVeri();
+  if (Guvence.kurtarildi) toast({bozuk: 'Tarayıcıdaki kayıt bozuktu', bos: 'Tarayıcıdaki kayıt silinmişti', eski: 'Tarayıcıdaki kayıt eski kalmıştı'}[Guvence.kurtarildi] + `; veriler tarayıcının güvence kopyasından geri yüklendi (son kayıt ${zamanMetni(D.z)}).`, 'ok', 10000);
   if (Model.yeniSurum) toast('Bu veriler programın daha yeni bir sürümüyle kaydedilmiş. Yeni sürümü kullanın; bu sürüm bazı alanları göstermeyebilir.', 'wrn', 12000);
   C.acilisUyari();
 }
