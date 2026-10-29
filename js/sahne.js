@@ -589,7 +589,17 @@ void main() { renk = uRenk; }`;
       return (2 * k.yarimY) / Math.max(1, canvas.clientHeight);
     }
 
-    return Object.assign(S, { yukle, ciz, sec, boyutla, pikselOlcek, canvas, parcalar: () => P });
+    /** Dünya noktasının canvas üzerindeki yeri (CSS piksel); kameranın arkasındaysa null. */
+    function ekran(p) {
+      const k = kamera();
+      const m = k.VP;
+      const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12];
+      const y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13];
+      const w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15];
+      if (w <= 1e-6) return null;
+      return [((x / w + 1) / 2) * canvas.clientWidth, ((1 - y / w) / 2) * canvas.clientHeight];
+    }
+    return Object.assign(S, { yukle, ciz, sec, boyutla, pikselOlcek, ekran, canvas, parcalar: () => P });
   }
 
   const destekli = () => {

@@ -85,6 +85,17 @@ Atölye sekmesinde ve "Kurulum şeması PDF" çıktısında.
   eskisi sürüm geçmişine alınır. 7 günden eski yedekte hatırlatma.
 - Kalıcı depolama istenir; tarayıcının tek-proje kaydı silinse bile arşivden geri gelir; iki sekme uyarısı.
 
+## 8. Kullanım kolaylığı — tamamlandı
+
+- **Masa** modül türü: tabla + ayak (yan panel, ahşap 4 ayak, metal 4 ayak, U, X, merkez), tabla taşması,
+  kayıt (etek), bacak paneli, şekilli tabla; kesim listesi, hırdavat, delik planı, montaj tarifi, ön ve yan
+  görünüş, 3B; hazırlar: çalışma, metal ayaklı, yemek, yuvarlak, oval, sehpa, bar. Masaya sandalye süsü.
+- **3B'de doğrudan düzenleme**: 3D açılış sekmesi; "＋ Ekle"; seçince küçük araç çubuğu (ölçü, özellikler,
+  çoğalt, otomatik konum, sil); seçiliyi sürükleyerek duvar boyunca taşıma (komşuya / duvar ucuna yapışma);
+  ⇔ ⇕ ↕ tutamaklarla genişlik, yükseklik, montaj yüksekliği (canlı ölçü etiketi); klavye kısayolları.
+- **Malzemeler**: seçimler kullanıma göre süzülür ve türe göre gruplanır, renk karesiyle; modül formunda yalnız o
+  modülde kullanılan malzeme alanları; kütüphane türe göre gruplu, aranabilir, "yalnız kullanılanlar".
+
 ## Sıradaki adaylar
 
 - Kurulum şemasında adım başına vida/minifix yerlerinin büyütülmüş detay çizimi.

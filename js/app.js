@@ -256,7 +256,9 @@
     proje.moduller.push(m);
     seciliId = m.id;
     $('#katalog').close();
+    if (aktifSekme === 'uc') ucSecim = { modulId: m.id, satir: null, kul: null, tur: '' };
     tumunuCiz(true);
+    if (aktifSekme === 'uc') bildir(`"${esc(m.ad)}" eklendi. Sürükleyerek taşıyın, kenar tutamaklarıyla boyutlandırın.`);
   });
 
   // ---------------- Ölçüden tasarım öner ----------------
@@ -396,17 +398,64 @@
   // ---------------- Modül formu ----------------
   const secim = (ad, deger, secenekler, ek) =>
     `<select data-alan="${ad}" ${ek || ''}>${secenekler.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(deger) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+  /**
+   * Kullanıma göre süzülmüş, türe göre gruplu malzeme seçimi; yanında seçili malzemenin renk karesi.
+   * kul: govde | kapak | cekmece | arkalik | cam | camRaf | ayna. bos: [değer, etiket] ilk seçenek (proje varsayılanı).
+   */
+  const PLAKA_DISI = ['Lambri / çıta', 'Akustik keçe'];
+  function malzemeUygun(m, kul) {
+    if (kul === 'cam' || kul === 'camRaf') return m.tur === 'Cam';
+    if (kul === 'ayna') return m.tur === 'Ayna';
+    return !Hesap.camMi(m);
+  }
+  function malzemeOnerilen(m, kul) {
+    if (kul === 'arkalik') return m.kalinlik <= 10;
+    if (['govde', 'kapak', 'cekmece'].includes(kul)) return m.kalinlik >= 12 && !PLAKA_DISI.includes(m.tur);
+    return true;
+  }
+  function malzemeSecim(ad, deger, kul, ek, bos) {
+    const A = proje.ayarlar;
+    const L = A.malzemeler.filter((m) => malzemeUygun(m, kul) || m.id === deger);
+    const gruplar = new Map();
+    const ekle = (g, m) => { if (!gruplar.has(g)) gruplar.set(g, []); gruplar.get(g).push(m); };
+    for (const m of L) {
+      if (m.oto) ekle('Renk tabakaları (boyamadan)', m);
+      else if (malzemeOnerilen(m, kul)) ekle(m.tur, m);
+      else ekle('Diğer (bu kullanım için alışılmış değil)', m);
+    }
+    // Sıra: önerilen türler, renk tabakaları, diğer
+    const sira = [...gruplar.keys()].sort((a, b) => (a.startsWith('Diğer (') ? 2 : a.startsWith('Renk') ? 1 : 0) - (b.startsWith('Diğer (') ? 2 : b.startsWith('Renk') ? 1 : 0));
+    const sec = (m) => `<option value="${esc(m.id)}"${m.id === deger ? ' selected' : ''}>${esc(m.ad)}</option>`;
+    const secili = A.malzemeler.find((m) => m.id === deger) || (bos ? A.malzemeler.find((m) => m.id === A.kullanim[kul]) : null);
+    const renk = secili ? secili.renk || '#f2efe8' : 'transparent';
+    return `<span class="malz-sec"><span class="renk-nokta" style="background:${esc(renk)}" title="${esc(secili ? secili.ad : '')}"></span><select data-alan="${ad}" ${ek || ''}>${bos ? `<option value="${esc(bos[0])}"${!deger ? ' selected' : ''}>${esc(bos[1])}</option>` : ''}${sira.map((g) => `<optgroup label="${esc(g)}">${gruplar.get(g).map(sec).join('')}</optgroup>`).join('')}</select></span>`;
+  }
   const sayiGir = (alan, deger, ek) => `<input data-alan="${alan}" type="number" value="${deger == null ? '' : esc(deger)}" ${ek || ''}>`;
 
   function malzemeHirdavatFormu(m) {
     const A = proje.ayarlar;
-    const malzSecenek = A.malzemeler.map((x) => [x.id, x.ad]);
     const ozel = Object.keys(m.malzeme || {}).filter((k) => m.malzeme[k]).length + Object.keys(m.hirdavat || {}).filter((k) => m.hirdavat[k]).length;
+    // Yalnız bu modülde gerçekten kullanılan malzeme alanları gösterilir
+    const satirlar = (m.sutunlar || []).flatMap((c) => c.satirlar || []);
+    const ilgili = (k) => {
+      if ((m.malzeme || {})[k]) return true;
+      if (m.tip === 'panel') {
+        if (m.panelTuru === 'nesne' || m.panelTuru === 'bosluk') return false;
+        if (m.panelTuru === 'lambri') return k === 'kapak' || k === 'govde';
+        return k === (m.panelMalzeme || 'kapak');
+      }
+      if (k === 'cam') return satirlar.some((s) => s.tip === 'kapak' && /^cam/.test(s.kapakTuru)) || ['cam', 'cam_profil'].includes(m.surguTuru);
+      if (k === 'camRaf') return satirlar.some((s) => s.rafTipi === 'cam');
+      if (k === 'ayna') return satirlar.some((s) => s.kapakTuru === 'ayna') || m.surguTuru === 'ayna';
+      if (k === 'cekmece') return satirlar.some((s) => s.tip === 'cekmece' || s.icCekmece > 0);
+      if (k === 'arkalik') return m.arkalik !== 'yok';
+      return true;
+    };
     return `
       <details class="ozel-secim" ${ozel ? 'open' : ''}>
         <summary>Bu modüle özel malzeme & hırdavat${ozel ? ` <span class="rozet">${ozel}</span>` : ''}</summary>
         <div class="form-izgara">
-          ${Hesap.KULLANIMLAR.map((k) => `<label>${KULLANIM_AD[k]}${secim('malzeme.' + k, (m.malzeme || {})[k] || '', [['', `Proje: ${malzemeEtiket(malzeme(A.kullanim[k]))}`], ...malzSecenek])}</label>`).join('')}
+          ${Hesap.KULLANIMLAR.filter(ilgili).map((k) => `<label>${KULLANIM_AD[k]}${malzemeSecim('malzeme.' + k, (m.malzeme || {})[k] || '', k, '', ['', `Proje: ${malzemeEtiket(malzeme(A.kullanim[k]))}`])}</label>`).join('')}
           ${Object.entries(HS).map(([k, h]) => `<label>${h.baslik}${secim('hirdavat.' + k, (m.hirdavat || {})[k] || '', [['', `Proje: ${h.secenekler[A.hirdavat[k]].ad}`], ...Object.entries(h.secenekler).map(([v, o]) => [v, o.ad])])}</label>`).join('')}
         </div>
       </details>`;
@@ -506,14 +555,21 @@
     }
     if (pn) {
       kap.innerHTML = `
-        <h2>Panel</h2>
+        <h2>${m.panelTuru === 'masa' ? 'Masa' : 'Panel'}</h2>
         <div class="form-izgara">
           <label class="genis">Ad<input data-alan="ad" value="${esc(m.ad)}"></label>
           <label>Panel türü${secim('panelTuru', m.panelTuru, Object.entries(Hesap.PANEL_TURLERI).map(([k, v]) => [k, v.ad]))}</label>
           <label>Malzeme${secim('panelMalzeme', m.panelMalzeme, [['kapak', 'Kapak malzemesi'], ['govde', 'Gövde malzemesi'], ['ayna', 'Ayna']])}</label>
           ${['duvar', 'serbest', 'dolgu'].includes(m.panelTuru) ? `<label class="onay" title="Panelin / aynanın arkasında çevre boyunca LED: duvara hare ışık. Panel 30 mm takozla duvardan ayrılır."><input data-alan="ledArka" type="checkbox" ${m.ledArka ? 'checked' : ''}> Arkadan LED (hare)</label>` : ''}
-          <label>Boy (mm)${sayiGir('boy', m.boy, 'min="20"')}</label>
-          <label>En (mm)${sayiGir('en', m.en, 'min="20"')}</label>
+          <label>${m.panelTuru === 'masa' ? 'Uzunluk' : 'Boy'} (mm)${sayiGir('boy', m.boy, 'min="20"')}</label>
+          <label>${m.panelTuru === 'masa' ? 'Derinlik' : 'En'} (mm)${sayiGir('en', m.en, 'min="20"')}</label>
+          ${m.panelTuru === 'masa' ? `<label title="Zeminden tabla üstüne. Çalışma / yemek 750, sehpa 400–450, bar 1050">Yükseklik (mm)${sayiGir('masaH', m.masaH, 'min="200" max="1300"')}</label>
+          <label class="genis">Ayak${secim('masaAyak', m.masaAyak, Object.entries(Hesap.MASA_AYAKLARI).map(([k, v]) => [k, v.ad]))}</label>
+          <label title="Tablanın ayakların / yan panellerin dışına taşması (her yanda)">Tabla taşması (mm)${sayiGir('masaTasma', m.masaTasma, 'min="0"')}</label>
+          ${['ahsap4', 'metal4'].includes(m.masaAyak) ? `<label title="Kare ayak kesiti">Ayak kesiti (mm)${sayiGir('masaAyakKesit', m.masaAyakKesit, 'min="25" max="150"')}</label>` : ''}
+          ${m.masaAyak === 'panel' ? `<label class="onay" title="Arkada, yan ayakların arasında; masayı yana sallanmaktan korur"><input data-alan="masaArka" type="checkbox" ${m.masaArka ? 'checked' : ''}> Bacak paneli</label>` : ''}
+          ${m.masaAyak !== 'merkez' ? `<label class="onay" title="Tablanın altında ayakları bağlayan kuşak; uzun tablada sehimi önler"><input data-alan="masaKayit" type="checkbox" ${m.masaKayit || m.masaAyak === 'ahsap4' ? 'checked' : ''} ${m.masaAyak === 'ahsap4' ? 'disabled' : ''}> Kayıt (etek)</label>` : ''}
+          ${m.masaKayit || m.masaAyak === 'ahsap4' ? `<label>Kayıt yüksekliği (mm)${sayiGir('masaKayitH', m.masaKayitH, 'min="40" max="200"')}</label>` : ''}` : ''}
           <label>Adet${sayiGir('adet', m.adet, 'min="1"')}</label>
           ${m.panelTuru === 'lambri' ? `<label title="Çıta eni (lambri profilinde profil eni)">Çıta eni (mm)${sayiGir('lambriCitaEn', m.lambriCitaEn, 'min="10"')}</label>
           <label title="İki çıta arası boşluk; 0 = bitişik (dilli profil). Kenarlarda çıta olur, artan pay aralıklara paylaştırılır.">Çıta aralığı (mm)${sayiGir('lambriAralik', m.lambriAralik, 'min="0"')}</label>
@@ -526,7 +582,7 @@
             ? `<label title="Boy yönündeki bantlı kenar sayısı">Bant – uzun kenar${secim('bantU', m.bantU, [[0, '0'], [1, '1'], [2, '2']])}</label>
                <label title="En yönündeki bantlı kenar sayısı">Bant – kısa kenar${secim('bantK', m.bantK, [[0, '0'], [1, '1'], [2, '2']])}</label>`
             : `<label>Kenar bandı${secim('sekilBant', m.sekilBant, [['tum', 'Tüm çevre'], ['egri', 'Yalnız şekilli kenar'], ['yok', 'Bantsız']])}</label>`}
-          ${montaj}${duvarSecimi}
+          ${m.panelTuru === 'masa' ? '' : montaj}${duvarSecimi}
         </div>
         <p class="not">${esc(Hesap.PANEL_TURLERI[m.panelTuru].aciklama)}.${Hesap.SEKILLER[m.sekil].aciklama ? ' ' + esc(Hesap.SEKILLER[m.sekil].aciklama) : ''} Şekilli parça plakadan dikdörtgen kaba ölçüyle kesilir, sonra CNC veya şablonla şekillenir; maliyette gerçek alan ve kenar uzunluğu kullanılır.</p>
         ${malzemeHirdavatFormu(m)}`;
@@ -988,15 +1044,54 @@
     ['kusakGenisligi', 'Kuşak eni (mm)'],
   ];
 
+  // Malzeme kütüphanesi: türe göre gruplar, arama ve "yalnız kullanılanlar" süzgeci
+  let malzSadeceKullanilan = false;
+  const malzGrupAcik = new Set();
+  const malzGrupKapali = new Set();
+  const GRUP_SIRA = ['Suntalam', 'MDF Lam', 'MDF Lake', 'Akrilik / parlak', 'Ham MDF', 'Kontrplak', 'Masif panel', 'Kompakt laminat', 'HDF', 'Lambri / çıta', 'Akustik keçe', 'Cam', 'Ayna', 'Diğer'];
+  function malzemeGruplari(L) {
+    const G = new Map();
+    for (const m of L) {
+      const g = m.oto ? 'Renk tabakaları (boyamadan otomatik)' : m.tur === 'Cam' || m.tur === 'Ayna' ? 'Cam ve ayna' : m.tur;
+      if (!G.has(g)) G.set(g, []);
+      G.get(g).push(m);
+    }
+    const sira = (g) => { const i = GRUP_SIRA.indexOf(g === 'Cam ve ayna' ? 'Cam' : g); return g.startsWith('Renk') ? 99 : i < 0 ? 50 : i; };
+    return [...G.entries()].sort((a, b) => sira(a[0]) - sira(b[0]));
+  }
+  function malzSuz() {
+    const q = ($('#malzAra') ? $('#malzAra').value : '').trim().toLocaleLowerCase('tr');
+    const yalniz = $('#malzKullanilan') && $('#malzKullanilan').checked;
+    document.querySelectorAll('.malz-grup').forEach((tb) => {
+      let gorunen = 0;
+      tb.querySelectorAll('tr[data-malz]').forEach((tr) => {
+        const ok = (!q || tr.dataset.ara.includes(q)) && (!yalniz || tr.classList.contains('kullanimda'));
+        tr.hidden = !ok;
+        if (ok) gorunen++;
+      });
+      tb.hidden = gorunen === 0;
+      if (q && gorunen) tb.classList.remove('kapali');
+    });
+  }
+  document.addEventListener('input', (e) => { if (e.target.id === 'malzAra') malzSuz(); });
+  document.addEventListener('change', (e) => { if (e.target.id === 'malzKullanilan') { malzSadeceKullanilan = e.target.checked; malzSuz(); } });
+  document.addEventListener('click', (e) => {
+    const th = e.target.closest('.malz-grup .grup-baslik');
+    if (!th) return;
+    const tb = th.closest('.malz-grup');
+    const kapali = tb.classList.toggle('kapali');
+    const g = tb.dataset.grup;
+    if (kapali) { malzGrupAcik.delete(g); malzGrupKapali.add(g); } else { malzGrupKapali.delete(g); malzGrupAcik.add(g); }
+    th.querySelector('.ok').textContent = kapali ? '▸' : '▾';
+  });
   function ayarFormCiz() {
     const A = proje.ayarlar;
-    const malzSecenek = A.malzemeler.map((x) => [x.id, x.ad]);
     const kullanilanlar = new Set([...Object.values(A.kullanim), ...proje.moduller.flatMap((m) => Object.values(m.malzeme || {})),
       ...((proje.teklif && proje.teklif.secenekler) || []).flatMap((sc) => Object.values(sc.kullanim || {}))]);
     $('#ayarForm').innerHTML = `
       <h3>Proje varsayılanları</h3>
       <div class="form-izgara">
-        ${Hesap.KULLANIMLAR.map((k) => `<label>${KULLANIM_AD[k]}${secim(k, A.kullanim[k], malzSecenek, 'data-kullanim')}</label>`).join('')}
+        ${Hesap.KULLANIMLAR.map((k) => `<label>${KULLANIM_AD[k]}${malzemeSecim(k, A.kullanim[k], k, 'data-kullanim')}</label>`).join('')}
       </div>
       <div class="form-izgara">
         ${Object.entries(HS).map(([k, h]) => `<label>${h.baslik}${secim(k, A.hirdavat[k], Object.entries(h.secenekler).map(([v, o]) => [v, o.ad]), 'data-hirdavat')}</label>`).join('')}
@@ -1004,19 +1099,25 @@
       <p class="not">Her modül, modül formundaki "Bu modüle özel malzeme & hırdavat" bölümünden farklı malzeme ve hırdavat kullanabilir. Ray tipi çekmece kutusu ölçülerini değiştirir: bilyeli ray her yandan 13 mm, gizli ray 5 mm boşluk ister; metal yanlı sistemde yalnızca taban ve arkalık kesilir.</p>
 
       <h3>Malzeme kütüphanesi</h3>
+      <div class="arac-satir malz-arac"><input id="malzAra" type="search" placeholder="Malzeme ara (ör. ceviz, 18, lake)…" aria-label="Malzeme ara"><label class="onay"><input id="malzKullanilan" type="checkbox"${malzSadeceKullanilan ? ' checked' : ''}> Yalnız kullanılanlar</label><span class="not">Gruba tıklayınca açılır / kapanır.</span></div>
       <div class="tablo-kap">
       <table class="liste ayar-tablo">
         <thead><tr><th title="3B ve önizlemedeki rengi">Renk</th><th>Malzeme adı</th><th>Tür</th><th>Kalınlık</th><th>Plaka uzun</th><th>Plaka kısa</th><th title="0 = bantsız (örn. boyalı lake kenar)">Bant</th><th>Damar</th><th></th></tr></thead>
-        <tbody>${A.malzemeler.map((m) => `<tr data-malz="${esc(m.id)}">
+        ${malzemeGruplari(A.malzemeler).map(([grup, L]) => {
+          const kul = L.filter((m) => kullanilanlar.has(m.id)).length;
+          const acik = malzGrupAcik.has(grup) || (!malzGrupKapali.has(grup) && kul > 0);
+          return `<tbody class="malz-grup${acik ? '' : ' kapali'}" data-grup="${esc(grup)}"><tr class="grup-baslik"><th colspan="9"><span class="ok">${acik ? '▾' : '▸'}</span> ${esc(grup)} <small>${L.length} malzeme${kul ? ` · ${kul} kullanımda` : ''}</small></th></tr>
+          ${L.map((m) => `<tr data-malz="${esc(m.id)}" data-ara="${esc((m.ad + ' ' + m.tur + ' ' + m.kalinlik).toLocaleLowerCase('tr'))}" class="${kullanilanlar.has(m.id) ? 'kullanimda' : 'kullanilmiyor'}">
             <td><input data-alan="renk" type="color" value="${esc(m.renk || '#f2efe8')}" aria-label="${esc(m.ad)} rengi" class="renk-sec"></td>
-            <td><input data-alan="ad" value="${esc(m.ad)}"></td>
+            <td><input data-alan="ad" value="${esc(m.ad)}">${kullanilanlar.has(m.id) ? '<span class="rozet-kucuk">kullanımda</span>' : ''}</td>
             <td>${secim('tur', m.tur || 'Diğer', Hesap.MALZEME_TURLERI.map((t) => [t, t]))}</td>
             <td><input data-alan="kalinlik" type="number" step="0.5" min="1" value="${m.kalinlik}"></td>
             <td><input data-alan="plakaUzun" type="number" min="100" value="${esc(m.plakaUzun)}" ${Hesap.camMi(m) ? 'disabled title="Cam plakaya yerleştirilmez"' : ''}></td>
             <td><input data-alan="plakaKisa" type="number" min="10" value="${esc(m.plakaKisa)}" ${Hesap.camMi(m) ? 'disabled' : ''}></td>
             <td><input data-alan="bant" type="number" step="0.1" min="0" value="${esc(m.bant)}" ${Hesap.camMi(m) ? 'disabled' : ''}></td>
             <td><input data-alan="damar" type="checkbox" ${m.damar ? 'checked' : ''} ${Hesap.camMi(m) ? 'disabled' : ''}></td>
-            <td><button data-islem="malzSil" class="ikincil kucuk-buton" ${kullanilanlar.has(m.id) ? 'disabled title="Kullanımda"' : 'title="Sil"'}>✕</button></td></tr>`).join('')}</tbody>
+            <td><button data-islem="malzSil" class="ikincil kucuk-buton" ${kullanilanlar.has(m.id) ? 'disabled title="Kullanımda"' : 'title="Sil"'}>✕</button></td></tr>`).join('')}</tbody>`;
+        }).join('')}
       </table>
       </div>
       <button data-islem="malzEkle" class="ikincil">+ Malzeme ekle</button>
@@ -1036,6 +1137,7 @@
         <label class="onay" title="Kapalıysa arkalıklar çizimde görünür ama kesim listesine, plakaya ve maliyete girmez (ayrı alınıyorsa)"><input data-ayar="arkalikListede" type="checkbox" ${A.arkalikListede ? 'checked' : ''}> Arkalıkları kesim listesine ve maliyete kat</label>
       </div>
       <button id="btnAyarSifirla" class="ikincil">Varsayılanlara dön</button>`;
+    malzSuz();
   }
 
   $('#ayarForm').addEventListener('change', (e) => {
@@ -1485,7 +1587,8 @@
   function ucParcalariHazirla() {
     const kapaksiz = $('#ucKapaksiz').checked;
     const tezgah = tezgahSecenek();
-    const sus = $('#ucSus').checked;
+    const susAcik = $('#ucSus').checked && !canliMod;
+    const sus = susAcik;
     const renkFn = (x) => Hesap.modulRenkleri(x, proje.ayarlar);
     if ($('#ucKapsam').value === 'proje') {
       const yer = sus ? susluYerlesim(sonuc.yerlesim, true).yerlesim : sonuc.yerlesim;
@@ -1537,13 +1640,15 @@
     } else {
       $('#ucSvg').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
     }
-    if (ucSecim) ucMenuCiz();
+    tutamakYerlestir();
+    if (ucSecim && !canliMod) ucMenuCiz();
   }
   /** Yalnız kamerayı güncelleyip yeniden çizer (sürükleme sırasında hızlı yol). */
   function ucKameraCiz() {
     if (glAcik()) {
       Object.assign(sahne.gorus, { yaw: ucGorus.yaw, pitch: ucGorus.pitch, yakin: ucGorus.yakin, kx: ucGorus.kx || 0, ky: ucGorus.ky || 0 });
       sahne.ciz();
+      tutamakYerlestir();
     } else ucCiz();
   }
   for (const id of ['#ucGercek', '#ucPersp', '#ucOda']) $(id).addEventListener('change', () => { ucAyarKaydet(); ucCiz(); });
@@ -1610,9 +1715,12 @@
 
   // ---- Nesne menüsü (tıklanan parça) ----
   const TUR_AD = { govde: 'Gövde', panel: 'İç bölücü / raf', kapak: 'Kapak', cekmece: 'Çekmece önü', ic: 'Çekmece kutusu', arkalik: 'Arkalık', baza: 'Baza', ayak: 'Ayak / profil', kulp: 'Kulp / askı', cam: 'Cam', ayna: 'Ayna', led: 'LED şerit', nesne: 'Eşya', tezgah: 'Tezgah' };
+  let menuAcik = false;
   function ucMenuCiz() {
     const kutu = $('#ucMenu');
-    if (!ucSecim) { kutu.hidden = true; return; }
+    // Dolap / masa seçilince önce küçük araç çubuğu çıkar; özellikler ✎ ile açılır (tezgah ve süslerde doğrudan)
+    const modulMu = ucSecim && proje.moduller.some((m) => m.id === ucSecim.modulId);
+    if (!ucSecim || (modulMu && !menuAcik)) { kutu.hidden = true; return; }
     const m = proje.moduller.find((x) => x.id === ucSecim.modulId);
     const A = proje.ayarlar;
     const sec = ucSecim;
@@ -1654,7 +1762,13 @@
       </fieldset>`;
     }
     if (m.tip === 'panel') {
-      h += `<fieldset><legend>Ölçü</legend>${sayiAlan('Boy', 'boy', m.boy)}${sayiAlan('En', 'en', m.en)}${sayiAlan('Montaj yüksekliği', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
+      if (m.panelTuru === 'masa') {
+        h += `<fieldset><legend>Masa</legend>${sayiAlan('Uzunluk', 'boy', m.boy)}${sayiAlan('Derinlik', 'en', m.en)}${sayiAlan('Yükseklik', 'masaH', m.masaH)}${sayiAlan('Tabla taşması', 'masaTasma', m.masaTasma)}
+          <label class="tam">Ayak<select data-um-alan-sec="masaAyak">${secenek(Object.entries(Hesap.MASA_AYAKLARI).map(([k, v]) => [k, v.ad]), m.masaAyak)}</select></label>
+          <label class="tam">Tabla biçimi<select data-um-alan-sec="sekil">${secenek([['dikdortgen', 'Dikdörtgen'], ['radyus', 'Köşeleri yuvarlak'], ['oval', 'Oval'], ['daire', 'Yuvarlak'], ['kapsul', 'Kapsül']], m.sekil)}</select></label>
+          ${m.masaAyak === 'panel' ? `<label class="onay"><input type="checkbox" data-um-alan-onay="masaArka"${m.masaArka ? ' checked' : ''}> Bacak paneli</label>` : ''}
+          ${m.masaAyak !== 'merkez' && m.masaAyak !== 'ahsap4' ? `<label class="onay"><input type="checkbox" data-um-alan-onay="masaKayit"${m.masaKayit ? ' checked' : ''}> Kayıt (etek)</label>` : ''}</fieldset>`;
+      } else h += `<fieldset><legend>Ölçü</legend>${sayiAlan('Boy', 'boy', m.boy)}${sayiAlan('En', 'en', m.en)}${sayiAlan('Montaj yüksekliği', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
     } else if (m.tip !== 'lkose') {
       h += `<fieldset><legend>Modül ölçüsü</legend>${sayiAlan('Genişlik', 'genislik', m.genislik)}${sayiAlan('Yükseklik', 'yukseklik', m.yukseklik)}${sayiAlan('Derinlik', 'derinlik', m.derinlik)}${sayiAlan('Montaj yüks.', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
     }
@@ -1683,10 +1797,11 @@
   // Menü 3B alanının sağ üstüne (dar ekranda alta) yerleşir; modeli tıklanan yerde kapatmaz
   function ucMenuKonumla() { $('#ucMenu').scrollTop = 0; }
   function ucTikla(x, y) {
+    $('#ucAlan').focus({ preventScroll: true });
     if (!glAcik()) { bildir('Parçaya tıklayarak düzenlemek için "Gerçekçi" görünümü açın.'); return; }
     const i = sahne.sec(x, y);
     const p = i >= 0 ? ucParcalar[i] : null;
-    if (!p || p.modulId == null) { ucSecim = null; ucMenuCiz(); ucVurgula(); sahne.ciz(); return; }
+    if (!p || p.modulId == null) { ucSecim = null; ucMenuCiz(); ucVurgula(); sahne.ciz(); tutamakYerlestir(); return; }
     const sec = { modulId: p.modulId, satir: p.satir || null, kul: p.kul || null, tur: p.tur };
     if (boyaModu && boyaRenk) { ucSecim = sec; boya(sec, boyaRenk, $('#ucBoyaKapsam').value); return; }
     ucSecim = sec;
@@ -1696,6 +1811,7 @@
     ucMenuKonumla(x, y);
     ucVurgula();
     sahne.ciz();
+    tutamakYerlestir();
   }
   /** Menüden gelen değişikliği uygular ve her şeyi yeniden hesaplar. */
   function ucMenuDegis(f) {
@@ -1714,7 +1830,7 @@
     if (b.dataset.umBoya) { boya(ucSecim, { renk: b.dataset.umBoya, ad: b.dataset.ad }, $('#ucMenu [data-um-kapsam]').value); return; }
     const islem = b.dataset.um;
     const m = proje.moduller.find((x) => x.id === (ucSecim && ucSecim.modulId));
-    if (islem === 'kapat') { ucSecim = null; ucMenuCiz(); ucKameraCiz2(); return; }
+    if (islem === 'kapat') { menuAcik = false; ucMenuCiz(); return; }
     if (islem === 'karistir') { $('#ucSusKaristir').click(); return; }
     if (islem === 'susEkle') { ucSecim = null; $('#ucSusEkle').click(); return; }
     if (islem === 'susKapat') { ucSecim = null; $('#ucSus').checked = false; susKaydet(); ucCiz(); ucMenuCiz(); return; }
@@ -1771,6 +1887,17 @@
     if (el.matches('[data-um-kapsam]')) { ucMenuKapsam = el.value; return; }
     if (el.matches('[data-um-ozel]')) { boya(ucSecim, { renk: el.value, ad: null }, $('#ucMenu [data-um-kapsam]').value); return; }
     if (el.matches('[data-um-malz]')) { boya(ucSecim, { malzeme: el.value }, $('#ucMenu [data-um-kapsam]').value); return; }
+    if (el.dataset.umAlanSec || el.dataset.umAlanOnay) {
+      ucMenuDegis((m) => {
+        if (el.dataset.umAlanSec) m[el.dataset.umAlanSec] = el.value;
+        else m[el.dataset.umAlanOnay] = el.checked;
+        if (el.dataset.umAlanSec === 'sekil' && el.value === 'radyus') { m.sekilParam = m.sekilParam || 80; m.koseSayisi = 4; }
+        const N = Hesap.projeyiNormallestir(proje);
+        const n = N.moduller.find((x) => x.id === m.id);
+        if (n) Object.assign(m, n);
+      });
+      return;
+    }
     const alan = el.dataset.umAlan;
     const sa = el.dataset.umSatir;
     ucMenuDegis((m) => {
@@ -1804,6 +1931,188 @@
     ucBekleyen = true;
     requestAnimationFrame(() => { ucBekleyen = false; ucKameraCiz(); });
   };
+  // ---------------- 3B'de doğrudan düzenleme: seç, sürükle-taşı, tutamakla boyutla ----------------
+  const tutKap = document.createElement('div');
+  tutKap.className = 'uc-tutamaklar';
+  tutKap.innerHTML = `<div class="uc-mini" id="ucMini" hidden></div>
+    <button type="button" class="uc-tut tut-gen" data-t="gen" title="Sürükle: genişlik" hidden>⇔</button>
+    <button type="button" class="uc-tut tut-yuk" data-t="yuk" title="Sürükle: yükseklik" hidden>⇕</button>
+    <button type="button" class="uc-tut tut-mt" data-t="mt" title="Sürükle: yerden yükseklik (montaj)" hidden>↕</button>
+    <div class="uc-olcu-etiket" id="ucOlcuEtiket" hidden></div>`;
+  $('#ucAlan').appendChild(tutKap);
+  let canliMod = false;
+  const secModul = () => (ucSecim ? proje.moduller.find((m) => m.id === ucSecim.modulId) : null);
+  const secYer = (m) => (m && sonuc && sonuc.yerlesim ? sonuc.yerlesim.yerler.find((y) => (y.kaynak || y.modul).id === m.id) : null);
+  /** Tutamağın değiştirdiği alan: gen (genişlik), yuk (yükseklik), mt (montaj). null: bu modülde yok. */
+  function boyAlani(m, t) {
+    if (t === 'mt') {
+      if (m.tip === 'panel' && ['masa', 'baza', 'bosluk', 'yan_kapama'].includes(m.panelTuru)) return null;
+      return m.tip === 'panel' || (Number(m.montajYuksekligi) || 0) > 0 ? 'montajYuksekligi' : null;
+    }
+    if (m.tip !== 'panel') return t === 'gen' ? 'genislik' : 'yukseklik';
+    const tur = m.panelTuru;
+    if (tur === 'masa') return t === 'gen' ? 'boy' : 'masaH';
+    if (['tabla', 'raf', 'baza'].includes(tur)) return t === 'gen' ? 'boy' : null;
+    if (tur === 'yan_kapama') return t === 'gen' ? null : 'boy';
+    return t === 'gen' ? 'en' : 'boy';
+  }
+  /** Seçili modülün 3B sınır kutusu ve duvar eksenleri. */
+  function secimGeometri() {
+    const m = secModul();
+    if (!m || !glAcik()) return null;
+    const P = ucParcalar.filter((p) => p.modulId === m.id && !p.gizli);
+    if (!P.length) return null;
+    const b = [0, 1, 2].map((k) => [Math.min(...P.map((p) => Math.min(...p.k.map((q) => q[k])))), Math.max(...P.map((p) => Math.max(...p.k.map((q) => q[k]))))]);
+    const y = $('#ucKapsam').value === 'proje' ? secYer(m) : null;
+    const B = y && y.duvar === 'B' && sonuc.yerlesim.tip === 'L';
+    const a = B ? [0, 0, 1] : [1, 0, 0]; // duvar boyunca
+    const n = B ? [1, 0, 0] : [0, 0, 1]; // duvardan öne
+    const c = b.map((x) => (x[0] + x[1]) / 2);
+    const yari = (v) => v.reduce((s, x, k) => s + Math.abs(x) * (b[k][1] - b[k][0]) / 2, 0);
+    const nokta = (da, dy, dn) => c.map((x, k) => x + a[k] * da + (k === 1 ? dy : 0) + n[k] * dn);
+    return { m, y, b, a, n, c, ea: yari(a), en: yari(n), ey: (b[1][1] - b[1][0]) / 2, nokta };
+  }
+  /** Dünya ekseni boyunca ekranda 1 mm'nin piksel vektörü. */
+  function ekranEkseni(p, v) {
+    const p0 = sahne.ekran(p);
+    const p1 = sahne.ekran(p.map((x, k) => x + v[k] * 100));
+    if (!p0 || !p1) return null;
+    return [(p1[0] - p0[0]) / 100, (p1[1] - p0[1]) / 100];
+  }
+  const mmFark = (v, dx, dy) => { const l2 = v[0] * v[0] + v[1] * v[1]; return l2 < 1e-6 ? 0 : (dx * v[0] + dy * v[1]) / l2; };
+  function tutamakYerlestir() {
+    const g = secimGeometri();
+    const mini = $('#ucMini');
+    const goster = (el, p) => {
+      const e = p && sahne.ekran(p);
+      el.hidden = !e;
+      if (e) { el.style.left = e[0] + 'px'; el.style.top = e[1] + 'px'; }
+    };
+    if (!g || ucSecim.modulId === '__tezgah') { tutKap.querySelectorAll('.uc-tut').forEach((x) => (x.hidden = true)); mini.hidden = true; return; }
+    const on = g.en;
+    goster(tutKap.querySelector('[data-t="gen"]'), boyAlani(g.m, 'gen') ? g.nokta(g.ea, 0, on) : null);
+    goster(tutKap.querySelector('[data-t="yuk"]'), boyAlani(g.m, 'yuk') ? g.nokta(0, g.ey, on) : null);
+    goster(tutKap.querySelector('[data-t="mt"]'), boyAlani(g.m, 'mt') ? g.nokta(-g.ea, 0, on) : null);
+    const s = sonuc.modulSonuclari[g.m.id];
+    const G = s && s.geo;
+    const olcu = G ? `${Math.round(G.W)} × ${Math.round(G.H)} × ${Math.round(G.D)}` : '';
+    mini.innerHTML = `<b>${esc(g.m.ad)}</b><span>${olcu}</span>
+      <button type="button" data-mini="ozellik" title="Özellikler (ölçü, satır, renk)">✎</button>
+      <button type="button" data-mini="kopya" title="Çoğalt (Ctrl+D)">⧉</button>
+      ${g.y && g.m.konum != null ? '<button type="button" data-mini="otokonum" title="Duvarda otomatik sıraya dön">⟲</button>' : ''}
+      <button type="button" data-mini="sil" title="Sil (Delete)">🗑</button>`;
+    goster(mini, g.nokta(0, g.ey, on));
+  }
+  /** Sürükleme sırasında hızlı ön izleme: yalnız bu modül ve yerleşim yeniden hesaplanır. */
+  let canliBekleyen = null;
+  function canliGuncelle(m) {
+    canliBekleyen = m;
+    requestAnimationFrame(() => {
+      if (!canliBekleyen) return;
+      const x = canliBekleyen;
+      canliBekleyen = null;
+      sonuc.modulSonuclari[x.id] = Hesap.modulHesapla(Hesap.projeyiNormallestir({ ayarlar: proje.ayarlar, moduller: [x] }).moduller[0], proje.ayarlar);
+      sonuc.yerlesim = Hesap.yerlesimHesapla(proje, sonuc.modulSonuclari);
+      canliMod = true;
+      ucCiz();
+      canliMod = false;
+    });
+  }
+  const etiket = (metin, x, y) => { const el = $('#ucOlcuEtiket'); el.textContent = metin; el.style.left = x + 'px'; el.style.top = y + 'px'; el.hidden = !metin; };
+  let tutSurukle = null;
+  tutKap.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.uc-tut');
+    if (!b) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const g = secimGeometri();
+    if (!g) return;
+    const alan = boyAlani(g.m, b.dataset.t);
+    const eksen = b.dataset.t === 'gen' ? g.a : [0, 1, 0];
+    const v = ekranEkseni(g.c, eksen);
+    if (!alan || !v) return;
+    b.setPointerCapture(e.pointerId);
+    tutSurukle = { t: b.dataset.t, alan, m: g.m, v, sx: e.clientX, sy: e.clientY, d0: Number(g.m[alan]) || 0, isaret: b.dataset.t === 'gen' ? 1 : 1 };
+  });
+  tutKap.addEventListener('pointermove', (e) => {
+    if (!tutSurukle) return;
+    const T = tutSurukle;
+    const d = mmFark(T.v, e.clientX - T.sx, e.clientY - T.sy);
+    const adim = e.shiftKey ? 1 : 10;
+    const min = T.alan === 'montajYuksekligi' ? 0 : 100;
+    const yeni = Math.max(min, Math.round((T.d0 + d) / adim) * adim);
+    if (yeni === T.m[T.alan]) return;
+    T.m[T.alan] = yeni;
+    const r = $('#ucAlan').getBoundingClientRect();
+    etiket(`${{ gen: 'Genişlik', yuk: 'Yükseklik', mt: 'Yerden' }[T.t]}: ${yeni} mm`, e.clientX - r.left + 16, e.clientY - r.top - 10);
+    canliGuncelle(T.m);
+  });
+  const tutBitir = () => {
+    if (!tutSurukle) return;
+    tutSurukle = null;
+    etiket('', 0, 0);
+    tumunuCiz(true);
+  };
+  tutKap.addEventListener('pointerup', tutBitir);
+  tutKap.addEventListener('pointercancel', tutBitir);
+  function modulSil(m, onay) {
+    if (onay && !confirm(`"${m.ad}" silinsin mi?`)) return;
+    guvenlikKopyasi(`"${m.ad}" silinmeden önce`);
+    proje.moduller.splice(proje.moduller.indexOf(m), 1);
+    ucSecim = null;
+    if (seciliId === m.id) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
+    tumunuCiz(true);
+    bildir(`"${esc(m.ad)}" silindi.`, true);
+  }
+  function modulCogalt(m) {
+    const k = JSON.parse(JSON.stringify(m));
+    k.id = Hesap.yeniModul('alt').id;
+    k.ad = benzersizAd(m.ad);
+    if (k.konum != null) { const s = sonuc.modulSonuclari[m.id]; k.konum = Math.round(m.konum + (s && s.geo ? s.geo.W : 0)); }
+    proje.moduller.splice(proje.moduller.indexOf(m) + 1, 0, k);
+    ucSecim = { modulId: k.id, satir: null, kul: null, tur: '' };
+    seciliId = k.id;
+    tumunuCiz(true);
+    bildir(`"${esc(k.ad)}" eklendi.`);
+  }
+  tutKap.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mini]');
+    if (!b) return;
+    const m = secModul();
+    if (!m) return;
+    const i = b.dataset.mini;
+    if (i === 'sil') modulSil(m, false);
+    else if (i === 'kopya') modulCogalt(m);
+    else if (i === 'otokonum') { m.konum = null; tumunuCiz(true); }
+    else if (i === 'ozellik') { menuAcik = !menuAcik; ucMenuCiz(); }
+  });
+  /** Gövdeyi sürükleyerek duvar boyunca taşıma başlatılabilir mi? */
+  function tasimaBaslat(e, x, y) {
+    if (!glAcik() || !ucSecim || boyaModu || $('#ucKapsam').value !== 'proje') return null;
+    const i = sahne.sec(x, y);
+    const p = i >= 0 ? ucParcalar[i] : null;
+    if (!p || p.modulId !== ucSecim.modulId) return null;
+    const g = secimGeometri();
+    if (!g || !g.y || g.y.duvar === 'kose') return null;
+    const v = ekranEkseni(g.c, g.a);
+    if (!v) return null;
+    const duvarBoy = sonuc.yerlesim.tip === 'L' ? (g.y.duvar === 'B' ? proje.yerlesim.duvarB : proje.yerlesim.duvarA) : proje.yerlesim.duvarA;
+    const komsu = sonuc.yerlesim.yerler.filter((o) => o !== g.y && o.sira === g.y.sira && (o.duvar === g.y.duvar || (o.duvar === 'kose' && g.y.duvar !== 'kose')) && !o.nesne);
+    const yaklasma = [0].concat(duvarBoy > 0 ? [duvarBoy - g.y.W] : [], ...komsu.map((o) => [o.duvar === 'kose' ? (g.y.duvar === 'B' ? o.W2 : o.W) : o.bas + o.W, o.bas - g.y.W]));
+    return { m: g.m, v, bas0: g.y.bas, W: g.y.W, yaklasma, duvarBoy };
+  }
+  function tasimaHareket(T, e) {
+    const d = mmFark(T.v, e.clientX - T.sx, e.clientY - T.sy);
+    let yeni = Math.round((T.bas0 + d) / (e.shiftKey ? 1 : 10)) * (e.shiftKey ? 1 : 10);
+    // Komşu dolabın kenarına ve duvar uçlarına yapışma
+    for (const c of T.yaklasma) if (Math.abs(yeni - c) < 35) { yeni = Math.round(c); break; }
+    yeni = Math.max(0, T.duvarBoy > 0 ? Math.min(T.duvarBoy - T.W, yeni) : yeni);
+    if (T.m.konum === yeni) return;
+    T.m.konum = yeni;
+    const r = $('#ucAlan').getBoundingClientRect();
+    etiket(`Duvarda konum: ${yeni} mm`, e.clientX - r.left + 16, e.clientY - r.top - 10);
+    canliGuncelle(T.m);
+  }
   let surukle = null;
   // Dokunuşlar: tek parmak döndürür, iki parmak yakınlaştırır ve kaydırır
   const dokunuslar = new Map();
@@ -1823,6 +2132,12 @@
     $('#ucIpucu').hidden = true;
     if (dokunuslar.size === 2) { surukle = null; const n = ikiNokta(); kiskac = { d: n.d, x: n.x, y: n.y, yakin: ucGorus.yakin }; return; }
     surukle = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, yaw: ucGorus.yaw, pitch: ucGorus.pitch, kaydir: e.button === 2 || e.button === 1 || e.shiftKey, hareket: 0 };
+    // Seçili modülün üstünden sürükleme: duvar boyunca taşır
+    if (e.button === 0 && !e.shiftKey) {
+      const r = $('#ucAlan').getBoundingClientRect();
+      const T = tasimaBaslat(e, e.clientX - r.left, e.clientY - r.top);
+      if (T) surukle.tasi = Object.assign(T, { sx: e.clientX, sy: e.clientY });
+    }
   });
   let hoverBekle = false;
   $('#ucAlan').addEventListener('pointermove', (e) => {
@@ -1856,6 +2171,7 @@
       return;
     }
     surukle.hareket = Math.max(surukle.hareket, Math.hypot(e.clientX - surukle.sx, e.clientY - surukle.sy));
+    if (surukle.tasi) { if (surukle.hareket > 4) tasimaHareket(surukle.tasi, e); return; }
     if (surukle.kaydir) {
       kaydir(e.clientX - surukle.x, e.clientY - surukle.y);
       surukle.x = e.clientX; surukle.y = e.clientY;
@@ -1870,6 +2186,7 @@
     dokunuslar.delete(e.pointerId);
     if (dokunuslar.size < 2) kiskac = null;
     surukle = null;
+    if (s0 && s0.tasi && s0.hareket > 4) { etiket('', 0, 0); tumunuCiz(true); return; }
     if (s0 && e.type === 'pointerup' && s0.hareket <= 4 && !s0.kaydir) {
       const r = $('#ucAlan').getBoundingClientRect();
       ucTikla(e.clientX - r.left, e.clientY - r.top);
@@ -1880,6 +2197,28 @@
   $('#ucAlan').addEventListener('pointerleave', () => { $('#ucIpucu').hidden = true; });
   $('#ucAlan').addEventListener('wheel', (e) => { if (e.target.closest('#ucMenu')) return; e.preventDefault(); ucGorus.yakin = Math.max(0.3, Math.min(8, ucGorus.yakin * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); ucIste(); }, { passive: false });
   $('#ucAlan').addEventListener('keydown', (e) => {
+    if (e.target.closest('#ucMenu') || e.target.matches('input, select, textarea')) return;
+    const m = secModul();
+    if (m) {
+      // Seçili modül: Delete sil, Ctrl+D çoğalt, ←→ duvar boyunca, ↑↓ yerden yükseklik, Esc seçimi bırak
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); modulSil(m, false); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); modulCogalt(m); return; }
+      if (e.key === 'Escape') { ucSecim = null; ucMenuCiz(); ucCiz(); return; }
+      const adim = e.shiftKey ? 100 : 10;
+      const y = secYer(m);
+      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && y && y.duvar !== 'kose' && $('#ucKapsam').value === 'proje') {
+        e.preventDefault();
+        m.konum = Math.max(0, Math.round((m.konum != null ? m.konum : y.bas) + (e.key === 'ArrowRight' ? adim : -adim)));
+        tumunuCiz(true);
+        return;
+      }
+      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && boyAlani(m, 'mt')) {
+        e.preventDefault();
+        m.montajYuksekligi = Math.max(0, (Number(m.montajYuksekligi) || 0) + (e.key === 'ArrowUp' ? adim : -adim));
+        tumunuCiz(true);
+        return;
+      }
+    }
     const adim = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, -5], ArrowDown: [0, 5] }[e.key];
     if (!adim) return;
     e.preventDefault();
@@ -1913,7 +2252,8 @@
   }, { passive: true });
 
   // ---------------- Sekmeler ----------------
-  let aktifSekme = 'cizim';
+  let aktifSekme = 'uc';
+  $('#ucEkle').addEventListener('click', () => $('#btnKatalog').click());
   document.querySelector('.sekmeler').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-sekme]');
     if (!b) return;

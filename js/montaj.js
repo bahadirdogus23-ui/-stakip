@@ -61,6 +61,20 @@
       [HS.baglanti, araTur].includes('seffaf_t') ? 'Şeffaf T bağlantı (iki parçalı): her yarım iki kulaklı bir plakadır. Yarımları birleşim köşesine karşılıklı oturtup birini dikey panele, diğerini tablaya/rafa kulak uçlarındaki delik planı kılavuz deliklerine 2’şer sunta vidasıyla (3,5×16) vidalayın; sonra ortadaki göbekten geçen çektirme vidasını sıkarak iki yarımı ve panelleri birbirine çekin. Fazla sıkmayın, plastik çatlar.' : null,
     ]);
 
+    if (g.masa) {
+      const m = g.masa;
+      bolum('Masa montajı', [
+        'Tablayı kenar bantlı yüzü aşağı bakacak şekilde temiz, yumuşak bir zemine ters yatırın.',
+        m.ayak === 'panel' ? `Yan ayakları (${numara('Yan ayak')}) tablanın alt yüzündeki pimlere oturtup bağlantı gövdelerini sıkın; ayak pabuçlarını çakın.` : null,
+        m.ayak === 'panel' && m.arka ? `Bacak panelini (${numara('Bacak paneli')}) yan ayakların arasına kavelayla yerleştirip köşebentlerle tablaya bağlayın; masa yana sallanmaz.` : null,
+        m.kayit && m.ayak !== 'panel' ? 'Kayıtları ayaklara kavela ve köşe gergi plakalarıyla bağlayın, gergi cıvatalarını çaprazlama sıkın.' : null,
+        m.ayak === 'ahsap4' ? 'Kayıtlı ayak çerçevesini tablaya ortalayın; kayıtları köşebentlerle tablanın alt yüzüne vidalayın (vida boyu tabla kalınlığının 3/4’ünü geçmesin).' : null,
+        ['metal4', 'metal_u', 'x'].includes(m.ayak) ? `Metal ayakları delik planındaki yerlere oturtun; ${m.tas} mm taşma her yanda eşit olmalı. 4×25 vidalarla, önce kılavuz delerek bağlayın.` : null,
+        m.ayak === 'merkez' ? 'Merkez ayağın üst tablasını tam ortaya getirip 8 vidayla bağlayın; masayı çevirip devrilmeye karşı dört yönden bastırarak deneyin.' : null,
+        'Masayı çevirin, ayarlı ayaklarla teraziye alın.',
+      ]);
+      return bolumler;
+    }
     if (g.panel) {
       bolum('Montaj', [
         `${parca(sonuc.parcalar[0].ad)} panelini yerine göre ölçüp gerekirse duvara göre traşlayın.`,

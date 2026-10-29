@@ -562,3 +562,24 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
 @media (max-width: 760px) { .pr-govde { grid-template-columns: 1fr; } }
 
 [hidden] { display: none !important; }
+
+/* 3B doğrudan düzenleme */
+.uc-tutamaklar { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.uc-tut { position: absolute; pointer-events: auto; width: 34px; height: 34px; min-width: 0; padding: 0; border-radius: 50%; transform: translate(-50%, -50%); background: var(--vurgu); color: #fff; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); font-size: 16px; line-height: 1; touch-action: none; }
+.uc-tut.tut-gen { cursor: ew-resize; }
+.uc-tut.tut-yuk, .uc-tut.tut-mt { cursor: ns-resize; }
+.uc-tut.tut-mt { background: #3d6f8f; }
+.uc-mini { position: absolute; pointer-events: auto; transform: translate(-50%, calc(-100% - 26px)); display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.97); border: 1px solid var(--cizgi); border-radius: 999px; padding: 3px 6px 3px 12px; box-shadow: 0 4px 14px rgba(40,30,20,.2); font-size: 12px; white-space: nowrap; }
+.uc-mini span { color: var(--soluk); }
+.uc-mini button { width: 28px; height: 28px; min-width: 0; padding: 0; border-radius: 50%; }
+.uc-olcu-etiket { position: absolute; background: rgba(40,32,22,.9); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+/* Malzeme seçimi ve kütüphane */
+.malz-sec { display: flex; align-items: center; gap: 6px; }
+.malz-sec select { flex: 1; min-width: 0; }
+.renk-nokta { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,.2); flex: none; }
+.malz-arac input[type=search] { min-width: 240px; }
+.malz-grup .grup-baslik th { background: #f4efe7; text-align: left; cursor: pointer; font-weight: 600; padding: 6px 8px; user-select: none; }
+.malz-grup .grup-baslik small { color: var(--soluk); font-weight: 400; margin-left: 6px; }
+.malz-grup.kapali tr[data-malz] { display: none; }
+.rozet-kucuk { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #eef6ec; color: #2f6b2a; border: 1px solid #b9dcb3; vertical-align: middle; }

@@ -869,6 +869,44 @@
   }
 
   // ------------------------------------------------------------------ paneller
+  /** Masa: tabla alt yüzünde ayak / panel bağlantı yerleri, yan ayak ve kayıtlarda bağlantı delikleri. */
+  function masaPlani(P, g, sonuc) {
+    const m = g.masa;
+    const t = g.t;
+    const parca = (re) => sonuc.parcalar.find((p) => re.test(p.ad));
+    const tp = parca(/^Tabla/);
+    const tabla = tp && P.yeni(tp.ad, tp.ad, g.W, g.D, 'x: sol uçtan · y: ön kenardan (alt yüz)');
+    const x1 = m.tas, x2 = g.W - m.tas, y1 = m.tas, y2 = g.D - m.tas;
+    const ikiUc = (a, b, pay) => (b - a > 2 * pay + 40 ? [a + pay, b - pay] : [(a + b) / 2]);
+    if (m.ayak === 'panel') {
+      for (const x of [x1 + t / 2, x2 - t / 2]) for (const y of ikiUc(y1, y2, 60)) delik(tabla, 'baglanti', x, y, 5, 12, 'Yan ayak bağlantı pimi Ø5 (alt yüz)', 'alt yüz');
+      const ya = parca(/^Yan ayak/);
+      const yan = ya && P.yeni(ya.ad, ya.ad, ya.en, ya.boy, 'x: ön kenardan · y: alttan (iç yüz)', { adet: 2 });
+      for (const x of ikiUc(0, ya ? ya.en : 0, 60)) delik(yan, 'baglanti', x, (ya ? ya.boy : 0) - 34, 15, 13, 'Masa bağlantı gövdesi Ø15 (iç yüz)', 'iç yüz');
+      for (const x of [20, (ya ? ya.en : 0) - 20]) delik(yan, 'vida', x, 0, 8, 10, 'Ayak pabucu yeri Ø8 (alt kenar)', 'alt kenar');
+      not(yan, 'Tabla ile yan ayak: alt yüzdeki pim + yan ayaktaki gövde (minifix düzeni). İsterseniz köşebentle de bağlanabilir.');
+      const ba = parca(/^Bacak paneli/);
+      const bp = ba && P.yeni(ba.ad, ba.ad, ba.boy, ba.en, 'x: soldan · y: alttan', {});
+      for (const y of ikiUc(0, ba ? ba.en : 0, 60)) for (const x of [0, ba ? ba.boy : 0]) delik(bp, 'baglanti', x, y, 8, 30, 'Kavela Ø8 (uçtan, yan ayağa)', 'uç');
+      if (bp) not(bp, 'Yan ayaklara kavela + köşebentle; üst kenar tablaya 3 köşebentle.');
+      const ok = parca(/^Ön kayıt/);
+      const kp = ok && P.yeni(ok.ad, ok.ad, ok.boy, ok.en, 'x: soldan · y: alttan', {});
+      for (const x of [0, ok ? ok.boy : 0]) delik(kp, 'baglanti', x, (ok ? ok.en : 0) / 2, 8, 30, 'Kavela Ø8 (uçtan)', 'uç');
+    } else {
+      const k = m.k;
+      if (m.ayak === 'merkez') delik(tabla, 'vida', g.W / 2, g.D / 2, 4, 12, 'Merkez ayak tablası (plaka deliklerine göre, 8 vida)', 'alt yüz');
+      else if (m.ayak === 'metal_u' || m.ayak === 'x') for (const x of [x1 + (m.uOff != null ? m.uOff : 80) + 25, x2 - (m.uOff != null ? m.uOff : 80) - 25]) for (const y of ikiUc(y1, y2, 40)) delik(tabla, 'vida', x, y, 4, 12, 'Ayak üst lamasına vida yeri', 'alt yüz');
+      else for (const x of [x1 + k / 2, x2 - k / 2]) for (const y of [y1 + k / 2, y2 - k / 2]) delik(tabla, 'vida', x, y, 4, 12, m.ayak === 'ahsap4' ? 'Köşe gergi plakası vidaları (ayak yeri)' : 'Ayak bağlantı plakası', 'alt yüz');
+      for (const re of [/^Kayıt \(uzun\)/, /^Kayıt \(kısa\)/]) {
+        const kr = parca(re);
+        if (!kr) continue;
+        const kp = P.yeni(kr.ad, kr.ad, kr.boy, kr.en, 'x: soldan · y: alttan', { adet: kr.adet });
+        for (const x of [0, kr.boy]) for (const y of ikiUc(0, kr.en, 20)) delik(kp, 'baglanti', x, y, 8, 30, 'Kavela Ø8 (uçtan, ayağa)', 'uç');
+        not(kp, 'Köşede gergi plakasıyla ayağa çekilir; üst kenar tablaya köşebentle.');
+      }
+    }
+    if (tabla && g.sekil) not(tabla, 'Şekilli tabla: koordinatlar dış ölçü kutusuna göredir.');
+  }
   function panelPlani(P, g, modul, sonuc, A) {
     const HS = sonuc.hirdavatSecimi;
     const tur = g.tur;
@@ -877,6 +915,7 @@
     const w = yatayPanel ? g.boy : g.en;
     const h = yatayPanel ? g.en : g.boy;
     if (tur === 'serbest' || tur === 'bosluk' || tur === 'nesne') return;
+    if (tur === 'masa') { masaPlani(P, g, sonuc); return; }
     const p = P.yeni(adBas, adBas, w, h, yatayPanel ? 'x: sol uçtan · y: ön kenardan / alttan' : 'x: ön kenardan · y: alttan (iç yüz)');
     const kosebent = (x, y, yuz) => { for (const d of [-12, 12]) delik(p, 'vida', x, y + d, 3, 12, 'Köşebent vidası Ø3 (12 mm, boydan delmeyin)', yuz); };
     // Kenardan pay kadar içeride iki nokta; parça kısaysa ortada tek nokta

@@ -43,8 +43,8 @@
 
       <section class="sag">
         <nav class="sekmeler" role="tablist">
-          <button data-sekme="cizim" class="aktif">Çizim</button>
-          <button data-sekme="uc">3D</button>
+          <button data-sekme="uc" class="aktif">3D</button>
+          <button data-sekme="cizim">Çizim</button>
           <button data-sekme="yerlesim">Mutfak / yerleşim</button>
           <button data-sekme="kesim">Kesim listesi</button>
           <button data-sekme="plaka">Plaka yerleşimi</button>
@@ -56,7 +56,7 @@
 
         <div id="uyarilar" class="uyarilar"></div>
 
-        <div class="sekme aktif" id="sekme-cizim">
+        <div class="sekme" id="sekme-cizim">
           <div class="cizim-arac">
             <label><input type="checkbox" id="icGorunus"> İç görünüş (kapakları gizle)</label>
           </div>
@@ -66,9 +66,10 @@
           </div>
         </div>
 
-        <div class="sekme" id="sekme-uc">
+        <div class="sekme aktif" id="sekme-uc">
           <div class="arac-satir uc-arac">
-            <select id="ucKapsam" aria-label="Kapsam"><option value="modul">Seçili modül</option><option value="proje">Tüm proje (yerleşim)</option></select>
+            <button id="ucEkle" type="button" title="Katalogdan dolap, masa, panel ya da eşya ekle">＋ Ekle</button>
+            <select id="ucKapsam" aria-label="Kapsam"><option value="proje" selected>Tüm proje (yerleşim)</option><option value="modul">Seçili modül</option></select>
             <label class="onay"><input type="checkbox" id="ucKapaksiz"> Kapakları gizle</label>
             <label class="onay" title="Raflara, askılara, tezgaha ve duvara bağlama uygun eşya ve dekor (yalnız görsel; projeye eklenmez)"><input type="checkbox" id="ucSus" checked> Süsler</label>
             <select id="ucSusYogun" aria-label="Süs yoğunluğu" title="Süs yoğunluğu"><option value="az">Az süs</option><option value="normal" selected>Normal süs</option><option value="bol">Bol süs</option></select>
@@ -98,7 +99,7 @@
                 <option value="proje">Tüm proje (o kullanım)</option>
               </select>
             </span>
-            <span class="not">Sürükle: döndür · sağ tuş / Shift / iki parmak: kaydır · tekerlek: yakınlaştır · tıkla: düzenle</span>
+            <span class="not">Tıkla: seç · seçiliyi sürükle: duvar boyunca taşı · ⇔ ⇕ tutamak: boyutlandır · boşluğu sürükle: döndür · sağ tuş / iki parmak: kaydır · Delete: sil · Ctrl+D: çoğalt · ←→: kaydır</span>
           </div>
           <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"><canvas id="ucTuval" class="uc-tuval"></canvas><div id="ucSvg" class="uc-svgkap"></div><div id="ucMenu" class="uc-menu" hidden></div><div id="ucIpucu" class="uc-ipucu" hidden></div></div>
         </div>
@@ -242,7 +243,8 @@
     <header class="k-baslik"><h2>Nasıl kullanılır?</h2><button id="yardimKapat" class="ikincil" aria-label="Kapat">✕</button></header>
     <div class="yardim-icerik">
       <ol>
-        <li><b>Dolap ekleyin:</b> soldaki "Dolap kataloğundan ekle" ile hazır bir modül seçin.</li>
+        <li><b>Ekleyin:</b> 3D sekmesinde "＋ Ekle" (ya da soldaki katalog) ile dolap, <b>masa</b>, panel ya da eşya seçin.</li>
+        <li><b>3D'de düzenleyin:</b> parçaya tıklayın; seçili parçayı sürükleyince duvar boyunca kayar (komşuya yapışır), turuncu ⇔ ⇕ tutamaklarla genişlik ve yükseklik, mavi ↕ ile yerden yükseklik değişir. Üstteki küçük çubuktan ✎ özellikler, ⧉ çoğalt, 🗑 sil. Klavye: Delete sil, Ctrl+D çoğalt, ←→ kaydır, ↑↓ yükselt, Esc bırak.</li>
         <li><b>Ölçüleri girin:</b> genişlik, yükseklik (zeminden, ayak dahil) ve derinlik (kapak hariç). Çizim yazarken güncellenir.</li>
         <li><b>İçini düzenleyin:</b> "Bölmeler ve iç düzen" bölümünde dikey bölme ekleyin; her bölmeye kapak, çekmece, açık raf veya cihaz nişi satırları ekleyin. Yükseklik boş bırakılırsa kalan yer paylaştırılır.</li>
         <li><b>Mutfak / yerleşim:</b> duvar ölçülerini girin, L mutfakta her modülün duvarını seçin; taşma ve boşluklar gösterilir.</li>

@@ -53,8 +53,34 @@
   }
 
   /** Panel modülün görünüşü (orijin sol-alt): duvara bakınca görünen yüz. */
+  /** Masanın önden görünüşü: tabla ve ayaklar (orijin sol-alt zemin). */
+  function masaGovde(geo) {
+    const m = geo.masa;
+    const { W, H, t } = geo;
+    const y0 = H - t;
+    const x1 = m.tas, x2 = W - m.tas;
+    let s = '';
+    if (m.ayak === 'panel') {
+      if (m.arka) s += rect(x1 + t, y0 - m.arkaH, x2 - t, y0, 'arkalik');
+      s += rect(x1, 0, x1 + t, y0, 'govde') + rect(x2 - t, 0, x2, y0, 'govde');
+      if (m.kayit) s += rect(x1 + t, y0 - m.kayitH, x2 - t, y0, 'govde');
+    } else if (m.ayak === 'ahsap4' || m.ayak === 'metal4') {
+      const c = m.ayak === 'ahsap4' ? 'panel' : 'kulp';
+      s += rect(x1, 0, x1 + m.k, y0, c) + rect(x2 - m.k, 0, x2, y0, c);
+      if (m.kayit) s += rect(x1 + m.k, y0 - m.kayitH, x2 - m.k, y0, 'govde');
+      else if (m.ayak === 'metal4') s += rect(x1 + m.k, y0 - 40, x2 - m.k, y0, 'kulp');
+    } else if (m.ayak === 'metal_u' || m.ayak === 'x') {
+      for (const x of [x1 + 80, x2 - 130]) s += rect(x, 0, x + 50, y0, 'kulp');
+      s += rect(x1 + 130, y0 - 50, x2 - 130, y0 - 20, 'kulp');
+    } else if (m.ayak === 'merkez') {
+      const r = Math.min(W, geo.D) * 0.28;
+      s += rect(W / 2 - r, 0, W / 2 + r, 20, 'kulp') + rect(W / 2 - r * 0.22, 20, W / 2 + r * 0.22, y0, 'kulp');
+    }
+    return s + rect(0, y0, W, H, geo.kullanim === 'govde' ? 'govde' : 'kapak');
+  }
   function panelGovde(geo) {
     if (geo.nesne) return nesneCizim(geo);
+    if (geo.masa) return masaGovde(geo);
     if (geo.lambri) {
       const L = geo.lambri;
       let s = L.arkaKul ? rect(0, 0, geo.W, geo.H, L.arkaKul === 'govde' ? 'govde' : 'kapak') : rect(0, 0, geo.W, geo.H, 'bosluk');
@@ -327,6 +353,16 @@
 
   /** Panel modülün parça görünüşü: bantlı kenarlar kalın. */
   function panelOnGorunus(modul, geo) {
+    if (geo.masa) {
+      const w = geo.W;
+      const h = geo.H;
+      const fs = Math.max(w, h) / 24;
+      const pay = fs * 4;
+      const m = geo.masa;
+      const ayakAd = { panel: 'yan panel ayak', ahsap4: 'ahşap 4 ayak', metal4: 'metal 4 ayak', metal_u: 'U ayak', x: 'X ayak', merkez: 'merkez ayak' }[m.ayak] || '';
+      const s = masaGovde(geo) + olcuYatay(0, w, -fs * 2, fs) + olcuDikey(0, h, -fs * 2, fs) + yazi(w / 2, h + fs * 1.4, `${modul.ad}: ${f(w)} × ${f(geo.D)} × ${f(h)} · ${ayakAd}`, fs, 'baslik');
+      return `<svg class="cizim" viewBox="${f(-pay)} ${f(-h - fs * 3)} ${f(w + 2 * pay)} ${f(h + fs * 3 + pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    }
     if (geo.nesne) {
       const w = geo.W;
       const h = geo.H;
@@ -429,6 +465,23 @@
   function yanKesit(modul, geo) {
     if (!geo) return '';
     if (geo.lkose) return lKosePlan(modul, geo);
+    if (geo.masa) {
+      // Masa yan görünüşü: derinlik boyunca tabla, ayak ve kayıt
+      const m = geo.masa;
+      const D = geo.D, H = geo.H, t = geo.t, y0 = H - t;
+      const z1 = m.tas, z2 = D - m.tas;
+      const fs = Math.max(D, H) / 24;
+      const pay = fs * 4;
+      let s = '';
+      if (m.ayak === 'panel') { s += rect(z1, 0, z2, y0, 'govde'); }
+      else if (m.ayak === 'ahsap4' || m.ayak === 'metal4') { const c = m.ayak === 'ahsap4' ? 'panel' : 'kulp'; s += rect(z1, 0, z1 + m.k, y0, c) + rect(z2 - m.k, 0, z2, y0, c); if (m.kayit) s += rect(z1 + m.k, y0 - m.kayitH, z2 - m.k, y0, 'govde'); }
+      else if (m.ayak === 'metal_u') s += rect(z1, 0, z2, 25, 'kulp') + rect(z1, 0, z1 + 50, y0, 'kulp') + rect(z2 - 50, 0, z2, y0, 'kulp') + rect(z1, y0 - 25, z2, y0, 'kulp');
+      else if (m.ayak === 'x') s += `<path class="kulp" d="M${f(z1 + 30)},0 L${f(z2 - 30)},${f(-(y0 - 30))} M${f(z2 - 30)},0 L${f(z1 + 30)},${f(-(y0 - 30))}" stroke-width="40" fill="none"/>` + rect(z1 + 30, y0 - 30, z2 - 30, y0, 'kulp');
+      else if (m.ayak === 'merkez') { const r = Math.min(geo.W, D) * 0.28; s += rect(D / 2 - r, 0, D / 2 + r, 20, 'kulp') + rect(D / 2 - r * 0.22, 20, D / 2 + r * 0.22, y0, 'kulp'); }
+      s += rect(0, y0, D, H, geo.kullanim === 'govde' ? 'govde' : 'kapak');
+      s += olcuYatay(0, D, -fs * 2, fs) + olcuDikey(0, H, D + fs * 2, fs) + yazi(D / 2, H + fs * 1.4, 'Yan görünüş', fs, 'baslik');
+      return `<svg class="cizim" viewBox="${f(-pay)} ${f(-H - fs * 3)} ${f(D + 2 * pay)} ${f(H + fs * 3 + pay)}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    }
     if (geo.panel) return `<p class="not">${modul.ad}: tek parça panel, ${geo.t} mm.</p>`;
     const { D, H, Hc, hb, t, ta, Ds, tk } = geo;
     const fs = Math.max(D + tk, H) / 32;

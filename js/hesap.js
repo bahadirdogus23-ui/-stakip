@@ -24,6 +24,15 @@
   const camMi = (m) => !!m && (m.tur === 'Cam' || m.tur === 'Ayna');
 
   const SATIR_TIPLERI = { kapak: 'Kapak', cekmece: 'Çekmece', acik: 'Açık raf', nis: 'Cihaz nişi' };
+  /** Masa ayak tipleri. */
+  const MASA_AYAKLARI = {
+    panel: { ad: 'Yan panel ayak (tabla malzemesinden)' },
+    ahsap4: { ad: 'Ahşap 4 ayak (masif, kayıtlı)' },
+    metal4: { ad: 'Metal 4 ayak (çerçeveli)' },
+    metal_u: { ad: 'Metal U / köprü ayak' },
+    x: { ad: 'Metal X ayak' },
+    merkez: { ad: 'Merkez tek ayak (yuvarlak masa)' },
+  };
   /** Tezgah türleri (3B görünüş rengi ve dokusu). */
   const TEZGAH_TURLERI = {
     beyaz_mermer: { ad: 'Beyaz mermer görünüm (kuvars)', renk: '#ece9e3', doku: 'mermer' },
@@ -63,6 +72,7 @@
     baza: { ad: 'Baza bandı', aciklama: 'Dolapların altındaki süpürgelik; yerleşimde yer kaplamaz' },
     serbest: { ad: 'Serbest panel', aciklama: 'Herhangi bir düz parça' },
     duvar: { ad: 'Duvar kaplama paneli', aciklama: 'Duvara yaslanan dekor panel (TV arkası, yatak başı)' },
+    masa: { ad: 'Masa / sehpa', aciklama: 'Tabla ve ayaklar: yan panel, ahşap 4 ayak, metal 4 ayak, U, X ya da merkez ayak; isteğe bağlı kayıt ve bacak paneli' },
     lambri: { ad: 'Lambri', aciklama: 'Belirli aralıkla dizilen çıtalar; isteğe bağlı arka panel (keçe, MDF). Çıta malzemesi "Malzeme" seçiminden, arka panel "Arka panel" seçiminden' },
     bosluk: { ad: 'Boşluk', aciklama: 'Buzdolabı, bulaşık makinesi ya da diz boşluğu için yer tutar; parça çıkmaz' },
     nesne: { ad: 'Eşya / dekor', aciklama: 'Beyaz eşya, elektronik, küçük ev aleti ya da dekor: yalnızca 3B ve çizimde görünür, parça ve maliyet çıkmaz, başka modülleri itmez. Duvarda konum ve yükseklikle yerleştirin' },
@@ -143,6 +153,7 @@
     kutu: { grup: 'Dekor', ad: 'Saklama kutusu', W: 300, H: 200, D: 250, renk: '#ddd6c8' },
     mum: { grup: 'Dekor', ad: 'Mumluk', W: 80, H: 140, D: 80, renk: '#efe7d6' },
     pampas: { grup: 'Dekor', ad: 'Vazoda pampas otu', W: 300, H: 700, D: 300, renk: '#e2d2b0' },
+    sandalye: { grup: 'Dekor', ad: 'Sandalye', W: 450, H: 850, D: 520, renk: '#cfc4b3' },
     minder: { grup: 'Dekor', ad: 'Oturak minderi', W: 800, H: 90, D: 380, renk: '#d8ccb8' },
     tepsi: { grup: 'Dekor', ad: 'Dekor tepsi', W: 350, H: 40, D: 220, renk: '#c9a34a' },
     aplik: { grup: 'Aydınlatma', ad: 'Duvar apliği (LED çubuk)', W: 60, H: 600, D: 90, mt: 1400, renk: '#2b2b2d' },
@@ -361,6 +372,13 @@
     kulp_gomme: { ad: 'Gömme kulp', birim: 'adet', fiyat: 60 },
     gola: { ad: 'Gola profil', birim: 'm', fiyat: 280 },
     ayak_plastik: { ad: 'Plastik ayarlı ayak', birim: 'adet', fiyat: 15 },
+    masa_ayak_ahsap: { ad: 'Masif ahşap masa ayağı', birim: 'adet', fiyat: 350 },
+    masa_ayak_metal4: { ad: 'Metal masa ayağı takımı (4 ayak + çerçeve)', birim: 'takım', fiyat: 2400 },
+    masa_ayak_u: { ad: 'Metal U (köprü) masa ayağı', birim: 'takım', fiyat: 1900 },
+    masa_ayak_x: { ad: 'Metal X masa ayağı', birim: 'takım', fiyat: 2100 },
+    masa_ayak_merkez: { ad: 'Merkez (tek) masa ayağı', birim: 'adet', fiyat: 2200 },
+    masa_gergi: { ad: 'Masa köşe gergi plakası', birim: 'adet', fiyat: 25 },
+    masa_keceli_ayak: { ad: 'Keçeli / ayarlı ayak pabucu', birim: 'adet', fiyat: 10 },
     ayak_metal: { ad: 'Metal ayarlı ayak', birim: 'adet', fiyat: 60 },
     tekerlek: { ad: 'Tekerlek (frenli)', birim: 'adet', fiyat: 45 },
     raf_pimi: { ad: 'Raf pimi', birim: 'adet', fiyat: 1 },
@@ -573,7 +591,14 @@
     dolgu: P('Panel', 'Dolgu Paneli', 'Duvar–dolap arası', 'dolgu', 720, 50, { montajYuksekligi: 1450 }),
     bulasik_panel: P('Panel', 'Bulaşık Makinesi Kapağı', 'Ankastre makine için', 'bulasik', 715, 597, { montajYuksekligi: 100 }),
     duvar_rafi: P('Panel', 'Duvar Rafı', 'Gizli taşıyıcılı', 'raf', 800, 250, { panelMalzeme: 'govde', bantU: 1, bantK: 2, montajYuksekligi: 1500 }),
-    tabla: P('Panel', 'Masa / Çalışma Tablası', 'Düz tabla', 'tabla', 1200, 600, { panelMalzeme: 'govde', montajYuksekligi: 730 }),
+    tabla: P('Panel', 'Tabla (yalnız üst plaka)', 'Ayaksız düz tabla: dolapların ya da ayak ünitesinin üstüne', 'tabla', 1200, 600, { panelMalzeme: 'govde', montajYuksekligi: 730 }),
+    masa_calisma: P('Masa', 'Çalışma Masası', 'Yan panel ayaklı, arkada bacak paneli', 'masa', 1200, 600, { panelMalzeme: 'govde', masaH: 750, masaAyak: 'panel', masaTasma: 0, masaArka: true }),
+    masa_metal: P('Masa', 'Metal Ayaklı Çalışma Masası', 'Çerçeveli metal 4 ayak, 30 mm taşma', 'masa', 1400, 700, { panelMalzeme: 'govde', masaH: 750, masaAyak: 'metal4', masaTasma: 30, masaAyakKesit: 40 }),
+    masa_yemek: P('Masa', 'Yemek Masası (ahşap ayak)', '4 masif ayak, kayıtlı, 6 kişilik', 'masa', 1600, 900, { panelMalzeme: 'govde', masaH: 750, masaAyak: 'ahsap4', masaTasma: 40, masaAyakKesit: 70, masaKayit: true, malzeme: { govde: 'sl18m' } }),
+    masa_yuvarlak: P('Masa', 'Yuvarlak Yemek Masası', 'Çap 1000, merkez ayak', 'masa', 1000, 1000, { panelMalzeme: 'govde', masaH: 750, masaAyak: 'merkez', sekil: 'daire' }),
+    masa_oval: P('Masa', 'Oval Yemek Masası', '1800 × 950 elips, U ayak', 'masa', 1800, 950, { panelMalzeme: 'govde', masaH: 750, masaAyak: 'metal_u', masaTasma: 150, masaKayit: true, sekil: 'oval' }),
+    sehpa: P('Masa', 'Orta Sehpa', 'Alçak, metal ayaklı', 'masa', 1000, 600, { panelMalzeme: 'govde', masaH: 420, masaAyak: 'metal4', masaTasma: 20, masaAyakKesit: 30 }),
+    masa_bar: P('Masa', 'Bar Masası', 'Yüksek, X ayak', 'masa', 1200, 500, { panelMalzeme: 'govde', masaH: 1050, masaAyak: 'x', masaTasma: 60 }),
     duvar_paneli: P('Panel', 'Duvar Kaplama Paneli', 'TV arkası, yatak başı', 'duvar', 1200, 1000, { montajYuksekligi: 700, bantU: 2, bantK: 2 }),
     tabla_oval: P('Panel', 'Oval Masa Tablası', 'Kavisli: tam elips, CNC kesim', 'tabla', 1800, 900, { panelMalzeme: 'govde', montajYuksekligi: 730, sekil: 'oval' }),
     tabla_yuvarlak: P('Panel', 'Yuvarlak Masa Tablası', 'Kavisli: daire, çap 1000', 'tabla', 1000, 1000, { panelMalzeme: 'govde', montajYuksekligi: 730, sekil: 'daire' }),
@@ -596,7 +621,7 @@
   for (const [id, n] of Object.entries(NESNELER)) {
     PRESETLER['nesne_' + id] = P(n.grup, n.ad, `${n.W}×${n.H}×${n.D} mm · parça çıkmaz`, 'nesne', n.H, n.W, { nesneTuru: id, nesneD: n.D, montajYuksekligi: n.mt || 0, konum: 0, bantU: 0, bantK: 0 });
   }
-  const KATALOG_GRUPLARI = ['Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Lambri', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Mutfak eşyası', 'Giyim', 'Dekor', 'Aydınlatma'];
+  const KATALOG_GRUPLARI = ['Masa', 'Mutfak alt', 'Mutfak üst', 'Mutfak boy', 'Yatak odası', 'Banyo', 'Salon', 'Antre', 'Ofis', 'Panel', 'Lambri', 'Beyaz eşya', 'Elektronik', 'Küçük ev aletleri', 'Mutfak eşyası', 'Giyim', 'Dekor', 'Aydınlatma'];
 
   const kopya = (o) => JSON.parse(JSON.stringify(o));
   const r1 = (x) => Math.round(x * 10) / 10;
@@ -790,6 +815,14 @@
       nesneD: sayiAl(x.nesneD, null, 1, 3000),
       duvarMesafe: sayiAl(x.duvarMesafe, 0, 0, 3000), // nesnenin duvardan uzaklığı (ör. raf içinde öne alma)
       panelMalzeme: secenekAl(x.panelMalzeme, ['kapak', 'govde', 'ayna'], 'kapak'),
+      // Masa: yükseklik, ayak tipi, tabla taşması (ayaklardan / panellerden), ayak kesiti, kayıt (etek), bacak paneli
+      masaH: sayiAl(x.masaH, 750, 200, 1300),
+      masaAyak: secenekAl(x.masaAyak, Object.keys(MASA_AYAKLARI), 'panel'),
+      masaTasma: sayiAl(x.masaTasma, 30, 0, 300),
+      masaAyakKesit: sayiAl(x.masaAyakKesit, 60, 25, 150),
+      masaKayit: !!x.masaKayit,
+      masaKayitH: sayiAl(x.masaKayitH, 80, 40, 200),
+      masaArka: !!x.masaArka,
       boy: sayiAl(x.boy, 720, 0, 10000),
       en: sayiAl(x.en, 600, 0, 10000),
       bantU: Math.floor(sayiAl(x.bantU, 0, 0, 2)),
@@ -2194,6 +2227,7 @@
       return bos;
     }
     if (tur === 'lambri') return lambriHesapla(modul, T, M, HS, kul, t, boy, en);
+    if (tur === 'masa') return masaHesapla(modul, T, M, HS, kul, t, boy, en);
     const sekil = modul.sekil && modul.sekil !== 'dikdortgen' ? modul.sekil : null;
     let sg = null;
     if (sekil) {
@@ -2251,6 +2285,75 @@
     return {
       parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, malzemeler: M, hirdavatSecimi: HS,
       geo: { panel: true, tur, boy: b, en: e, girilenBoy: boy, girilenEn: en, t, W, D, H, bant: { u: modul.bantU, k: modul.bantK }, kullanim: kul, yerlesimDisi: tur === 'baza', sekil: sg ? Object.assign({ tur: sekil }, sg) : null, ledArka: !!modul.ledArka && (tur === 'duvar' || tur === 'serbest' || tur === 'dolgu') },
+    };
+  }
+
+  /**
+   * Masa: boy = tabla uzunluğu, en = tabla derinliği, masaH = toplam yükseklik (zeminden tabla üstüne).
+   * Yan panel ayaklıda yanlar tabla malzemesinden, isteğe bağlı bacak paneli (arkada) ve ön kayıt;
+   * ahşap 4 ayakta ayaklar hazır masif ayak, kayıtlar (etek) tabla malzemesinden; metal ayaklar hazır takım.
+   */
+  function masaHesapla(modul, T, M, HS, kul, t, L, Dp) {
+    const { ekle, hEkle, uyarilar } = T;
+    const H = say(modul.masaH, 750);
+    const ayak = MASA_AYAKLARI[modul.masaAyak] ? modul.masaAyak : 'panel';
+    const tas = Math.min(say(modul.masaTasma, 0), Math.min(L, Dp) / 4);
+    let k = say(modul.masaAyakKesit, 60);
+    const hAlt = H - t; // tablanın altı
+    const kayit = !!modul.masaKayit || ayak === 'ahsap4';
+    const kayitH = Math.min(say(modul.masaKayitH, 80), hAlt - 200);
+    const arka = !!modul.masaArka && ayak === 'panel';
+    const arkaH = Math.round(Math.min(400, hAlt * 0.55));
+    if (hAlt < 150) { uyarilar.push('Masa yüksekliği tabla kalınlığına göre çok az.'); }
+    // Tabla (şekilli olabilir)
+    const sekil = modul.sekil && modul.sekil !== 'dikdortgen' ? modul.sekil : null;
+    let sg = null;
+    if (sekil) {
+      sg = sekilGeometrisi(sekil, Dp, L, say(modul.sekilParam, 0), modul.koseSayisi);
+      ekle(`Tabla – ${SEKILLER[sekil].kisa}`, kul, sg.kutuH, sg.kutuW, 1, { u: 0, k: 0 }, {
+        sekil: { tur: sekil, alan: sg.alan, cevre: sg.cevre, egri: sg.egri, duz: sg.duz, cnc: sg.cnc }, bantUzunluk: sg.cevre,
+        not: `Şekilli kesim (CNC/şablon): ${sg.bilgi.join(', ').replace(/(\d)\.(\d)/g, '$1,$2')}`,
+      });
+      if (ayak === 'panel' || ayak === 'ahsap4') uyarilar.push(`Şekilli (${SEKILLER[sekil].kisa}) tablada yan panel / ahşap ayak köşeleri tablanın dışına taşabilir; merkez, U ya da X ayak önerilir.`);
+    } else ekle('Tabla', kul, L, Dp, 1, { u: 2, k: 2 });
+    const Lb = sg ? sg.kutuH : L;
+    const Db = sg ? sg.kutuW : Dp;
+    const ic = Lb - 2 * tas; // ayakların dış ölçüsü (boyda)
+    const icD = Db - 2 * tas;
+    // Küçük tablada ayaklar birbirine girmesin: kesit ve U/X ayak içeri kaçıklığı sınırlanır
+    const k0 = k;
+    k = Math.max(10, Math.min(k, (ic - 40) / 2, (icD - 40) / 2));
+    const uOff = Math.max(0, Math.min(80, (ic - 140) / 2));
+    if (k < k0 - 0.5 || ((ayak === 'metal_u' || ayak === 'x') && ic < 300) || (ayak === 'panel' && ic < 2 * t + 150)) uyarilar.push(`Masa ölçüsü (${r1(Lb)} × ${r1(Db)}) bu ayak tipi için çok küçük; ayaklar sığmıyor.`);
+    if (ayak === 'panel') {
+      ekle('Yan ayak', kul, hAlt, icD, 2, { u: 1, k: 1 }, { not: 'Ön kenar ve alt kenar bantlı; tablaya minifix ile bağlanır, altına ayak pabucu' });
+      hEkle('minifix', 'Minifix + kavela', 4);
+      hEkle('masa_keceli_ayak', 'Keçeli / ayarlı ayak pabucu', 4);
+      if (arka) { ekle('Bacak paneli (arka)', kul, ic - 2 * t, arkaH, 1, { u: 1, k: 0 }, { not: 'Arkadan 40 mm içeride, yan ayaklara ve tablaya bağlanır' }); hEkle('minifix', 'Minifix + kavela', 4); }
+      if (kayit) { ekle('Ön kayıt', kul, ic - 2 * t, kayitH, 1, { u: 1, k: 0 }, { not: 'Tablanın altında, önden geride; sehimi önler' }); hEkle('minifix', 'Minifix + kavela', 2); }
+      if (!arka && !kayit && Lb > 1000) uyarilar.push('Yan panel ayaklı masada bacak paneli ya da kayıt olmadan masa yana sallanır; "Bacak paneli" ya da "Kayıt" açın.');
+    } else if (ayak === 'ahsap4') {
+      hEkle('masa_ayak_ahsap', `Masif ahşap ayak ${r1(k)}×${r1(k)}×${r1(hAlt)}`, 4);
+      ekle('Kayıt (uzun)', kul, ic - 2 * k, kayitH, 2, { u: 1, k: 0 }, { not: `Ayakların arasında, dış yüzden 15 mm içeride; uçlar kavela ile ayağa` });
+      ekle('Kayıt (kısa)', kul, icD - 2 * k, kayitH, 2, { u: 1, k: 0 });
+      hEkle('kavela', 'Kavela 8×35', 16);
+      hEkle('masa_gergi', 'Masa köşe gergi plakası', 4);
+      hEkle('sunta_vidasi', 'Sunta vidası 3,5×16', 16);
+    } else {
+      const ad = { metal4: 'Metal masa ayağı takımı (4 ayak + çerçeve)', metal_u: 'Metal U (köprü) masa ayağı', x: 'Metal X masa ayağı', merkez: 'Merkez (tek) masa ayağı' }[ayak];
+      hEkle({ metal4: 'masa_ayak_metal4', metal_u: 'masa_ayak_u', x: 'masa_ayak_x', merkez: 'masa_ayak_merkez' }[ayak], `${ad} – yükseklik ${r1(hAlt)}`, 1, ayak === 'merkez' ? 'adet' : 'takım');
+      hEkle('sunta_vidasi', 'Sunta vidası 4×25 (ayak bağlantı)', ayak === 'merkez' ? 8 : 16);
+      if (kayit) { ekle('Kayıt (uzun)', kul, ic - 2 * k, kayitH, 2, { u: 1, k: 0 }); ekle('Kayıt (kısa)', kul, icD - 2 * k, kayitH, 2, { u: 1, k: 0 }); hEkle('masa_gergi', 'Masa köşe gergi plakası', 4); }
+      if (ayak === 'merkez' && Math.max(Lb, Db) > 1200) uyarilar.push(`Merkez ayakta tabla ${r1(Math.max(Lb, Db))} mm; 1200 mm üstünde devrilme riski, U ya da 4 ayak önerilir.`);
+    }
+    if (Lb > 1600 && t < 25 && !kayit && ayak !== 'panel') uyarilar.push(`${r1(Lb)} mm tablada ${t} mm kalınlıkla kayıtsız masa sehim yapabilir; kayıt ekleyin ya da kalın tabla seçin.`);
+    return {
+      parcalar: T.parcalar, hirdavat: T.hirdavat, uyarilar, malzemeler: M, hirdavatSecimi: HS,
+      geo: {
+        panel: true, tur: 'masa', boy: Lb, en: Db, girilenBoy: L, girilenEn: Dp, t, W: Lb, D: Db, H, kullanim: kul, bant: { u: 2, k: 2 },
+        sekil: sg ? Object.assign({ tur: sekil }, sg) : null,
+        masa: { ayak, tas, k, uOff, kayit, kayitH, arka, arkaH, hAlt },
+      },
     };
   }
 
@@ -2329,7 +2432,7 @@
     const hacimler = [];
     const cakisan = (k) => hacimler.find((o) => k.x1 < o.x2 - 0.5 && k.x2 > o.x1 + 0.5 && k.z1 < o.z2 - 0.5 && k.z2 > o.z1 + 0.5 && k.y1 < o.y2 - 1 && k.y2 > o.y1 + 1);
     // Ön paneller (dolgu, bulaşık kapağı, serbest) gövdelerin ön düzleminde durur
-    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk', 'duvar', 'nesne', 'lambri'].includes(g.tur);
+    const onPanel = (g) => g.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'bosluk', 'duvar', 'nesne', 'lambri', 'masa'].includes(g.tur);
     const govdeD = {};
     for (const sr of ['zemin', 'duvar']) govdeD[sr] = Math.max(0, ...proje.moduller.filter((m) => gecerli(m) && !sonuclar[m.id].geo.panel && siraOf(m) === sr).map((m) => sonuclar[m.id].geo.D)) || (sr === 'zemin' ? 560 : 320);
     // Düz yerleşimdeki L köşe dolap B kolu kadar odaya taşar
@@ -2661,6 +2764,7 @@
     mentesheKonumlari,
     KAPAK_TURLERI,
     KAPAK_DESENLERI,
+    MASA_AYAKLARI,
     TEZGAH_TURLERI,
     KULP_RENKLERI,
     ACILIMLAR,

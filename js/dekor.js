@@ -135,6 +135,17 @@
         } else if (g.tur === 'raf' && R.ihtimal(Y.yuzey)) {
           // Duvar rafı üstü
           yuzeyDoldur(R, y, RAF_ESYA.salon, 0, g.W, y.montaj + g.H, 280, g.D - 10, 5, Y.adet);
+        } else if (g.tur === 'masa') {
+          // Masa: üstüne eşya, önüne sandalye(ler) yarısı masanın altına girmiş
+          const ust = y.montaj + g.H;
+          const yemek = g.W >= 1400 || /yemek|yuvarlak|oval/i.test(y.modul.ad);
+          const masaListe = g.H < 550 ? ['vazo', 'kitap_yatay', 'tepsi', 'mum', 'kase'] : yemek ? ['vazo', 'kase', 'mum', 'tepsi'] : ['laptop', 'lamba', 'kupa', 'saksi', 'kitap_yatay'];
+          yuzeyDoldur(R, y, masaListe, 60, g.W - 60, ust, 450, Math.min(g.D - 80, 320), 40, Y.adet);
+          if (g.H >= 650 && g.H <= 800) {
+            const n = yemek ? Math.max(1, Math.min(3, Math.floor((g.W - 2 * (g.masa ? g.masa.tas : 0) - 200) / 550))) : 1;
+            const ara = g.W / n;
+            for (let i = 0; i < n; i++) ekle('sandalye', y, ara * i + ara / 2 - 225, 450, 0, 850, 520, Math.max(0, g.D - 220), 'Sandalye');
+          }
         } else if (g.tur === 'tabla') {
           const ust = y.montaj + g.H;
           const masa = /makyaj/i.test(y.modul.ad) ? ['lamba', 'biblo', 'mum', 'cerceve'] : ['laptop', 'monitor', 'lamba', 'kupa', 'saksi', 'kitap_yatay'];

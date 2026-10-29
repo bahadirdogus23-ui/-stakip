@@ -714,6 +714,17 @@
         }
         break;
       }
+      case 'sandalye': {
+        // Döşemeli oturak, ahşap ayaklar, kavisli sırt (masaya bakar: sırt öne, z = D tarafında)
+        const ot = Math.min(460, H * 0.54);
+        const ah = '#7a5a3e';
+        for (const [x, z] of [[30, 40], [W - 30, 40], [30, D - 40], [W - 30, D - 40]]) don(x, z, [[0, 0.65], [ot - 30, 1]], 16, 16, ah);
+        ykYan(10, W - 10, ot - 40, ot, 15, D - 15, koyu(r, 0.85), 15);
+        ykYan(14, W - 14, ot, ot + 45, 20, D - 25, r, 22);
+        for (const x of [40, W - 52]) k(x, x + 12, ot, H - 60, D - 40, D - 28, ah);
+        ykOn(20, W - 20, H * 0.68, H, D - 50, D - 18, r, 60, null, [20, 20, 90, 90]);
+        break;
+      }
       case 'minder': {
         ykYan(0, W, 0, H, 0, D, r, H * 0.42);
         k(6, W - 6, H * 0.48, H * 0.52, D, D + 0.6, koyu(r, 0.9));
@@ -1078,9 +1089,96 @@
     }
     return P;
   }
+  /**
+   * Masa: x boyunca tabla uzunluğu (W), z derinlik (0 arka), y zeminden. Tabla gövde/kapak türünde,
+   * panel ayak ve kayıtlar tabla malzemesinden; metal ayaklar koyu, masif ayaklar ahşap.
+   */
+  function masaParcalari(g, tur) {
+    const P = [];
+    const { W, D, H, t } = g;
+    const m = g.masa;
+    const y0 = H - t;
+    const METAL = { renk: '#2b2b2d' };
+    const AHSAP = { renk: '#b8875a', doku: 'ahsap' };
+    // Tabla
+    if (g.sekil && g.sekil.yol) {
+      const pts = yolNoktalari(g.sekil.yol);
+      P.push(prizma(pts, (u, v, w) => [v, w, u], y0, H, tur));
+    } else P.push(kutu(0, W, y0, H, 0, D, tur));
+    const a = m.tas;
+    const k = m.k;
+    const x1 = a, x2 = W - a, z1 = a, z2 = D - a;
+    const kayitlar = (ic) => {
+      // Ayakların arasında, dış yüzden 15 mm içeride
+      const e = 15;
+      const yk = y0 - m.kayitH;
+      P.push(kutu(x1 + ic, x2 - ic, yk, y0, z1 + e, z1 + e + t, tur));
+      P.push(kutu(x1 + ic, x2 - ic, yk, y0, z2 - e - t, z2 - e, tur));
+      P.push(kutu(x1 + e, x1 + e + t, yk, y0, z1 + ic, z2 - ic, tur));
+      P.push(kutu(x2 - e - t, x2 - e, yk, y0, z1 + ic, z2 - ic, tur));
+    };
+    if (m.ayak === 'panel') {
+      P.push(kutu(x1, x1 + t, 0, y0, z1, z2, tur));
+      P.push(kutu(x2 - t, x2, 0, y0, z1, z2, tur));
+      if (m.arka) P.push(kutu(x1 + t, x2 - t, y0 - m.arkaH, y0, z1 + 40, z1 + 40 + t, tur));
+      if (m.kayit) P.push(kutu(x1 + t, x2 - t, y0 - m.kayitH, y0, z2 - 60 - t, z2 - 60, tur));
+    } else if (m.ayak === 'ahsap4' || m.ayak === 'metal4') {
+      const ek = m.ayak === 'ahsap4' ? AHSAP : METAL;
+      for (const [x, z] of [[x1, z1], [x2 - k, z1], [x1, z2 - k], [x2 - k, z2 - k]]) {
+        if (m.ayak === 'ahsap4') {
+          // Aşağı doğru hafif incelen masif ayak
+          const c = [x + k / 2, z + k / 2];
+          const kesit = (s) => [[c[0] - s / 2, c[1] - s / 2], [c[0] + s / 2, c[1] - s / 2], [c[0] + s / 2, c[1] + s / 2], [c[0] - s / 2, c[1] + s / 2]];
+          const ust = kesit(k);
+          const alt = kesit(k * 0.7);
+          const v = alt.map(([u, w]) => [u, 0, w]).concat(ust.map(([u, w]) => [u, y0, w]));
+          const f = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]];
+          P.push(Object.assign(kutu(x, x + k, 0, y0, z, z + k, 'ayak'), { sk: { v, f } }, ek));
+        } else P.push(kutu(x, x + k, 0, y0, z, z + k, 'ayak', ek));
+      }
+      if (m.ayak === 'metal4' && !m.kayit) {
+        // Takımın ince metal çerçevesi
+        const yk = y0 - 40;
+        P.push(kutu(x1 + k, x2 - k, yk, y0, z1, z1 + 20, 'ayak', METAL));
+        P.push(kutu(x1 + k, x2 - k, yk, y0, z2 - 20, z2, 'ayak', METAL));
+        P.push(kutu(x1, x1 + 20, yk, y0, z1 + k, z2 - k, 'ayak', METAL));
+        P.push(kutu(x2 - 20, x2, yk, y0, z1 + k, z2 - k, 'ayak', METAL));
+      }
+      if (m.kayit) kayitlar(k);
+    } else if (m.ayak === 'metal_u') {
+      const p = 50;
+      const o = m.uOff != null ? m.uOff : 80;
+      for (const x of x2 - x1 >= 2 * (o + p) + 1 ? [x1 + o, x2 - o - p] : [(x1 + x2) / 2 - p / 2]) {
+        P.push(kutu(x, x + p, 0, 25, z1, z2, 'ayak', METAL));
+        P.push(kutu(x, x + p, y0 - 25, y0, z1, z2, 'ayak', METAL));
+        P.push(kutu(x, x + p, 25, y0 - 25, z1, z1 + p, 'ayak', METAL));
+        P.push(kutu(x, x + p, 25, y0 - 25, z2 - p, z2, 'ayak', METAL));
+      }
+      if (m.kayit && x2 - x1 - 2 * (o + p) > 20) P.push(kutu(x1 + o + p, x2 - o - p, y0 - 60, y0, D / 2 - 20, D / 2 + 20, 'ayak', METAL));
+    } else if (m.ayak === 'x') {
+      const p = 45;
+      const o = Math.min(60, m.uOff != null ? m.uOff : 60);
+      const iki = x2 - x1 >= 2 * (o + p) + 1;
+      for (const x of iki ? [x1 + o, x2 - o - p] : [(x1 + x2) / 2 - p / 2]) {
+        // İki çapraz çubuk (yan görünüşte X) ve üst lama
+        const zz1 = z1 + 30;
+        const zz2 = z2 - 30;
+        const d = 40;
+        P.push(prizma([[zz1, 0], [zz1 + d, 0], [zz2, y0 - 30], [zz2 - d, y0 - 30]], (u, v, w) => [w, v, u], x, x + p / 2, 'ayak', METAL));
+        P.push(prizma([[zz2 - d, 0], [zz2, 0], [zz1 + d, y0 - 30], [zz1, y0 - 30]], (u, v, w) => [w, v, u], x + p / 2, x + p, 'ayak', METAL));
+        P.push(kutu(x, x + p, y0 - 30, y0, zz1, zz2, 'ayak', METAL));
+      }
+      if (iki && x2 - x1 - 2 * (o + p) > 20) P.push(kutu(x1 + o + p, x2 - o - p, y0 - 50, y0 - 20, D / 2 - 15, D / 2 + 15, 'ayak', METAL));
+    } else if (m.ayak === 'merkez') {
+      const r = Math.min(W, D) * 0.28;
+      P.push(Object.assign(donel(W / 2, D / 2, [[0, 1], [18, 1], [30, 0.35], [y0 - 40, 0.22], [y0 - 20, 0.6], [y0, 0.6]], 'ayak', null, r, r), METAL));
+    }
+    return P;
+  }
   function panelParcalariHam(g, onZ) {
     const tur = g.kullanim === 'govde' ? 'govde' : g.kullanim === 'ayna' ? 'ayna' : 'kapak';
     if (g.nesne) return nesneParcalari(g);
+    if (g.masa) return masaParcalari(g, tur);
     if (g.lambri) {
       // Arka panel duvarda, çıtalar önünde eşit aralıklı
       const L = g.lambri;
@@ -1120,7 +1218,7 @@
     for (const y of yer.yerler) {
       let yerel;
       if (y.geo && y.geo.nesne) yerel = nesneParcalari(y.geo);
-      else if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'lambri', 'duvar'].includes(y.geo.tur)) {
+      else if (y.geo && y.geo.panel && !['yan_kapama', 'raf', 'tabla', 'baza', 'lambri', 'duvar', 'masa'].includes(y.geo.tur)) {
         // Ön panel: aynı duvar ve sıradaki en yakın gövdenin ön yüzüne hizalanır
         const komsu = yer.yerler.filter((x) => x !== y && x.geo && !x.geo.panel && x.sira === y.sira && (x.duvar === y.duvar || x.duvar === 'kose'))
           .sort((a, b) => Math.abs(a.bas - y.bas) - Math.abs(b.bas - y.bas))[0];
