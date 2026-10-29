@@ -2675,6 +2675,17 @@
   $('#btnProjeler').addEventListener('click', projelerAc);
   $('#projelerKapat').addEventListener('click', () => $('#projelerPencere').close());
   $('#projeAra').addEventListener('input', () => projelerCiz());
+  const birlestirSecili = new Set();
+  /** Kaynak projeyi açık projeye ekler (önce güvenlik kopyası; geri alınabilir). */
+  function birlestirUygula(kaynak, kaynakAd) {
+    guvenlikKopyasi(`"${kaynakAd}" birleştirilmeden önce`);
+    const { proje: yeni, rapor } = Hesap.projeBirlestir(proje, kaynak);
+    proje = yeni;
+    seciliId = proje.moduller.length ? proje.moduller[proje.moduller.length - 1].id : seciliId;
+    tumunuCiz(true);
+    ayarFormCiz();
+    bildir(`"${esc(kaynakAd)}" birleştirildi: ${rapor.modul} modül eklendi${rapor.malzeme ? `, ${rapor.malzeme} malzeme eklendi` : ''}${rapor.adDegisen ? `, ${rapor.adDegisen} modülün adı çakıştığı için numaralandı` : ''}. Kaynak proje silinmedi.`, true);
+  }
   async function projelerCiz() {
     if (typeof Depo === 'undefined' || !guv.hazir) {
       $('#projeListesi').innerHTML = '<li>Arşiv kullanılamıyor (tarayıcı depolamaya izin vermiyor). "Dosyaya kaydet" ile yedek alın.</li>';
@@ -2703,8 +2714,9 @@
     const L = tum.filter((p) => !p.silindi && (!ara || String(p.ad).toLocaleLowerCase('tr').includes(ara)));
     $('#projeSayisi').textContent = `(${tum.filter((p) => !p.silindi).length})`;
     $('#projeListesi').innerHTML = L.map((p) => `<li data-pr="${esc(p.id)}" class="${p.id === proje.id ? 'aktif' : ''}">
+      <input type="checkbox" class="pr-sec" aria-label="Birleştirmek için seç"${birlestirSecili.has(p.id) ? ' checked' : ''}>
       <span class="pr-ad">${esc(p.ad)}${p.id === proje.id ? ' <b>(açık)</b>' : ''}<small>${p.modulSayisi} modül · ${tarihYaz(p.guncel)}</small></span>
-      ${p.id === proje.id ? '' : '<button data-pi="ac">Aç</button>'}
+      ${p.id === proje.id ? '' : '<button data-pi="ac">Aç</button><button data-pi="birlestir" class="ikincil" title="Bu projenin modüllerini açık projeye ekle">⊕</button>'}
       <button data-pi="kopya" class="ikincil" title="Kopyasını yeni proje olarak aç">⧉</button>
       <button data-pi="indir" class="ikincil" title="Proje dosyası indir">⬇</button>
       ${p.id === proje.id ? '' : '<button data-pi="cop" class="ikincil" title="Çöp kutusuna taşı (geri alınabilir)">🗑</button>'}
@@ -2735,6 +2747,10 @@
         if (!k) return;
         const islem = b.dataset.pi;
         if (islem === 'ac') { await projeyeGec(Hesap.projeyiNormallestir(k.proje)); bildir(`"${esc(k.ad)}" açıldı.`); }
+        else if (islem === 'birlestir') {
+          if (!confirm(`"${k.ad}" projesinin ${k.modulSayisi} modülü açık projeye ("${proje.ad}") eklensin mi? Kaynak proje olduğu gibi kalır.`)) return;
+          birlestirUygula(k.proje, k.ad);
+        }
         else if (islem === 'kopya') {
           const p = Hesap.projeyiNormallestir(Object.assign({}, k.proje, { id: undefined, ad: `${k.ad} (kopya)`.slice(0, 80), olusturma: undefined }));
           await projeyeGec(p);
@@ -2763,6 +2779,18 @@
           await projeyeGec(Hesap.projeyiNormallestir(Object.assign({}, p, { id: undefined, ad: `${p.ad} (${Depo.tarihAd(s.zaman)})`.slice(0, 80), olusturma: undefined })));
           bildir('Sürüm ayrı proje olarak açıldı.');
         }
+        return;
+      }
+      if (b.id === 'btnBirlestirYeni') {
+        const idler = [...birlestirSecili];
+        if (idler.length < 2) { bildir('Birleştirmek için en az iki proje işaretleyin.'); return; }
+        const kayitlar = (await Promise.all(idler.map((id) => Depo.projeAl(id)))).filter(Boolean);
+        let y = Hesap.projeyiNormallestir(Object.assign(JSON.parse(JSON.stringify(kayitlar[0].proje)), { id: undefined, olusturma: undefined }));
+        for (const k of kayitlar.slice(1)) y = Hesap.projeBirlestir(y, k.proje).proje;
+        y.ad = `Birleşik: ${kayitlar.map((k) => k.ad).join(' + ')}`.slice(0, 80);
+        birlestirSecili.clear();
+        await projeyeGec(y);
+        bildir(`${kayitlar.length} proje yeni projede birleştirildi (${y.moduller.length} modül). Kaynak projeler duruyor.`);
         return;
       }
       if (b.id === 'btnKlasorSec') {
@@ -2795,6 +2823,26 @@
     } catch (err) {
       if (err && err.name === 'AbortError') return; // klasör seçimi iptal
       bildir(`İşlem yapılamadı: ${esc(err && err.message ? err.message : String(err))}`);
+    }
+  });
+  $('#projelerPencere').addEventListener('change', (e) => {
+    if (!e.target.matches('.pr-sec')) return;
+    const id = e.target.closest('li').dataset.pr;
+    if (e.target.checked) birlestirSecili.add(id); else birlestirSecili.delete(id);
+    $('#btnBirlestirYeni').disabled = birlestirSecili.size < 2;
+    $('#btnBirlestirYeni').textContent = `⊕ Seçilenleri birleştir${birlestirSecili.size ? ` (${birlestirSecili.size})` : ''}`;
+  });
+  $('#birlestirDosya').addEventListener('change', async (e) => {
+    const dosya = e.target.files[0];
+    e.target.value = '';
+    if (!dosya) return;
+    try {
+      const c = Depo.icerikCoz(JSON.parse(await dosya.text()));
+      if (!c || !c.projeler.length) throw new Error('biçim');
+      for (const p of c.projeler) birlestirUygula(p, p.ad || dosya.name);
+      if ($('#projelerPencere').open) projelerCiz();
+    } catch (err) {
+      alert('Dosya okunamadı: geçerli bir Mobilya Ölçü proje ya da yedek dosyası değil.');
     }
   });
   $('#yedekAc').addEventListener('change', async (e) => {

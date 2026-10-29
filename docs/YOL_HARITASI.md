@@ -96,6 +96,11 @@ Atölye sekmesinde ve "Kurulum şeması PDF" çıktısında.
 - **Malzemeler**: seçimler kullanıma göre süzülür ve türe göre gruplanır, renk karesiyle; modül formunda yalnız o
   modülde kullanılan malzeme alanları; kütüphane türe göre gruplu, aranabilir, "yalnız kullanılanlar".
 
+- **Proje birleştirme**: Projelerim'de ⊕ ile bir projenin modülleri açık projeye eklenir; işaretlenen projeler
+  yeni bir projede birleştirilir; "Dosyadan birleştir" ile dosyadaki proje eklenir. Modüller yeni kimlik ve
+  çakışmayan adla gelir, eksik malzemeler eklenir, kaynak projenin varsayılan malzeme / hırdavatı modüle yazılır
+  (kesim ve görünüş değişmez), sabit konumlular mevcut dizinin sonuna kayar. Kaynaklar silinmez; öncesinde sürüm kopyası.
+
 ## Sıradaki adaylar
 
 - Kurulum şemasında adım başına vida/minifix yerlerinin büyütülmüş detay çizimi.

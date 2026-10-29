@@ -2644,6 +2644,74 @@
     return (say(m.genislik, 0) * say(m.yukseklik, 0)) / 1e6;
   }
 
+  /**
+   * Proje birleştirme: kaynak projenin modülleri hedefe eklenir (yeni kimlik, çakışmayan ad). Hedefte
+   * olmayan malzemeler eklenir; kaynak projenin varsayılan malzeme / hırdavatı hedefinkinden farklıysa
+   * modüle özel seçim olarak yazılır (görünüş ve kesim değişmez). Sabit konumlu modüller hedefteki
+   * mevcut dizinin sonuna kaydırılır; düz projeye L projeden gelen B duvarı modülleri A duvarına geçer.
+   * Girdiler değişmez. Dönüş: { proje, rapor: { modul, malzeme, adDegisen } }.
+   */
+  function projeBirlestir(hedef0, kaynak0) {
+    const hedef = projeyiNormallestir(kopya(hedef0));
+    const kaynak = projeyiNormallestir(kopya(kaynak0));
+    const A = hedef.ayarlar;
+    const KA = kaynak.ayarlar;
+    const rapor = { modul: 0, malzeme: 0, adDegisen: 0 };
+    // Malzemeler: aynı kimlik hedefte varsa hedefinki kullanılır, yoksa eklenir
+    const idEsle = new Map();
+    for (const m of KA.malzemeler) {
+      if (A.malzemeler.some((x) => x.id === m.id)) { idEsle.set(m.id, m.id); continue; }
+      // Aynı ad + kalınlıkta malzeme varsa onu kullan (aynı plaka iki kez listelenmesin)
+      const ayni = A.malzemeler.find((x) => x.ad === m.ad && x.kalinlik === m.kalinlik && x.tur === m.tur);
+      if (ayni) { idEsle.set(m.id, ayni.id); continue; }
+      if (A.malzemeler.length >= 100) { idEsle.set(m.id, null); continue; }
+      A.malzemeler.push(kopya(m));
+      idEsle.set(m.id, m.id);
+      rapor.malzeme++;
+    }
+    const esle = (id) => (id ? idEsle.get(id) || null : null);
+    // Hedefin dolu duvar uzunluğu: sabit konumlular bunun sonuna kaydırılır
+    let kaydirma = 0;
+    try {
+      const r = projeHesapla(hedef);
+      for (const y of r.yerlesim.yerler) if (y.duvar !== 'B') kaydirma = Math.max(kaydirma, (y.duvar === 'kose' ? 0 : y.bas) + y.W);
+    } catch (e) { kaydirma = 0; }
+    const adlar = new Set(hedef.moduller.map((m) => m.ad));
+    const benzersiz = (ad) => {
+      if (!adlar.has(ad)) return ad;
+      const kok = ad.replace(/ \(\d+\)$/, '');
+      let i = 2;
+      while (adlar.has(`${kok} (${i})`)) i++;
+      return `${kok} (${i})`;
+    };
+    const L = hedef.yerlesim.tip === 'L';
+    for (const m0 of kaynak.moduller) {
+      const m = kopya(m0);
+      m.id = yeniId('m');
+      const ad = benzersiz(m.ad);
+      if (ad !== m.ad) rapor.adDegisen++;
+      m.ad = ad;
+      adlar.add(ad);
+      // Malzeme: modüle özel seçimler eşlenir; boş olanlarda kaynak projenin varsayılanı hedeften farklıysa yazılır
+      const mz = {};
+      for (const k of KULLANIMLAR) {
+        const ozel = esle(m.malzeme && m.malzeme[k]);
+        const vars = esle(KA.kullanim[k]);
+        mz[k] = ozel || (vars && vars !== A.kullanim[k] ? vars : null);
+      }
+      m.malzeme = mz;
+      for (const sut of m.sutunlar || []) for (const r of sut.satirlar || []) if (r.onMalzeme) r.onMalzeme = esle(r.onMalzeme);
+      const hr = Object.assign({}, m.hirdavat);
+      for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) if (!hr[k] && KA.hirdavat[k] && KA.hirdavat[k] !== A.hirdavat[k]) hr[k] = KA.hirdavat[k];
+      m.hirdavat = hr;
+      // Yerleşim
+      if (!L && m.duvar === 'B') { m.duvar = 'A'; m.konum = null; }
+      if (m.konum != null && (L ? m.duvar !== 'B' : true)) m.konum = Math.round(m.konum + kaydirma);
+      hedef.moduller.push(m);
+      rapor.modul++;
+    }
+    return { proje: projeyiNormallestir(hedef), rapor };
+  }
   function projeHesapla(proje) {
     const A = proje.ayarlar;
     const tumParcalar = [];
@@ -2784,6 +2852,7 @@
     yeniSatir,
     yeniProje,
     projeyiNormallestir,
+    projeBirlestir,
     malzemeBul,
     malzemeCoz,
     hirdavatCoz,

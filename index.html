@@ -253,7 +253,7 @@
         <li><b>Fiyat & maliyet:</b> kendi fiyatlarınızı girin, müşteriye fiyat teklifi PDF'i çıkarın.</li>
         <li><b>Malzeme & ayarlar:</b> malzeme kütüphanesi, bağlantı tipi (minifix, şeffaf T…) ve atölyenizin payları.</li>
       </ol>
-      <p><b>İpuçları:</b> Ctrl+Z geri alır, Ctrl+Y yineler. Uyarıya tıklayınca ilgili modül seçilir. Çalışma otomatik kaydedilir: "Projelerim"de tüm projeler, sürüm geçmişi ve çöp kutusu var; "Kayıt klasörü seç" ile projeler bilgisayarınızdaki bir klasöre (OneDrive / Google Drive klasörü de olur) her değişiklikte dosya olarak yazılır. Ara sıra "Tam yedek indir" ile yedek alın. Eğimli, oval, radyüslü parçalar için katalogdan bir panel ekleyip "Şekil" seçin.</p>
+      <p><b>İpuçları:</b> Ctrl+Z geri alır, Ctrl+Y yineler. Uyarıya tıklayınca ilgili modül seçilir. Çalışma otomatik kaydedilir: "Projelerim"de tüm projeler, sürüm geçmişi ve çöp kutusu var; "Kayıt klasörü seç" ile projeler bilgisayarınızdaki bir klasöre (OneDrive / Google Drive klasörü de olur) her değişiklikte dosya olarak yazılır. Ara sıra "Tam yedek indir" ile yedek alın. Projeleri birleştirmek için "Projelerim"de ⊕ (açık projeye ekle) ya da kutucuklarla seçip "Seçilenleri birleştir". Eğimli, oval, radyüslü parçalar için katalogdan bir panel ekleyip "Şekil" seçin.</p>
     </div>
   </dialog>
 
@@ -274,6 +274,11 @@
       <section class="pr-kutu">
         <h3>Projeler <span id="projeSayisi" class="not"></span></h3>
         <input id="projeAra" type="search" placeholder="Proje ara…" aria-label="Proje ara">
+        <div class="arac-satir pr-birlestir">
+          <button id="btnBirlestirYeni" class="ikincil" disabled title="İşaretlenen projeleri tek yeni projede birleştir (kaynaklar silinmez)">⊕ Seçilenleri birleştir</button>
+          <label class="ikincil buton-label" title="Proje dosyasındaki modülleri açık projeye ekle">⊕ Dosyadan birleştir<input id="birlestirDosya" type="file" accept=".json,application/json" hidden></label>
+          <span class="not">⊕: açık projeye ekle · kutucuk: birden çoğunu yeni projede birleştir</span>
+        </div>
         <ul id="projeListesi" class="pr-liste"></ul>
       </section>
       <section class="pr-kutu">

@@ -591,6 +591,9 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
 .malz-grup.kapali tr[data-malz] { display: none; }
 .rozet-kucuk { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #eef6ec; color: #2f6b2a; border: 1px solid #b9dcb3; vertical-align: middle; }
 
+.pr-birlestir { margin: 6px 0; gap: 6px; flex-wrap: wrap; }
+.pr-liste .pr-sec { width: 16px; height: 16px; flex: none; }
+
 </style>
 </head>
 <body>
@@ -840,7 +843,7 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
         <li><b>Fiyat & maliyet:</b> kendi fiyatlarınızı girin, müşteriye fiyat teklifi PDF'i çıkarın.</li>
         <li><b>Malzeme & ayarlar:</b> malzeme kütüphanesi, bağlantı tipi (minifix, şeffaf T…) ve atölyenizin payları.</li>
       </ol>
-      <p><b>İpuçları:</b> Ctrl+Z geri alır, Ctrl+Y yineler. Uyarıya tıklayınca ilgili modül seçilir. Çalışma otomatik kaydedilir: "Projelerim"de tüm projeler, sürüm geçmişi ve çöp kutusu var; "Kayıt klasörü seç" ile projeler bilgisayarınızdaki bir klasöre (OneDrive / Google Drive klasörü de olur) her değişiklikte dosya olarak yazılır. Ara sıra "Tam yedek indir" ile yedek alın. Eğimli, oval, radyüslü parçalar için katalogdan bir panel ekleyip "Şekil" seçin.</p>
+      <p><b>İpuçları:</b> Ctrl+Z geri alır, Ctrl+Y yineler. Uyarıya tıklayınca ilgili modül seçilir. Çalışma otomatik kaydedilir: "Projelerim"de tüm projeler, sürüm geçmişi ve çöp kutusu var; "Kayıt klasörü seç" ile projeler bilgisayarınızdaki bir klasöre (OneDrive / Google Drive klasörü de olur) her değişiklikte dosya olarak yazılır. Ara sıra "Tam yedek indir" ile yedek alın. Projeleri birleştirmek için "Projelerim"de ⊕ (açık projeye ekle) ya da kutucuklarla seçip "Seçilenleri birleştir". Eğimli, oval, radyüslü parçalar için katalogdan bir panel ekleyip "Şekil" seçin.</p>
     </div>
   </dialog>
 
@@ -861,6 +864,11 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
       <section class="pr-kutu">
         <h3>Projeler <span id="projeSayisi" class="not"></span></h3>
         <input id="projeAra" type="search" placeholder="Proje ara…" aria-label="Proje ara">
+        <div class="arac-satir pr-birlestir">
+          <button id="btnBirlestirYeni" class="ikincil" disabled title="İşaretlenen projeleri tek yeni projede birleştir (kaynaklar silinmez)">⊕ Seçilenleri birleştir</button>
+          <label class="ikincil buton-label" title="Proje dosyasındaki modülleri açık projeye ekle">⊕ Dosyadan birleştir<input id="birlestirDosya" type="file" accept=".json,application/json" hidden></label>
+          <span class="not">⊕: açık projeye ekle · kutucuk: birden çoğunu yeni projede birleştir</span>
+        </div>
         <ul id="projeListesi" class="pr-liste"></ul>
       </section>
       <section class="pr-kutu">
@@ -3839,6 +3847,74 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     return (say(m.genislik, 0) * say(m.yukseklik, 0)) / 1e6;
   }
 
+  /**
+   * Proje birleştirme: kaynak projenin modülleri hedefe eklenir (yeni kimlik, çakışmayan ad). Hedefte
+   * olmayan malzemeler eklenir; kaynak projenin varsayılan malzeme / hırdavatı hedefinkinden farklıysa
+   * modüle özel seçim olarak yazılır (görünüş ve kesim değişmez). Sabit konumlu modüller hedefteki
+   * mevcut dizinin sonuna kaydırılır; düz projeye L projeden gelen B duvarı modülleri A duvarına geçer.
+   * Girdiler değişmez. Dönüş: { proje, rapor: { modul, malzeme, adDegisen } }.
+   */
+  function projeBirlestir(hedef0, kaynak0) {
+    const hedef = projeyiNormallestir(kopya(hedef0));
+    const kaynak = projeyiNormallestir(kopya(kaynak0));
+    const A = hedef.ayarlar;
+    const KA = kaynak.ayarlar;
+    const rapor = { modul: 0, malzeme: 0, adDegisen: 0 };
+    // Malzemeler: aynı kimlik hedefte varsa hedefinki kullanılır, yoksa eklenir
+    const idEsle = new Map();
+    for (const m of KA.malzemeler) {
+      if (A.malzemeler.some((x) => x.id === m.id)) { idEsle.set(m.id, m.id); continue; }
+      // Aynı ad + kalınlıkta malzeme varsa onu kullan (aynı plaka iki kez listelenmesin)
+      const ayni = A.malzemeler.find((x) => x.ad === m.ad && x.kalinlik === m.kalinlik && x.tur === m.tur);
+      if (ayni) { idEsle.set(m.id, ayni.id); continue; }
+      if (A.malzemeler.length >= 100) { idEsle.set(m.id, null); continue; }
+      A.malzemeler.push(kopya(m));
+      idEsle.set(m.id, m.id);
+      rapor.malzeme++;
+    }
+    const esle = (id) => (id ? idEsle.get(id) || null : null);
+    // Hedefin dolu duvar uzunluğu: sabit konumlular bunun sonuna kaydırılır
+    let kaydirma = 0;
+    try {
+      const r = projeHesapla(hedef);
+      for (const y of r.yerlesim.yerler) if (y.duvar !== 'B') kaydirma = Math.max(kaydirma, (y.duvar === 'kose' ? 0 : y.bas) + y.W);
+    } catch (e) { kaydirma = 0; }
+    const adlar = new Set(hedef.moduller.map((m) => m.ad));
+    const benzersiz = (ad) => {
+      if (!adlar.has(ad)) return ad;
+      const kok = ad.replace(/ \(\d+\)$/, '');
+      let i = 2;
+      while (adlar.has(`${kok} (${i})`)) i++;
+      return `${kok} (${i})`;
+    };
+    const L = hedef.yerlesim.tip === 'L';
+    for (const m0 of kaynak.moduller) {
+      const m = kopya(m0);
+      m.id = yeniId('m');
+      const ad = benzersiz(m.ad);
+      if (ad !== m.ad) rapor.adDegisen++;
+      m.ad = ad;
+      adlar.add(ad);
+      // Malzeme: modüle özel seçimler eşlenir; boş olanlarda kaynak projenin varsayılanı hedeften farklıysa yazılır
+      const mz = {};
+      for (const k of KULLANIMLAR) {
+        const ozel = esle(m.malzeme && m.malzeme[k]);
+        const vars = esle(KA.kullanim[k]);
+        mz[k] = ozel || (vars && vars !== A.kullanim[k] ? vars : null);
+      }
+      m.malzeme = mz;
+      for (const sut of m.sutunlar || []) for (const r of sut.satirlar || []) if (r.onMalzeme) r.onMalzeme = esle(r.onMalzeme);
+      const hr = Object.assign({}, m.hirdavat);
+      for (const k of Object.keys(HIRDAVAT_SECENEKLERI)) if (!hr[k] && KA.hirdavat[k] && KA.hirdavat[k] !== A.hirdavat[k]) hr[k] = KA.hirdavat[k];
+      m.hirdavat = hr;
+      // Yerleşim
+      if (!L && m.duvar === 'B') { m.duvar = 'A'; m.konum = null; }
+      if (m.konum != null && (L ? m.duvar !== 'B' : true)) m.konum = Math.round(m.konum + kaydirma);
+      hedef.moduller.push(m);
+      rapor.modul++;
+    }
+    return { proje: projeyiNormallestir(hedef), rapor };
+  }
   function projeHesapla(proje) {
     const A = proje.ayarlar;
     const tumParcalar = [];
@@ -3979,6 +4055,7 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
     yeniSatir,
     yeniProje,
     projeyiNormallestir,
+    projeBirlestir,
     malzemeBul,
     malzemeCoz,
     hirdavatCoz,
@@ -12893,6 +12970,17 @@ void main() { renk = uRenk; }`;
   $('#btnProjeler').addEventListener('click', projelerAc);
   $('#projelerKapat').addEventListener('click', () => $('#projelerPencere').close());
   $('#projeAra').addEventListener('input', () => projelerCiz());
+  const birlestirSecili = new Set();
+  /** Kaynak projeyi açık projeye ekler (önce güvenlik kopyası; geri alınabilir). */
+  function birlestirUygula(kaynak, kaynakAd) {
+    guvenlikKopyasi(`"${kaynakAd}" birleştirilmeden önce`);
+    const { proje: yeni, rapor } = Hesap.projeBirlestir(proje, kaynak);
+    proje = yeni;
+    seciliId = proje.moduller.length ? proje.moduller[proje.moduller.length - 1].id : seciliId;
+    tumunuCiz(true);
+    ayarFormCiz();
+    bildir(`"${esc(kaynakAd)}" birleştirildi: ${rapor.modul} modül eklendi${rapor.malzeme ? `, ${rapor.malzeme} malzeme eklendi` : ''}${rapor.adDegisen ? `, ${rapor.adDegisen} modülün adı çakıştığı için numaralandı` : ''}. Kaynak proje silinmedi.`, true);
+  }
   async function projelerCiz() {
     if (typeof Depo === 'undefined' || !guv.hazir) {
       $('#projeListesi').innerHTML = '<li>Arşiv kullanılamıyor (tarayıcı depolamaya izin vermiyor). "Dosyaya kaydet" ile yedek alın.</li>';
@@ -12921,8 +13009,9 @@ void main() { renk = uRenk; }`;
     const L = tum.filter((p) => !p.silindi && (!ara || String(p.ad).toLocaleLowerCase('tr').includes(ara)));
     $('#projeSayisi').textContent = `(${tum.filter((p) => !p.silindi).length})`;
     $('#projeListesi').innerHTML = L.map((p) => `<li data-pr="${esc(p.id)}" class="${p.id === proje.id ? 'aktif' : ''}">
+      <input type="checkbox" class="pr-sec" aria-label="Birleştirmek için seç"${birlestirSecili.has(p.id) ? ' checked' : ''}>
       <span class="pr-ad">${esc(p.ad)}${p.id === proje.id ? ' <b>(açık)</b>' : ''}<small>${p.modulSayisi} modül · ${tarihYaz(p.guncel)}</small></span>
-      ${p.id === proje.id ? '' : '<button data-pi="ac">Aç</button>'}
+      ${p.id === proje.id ? '' : '<button data-pi="ac">Aç</button><button data-pi="birlestir" class="ikincil" title="Bu projenin modüllerini açık projeye ekle">⊕</button>'}
       <button data-pi="kopya" class="ikincil" title="Kopyasını yeni proje olarak aç">⧉</button>
       <button data-pi="indir" class="ikincil" title="Proje dosyası indir">⬇</button>
       ${p.id === proje.id ? '' : '<button data-pi="cop" class="ikincil" title="Çöp kutusuna taşı (geri alınabilir)">🗑</button>'}
@@ -12953,6 +13042,10 @@ void main() { renk = uRenk; }`;
         if (!k) return;
         const islem = b.dataset.pi;
         if (islem === 'ac') { await projeyeGec(Hesap.projeyiNormallestir(k.proje)); bildir(`"${esc(k.ad)}" açıldı.`); }
+        else if (islem === 'birlestir') {
+          if (!confirm(`"${k.ad}" projesinin ${k.modulSayisi} modülü açık projeye ("${proje.ad}") eklensin mi? Kaynak proje olduğu gibi kalır.`)) return;
+          birlestirUygula(k.proje, k.ad);
+        }
         else if (islem === 'kopya') {
           const p = Hesap.projeyiNormallestir(Object.assign({}, k.proje, { id: undefined, ad: `${k.ad} (kopya)`.slice(0, 80), olusturma: undefined }));
           await projeyeGec(p);
@@ -12981,6 +13074,18 @@ void main() { renk = uRenk; }`;
           await projeyeGec(Hesap.projeyiNormallestir(Object.assign({}, p, { id: undefined, ad: `${p.ad} (${Depo.tarihAd(s.zaman)})`.slice(0, 80), olusturma: undefined })));
           bildir('Sürüm ayrı proje olarak açıldı.');
         }
+        return;
+      }
+      if (b.id === 'btnBirlestirYeni') {
+        const idler = [...birlestirSecili];
+        if (idler.length < 2) { bildir('Birleştirmek için en az iki proje işaretleyin.'); return; }
+        const kayitlar = (await Promise.all(idler.map((id) => Depo.projeAl(id)))).filter(Boolean);
+        let y = Hesap.projeyiNormallestir(Object.assign(JSON.parse(JSON.stringify(kayitlar[0].proje)), { id: undefined, olusturma: undefined }));
+        for (const k of kayitlar.slice(1)) y = Hesap.projeBirlestir(y, k.proje).proje;
+        y.ad = `Birleşik: ${kayitlar.map((k) => k.ad).join(' + ')}`.slice(0, 80);
+        birlestirSecili.clear();
+        await projeyeGec(y);
+        bildir(`${kayitlar.length} proje yeni projede birleştirildi (${y.moduller.length} modül). Kaynak projeler duruyor.`);
         return;
       }
       if (b.id === 'btnKlasorSec') {
@@ -13013,6 +13118,26 @@ void main() { renk = uRenk; }`;
     } catch (err) {
       if (err && err.name === 'AbortError') return; // klasör seçimi iptal
       bildir(`İşlem yapılamadı: ${esc(err && err.message ? err.message : String(err))}`);
+    }
+  });
+  $('#projelerPencere').addEventListener('change', (e) => {
+    if (!e.target.matches('.pr-sec')) return;
+    const id = e.target.closest('li').dataset.pr;
+    if (e.target.checked) birlestirSecili.add(id); else birlestirSecili.delete(id);
+    $('#btnBirlestirYeni').disabled = birlestirSecili.size < 2;
+    $('#btnBirlestirYeni').textContent = `⊕ Seçilenleri birleştir${birlestirSecili.size ? ` (${birlestirSecili.size})` : ''}`;
+  });
+  $('#birlestirDosya').addEventListener('change', async (e) => {
+    const dosya = e.target.files[0];
+    e.target.value = '';
+    if (!dosya) return;
+    try {
+      const c = Depo.icerikCoz(JSON.parse(await dosya.text()));
+      if (!c || !c.projeler.length) throw new Error('biçim');
+      for (const p of c.projeler) birlestirUygula(p, p.ad || dosya.name);
+      if ($('#projelerPencere').open) projelerCiz();
+    } catch (err) {
+      alert('Dosya okunamadı: geçerli bir Mobilya Ölçü proje ya da yedek dosyası değil.');
     }
   });
   $('#yedekAc').addEventListener('change', async (e) => {

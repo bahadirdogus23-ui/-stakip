@@ -1493,3 +1493,35 @@ test('proje kimliği kalıcı: normalleştirme kimliği korur, yoksa üretir', (
   assert.equal(Hesap.projeyiNormallestir(JSON.parse(JSON.stringify(p))).id, p.id);
   assert.equal(Hesap.projeyiNormallestir(JSON.parse(JSON.stringify(p))).olusturma, p.olusturma);
 });
+
+test('proje birleştirme: modüller yeni kimlik ve benzersiz adla eklenir, malzeme ve varsayılanlar korunur, kaynak değişmez', () => {
+  const a = Hesap.yeniProje();
+  a.moduller = [Hesap.yeniModul('alt'), Hesap.yeniModul('ust')];
+  const b = Hesap.yeniProje();
+  b.ayarlar.kullanim.kapak = 'sl18c';
+  b.ayarlar.hirdavat.kulp = 'gola';
+  b.ayarlar.malzemeler.push({ id: 'ozelmz', ad: 'Özel Lake Mor 18mm', tur: 'MDF Lake', kalinlik: 18, plakaUzun: 2800, plakaKisa: 2100, bant: 0, renk: '#6a4c93' });
+  const g = Hesap.yeniModul('alt');
+  g.malzeme = { govde: 'ozelmz' };
+  const s = Hesap.yeniModul('nesne_vazo');
+  s.konum = 300;
+  b.moduller = [g, s];
+  const once = JSON.stringify(b);
+  const { proje: P, rapor } = Hesap.projeBirlestir(a, b);
+  assert.equal(JSON.stringify(b), once, 'kaynak değişmemeli');
+  assert.equal(P.id, Hesap.projeyiNormallestir(a).id);
+  assert.deepEqual(rapor, { modul: 2, malzeme: 1, adDegisen: 1 });
+  assert.equal(P.moduller.length, 4);
+  assert.equal(new Set(P.moduller.map((m) => m.id)).size, 4);
+  assert.equal(new Set(P.moduller.map((m) => m.ad)).size, 4);
+  const yeni = P.moduller[2];
+  assert.equal(yeni.malzeme.govde, 'ozelmz');
+  assert.equal(yeni.malzeme.kapak, 'sl18c'); // kaynak varsayılanı korunur
+  assert.equal(yeni.hirdavat.kulp, 'gola');
+  assert.ok(P.ayarlar.malzemeler.some((m) => m.id === 'ozelmz'));
+  // Sabit konumlu eşya hedefteki dizinin sonuna kayar (alt dolap 600 mm)
+  assert.equal(P.moduller[3].konum, 900);
+  // Kesimde kaynak modülün kapağı ceviz
+  const r = Hesap.projeHesapla(P);
+  assert.ok(r.kesimListesi.some((p) => p.malzeme === 'sl18c' && p.modulIdler.includes(yeni.id)));
+});

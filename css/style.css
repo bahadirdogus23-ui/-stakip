@@ -583,3 +583,6 @@ h4.yapi-grup { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; l
 .malz-grup .grup-baslik small { color: var(--soluk); font-weight: 400; margin-left: 6px; }
 .malz-grup.kapali tr[data-malz] { display: none; }
 .rozet-kucuk { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #eef6ec; color: #2f6b2a; border: 1px solid #b9dcb3; vertical-align: middle; }
+
+.pr-birlestir { margin: 6px 0; gap: 6px; flex-wrap: wrap; }
+.pr-liste .pr-sec { width: 16px; height: 16px; flex: none; }
