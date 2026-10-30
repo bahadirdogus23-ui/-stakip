@@ -183,6 +183,8 @@
       if (i < proje.moduller.length - 1) [proje.moduller[i + 1], proje.moduller[i]] = [proje.moduller[i], proje.moduller[i + 1]];
     } else {
       seciliId = id;
+      // 3B açıkken listeden seçim 3B seçimini ve sağ paneli de o modüle taşır
+      if (aktifSekme === 'uc') ucSecim = { modulId: id, satir: null, kul: null, tur: '' };
     }
     tumunuCiz(true);
   });
@@ -1641,7 +1643,7 @@
       $('#ucSvg').innerHTML = Uc.ciz(P, ucGorus, { yakin: ucGorus.yakin });
     }
     tutamakYerlestir();
-    if (ucSecim && !canliMod) ucMenuCiz();
+    if (!canliMod) ucMenuCiz();
   }
   /** Yalnız kamerayı güncelleyip yeniden çizer (sürükleme sırasında hızlı yol). */
   function ucKameraCiz() {
@@ -1715,65 +1717,137 @@
 
   // ---- Nesne menüsü (tıklanan parça) ----
   const TUR_AD = { govde: 'Gövde', panel: 'İç bölücü / raf', kapak: 'Kapak', cekmece: 'Çekmece önü', ic: 'Çekmece kutusu', arkalik: 'Arkalık', baza: 'Baza', ayak: 'Ayak / profil', kulp: 'Kulp / askı', cam: 'Cam', ayna: 'Ayna', led: 'LED şerit', nesne: 'Eşya', tezgah: 'Tezgah' };
-  let menuAcik = false;
-  function ucMenuCiz() {
+  // Sağ düzenleme paneli: seçim yoksa sahnedeki nesneler, seçimde o nesnenin bütün ayarları
+  let menuAcik = (() => { try { return localStorage.getItem('mo-uc-panel') !== '0'; } catch (e) { return true; } })();
+  const menuAcikYaz = (v) => { menuAcik = v; try { localStorage.setItem('mo-uc-panel', v ? '1' : '0'); } catch (e) { /* gizli pencere */ } };
+  const ucBolumAcik = {}; // bölüm → açık mı (kullanıcının son tercihi)
+  let ucPanelAnahtar = '';
+  const bolum = (ad, baslik, ic, acik = true) => (ic ? `<details class="up-bolum" data-bolum="${ad}"${(ucBolumAcik[ad] ?? acik) ? ' open' : ''}><summary>${baslik}</summary><div class="up-ic">${ic}</div></details>` : '');
+  /** Paneli doldurur; açılıp kapanınca 3B tuvali yeni genişliğe göre yeniden çizilir. Odak ve kaydırma korunur. */
+  function ucPanelYaz(h) {
     const kutu = $('#ucMenu');
-    // Dolap / masa seçilince önce küçük araç çubuğu çıkar; özellikler ✎ ile açılır (tezgah ve süslerde doğrudan)
-    const modulMu = ucSecim && proje.moduller.some((m) => m.id === ucSecim.modulId);
-    if (!ucSecim || (modulMu && !menuAcik)) { kutu.hidden = true; return; }
-    const m = proje.moduller.find((x) => x.id === ucSecim.modulId);
+    const gizle = h == null;
+    const anahtar = ucSecim ? `${ucSecim.modulId}|${ucSecim.satir || ''}|${ucSecim.kul || ''}` : '';
+    const oz = !gizle && kutu.contains(document.activeElement) ? ['data-um-alan', 'data-um-alan-sec', 'data-um-alan-onay', 'data-um-satir', 'data-um-ad', 'data-tz'].map((a) => document.activeElement.getAttribute(a) != null && `[${a}="${document.activeElement.getAttribute(a)}"]`).find(Boolean) : null;
+    const kaydirma = anahtar === ucPanelAnahtar ? kutu.scrollTop : 0;
+    ucPanelAnahtar = anahtar;
+    if (!gizle) { kutu.innerHTML = h; kutu.scrollTop = kaydirma; }
+    if (oz) { const el = kutu.querySelector(oz); if (el) el.focus({ preventScroll: true }); }
+    if (kutu.hidden !== gizle) {
+      kutu.hidden = gizle;
+      $('#ucPanelAc').classList.toggle('aktif', !gizle);
+      if (aktifSekme === 'uc') requestAnimationFrame(() => ucKameraCiz());
+    }
+  }
+  const panelBaslik = (ad, alt, renk) => `<div class="up-baslik">${renk ? `<span class="up-renk" style="background:${esc(renk)}"></span>` : ''}<div><h4>${ad}</h4>${alt ? `<div class="alt">${alt}</div>` : ''}</div><button data-um="kapat" class="ikincil kucuk-buton" title="Paneli kapat">✕</button></div>`;
+  function ucMenuCiz() {
+    if (!menuAcik) { ucPanelYaz(null); return; }
     const A = proje.ayarlar;
     const sec = ucSecim;
+    const m = sec && proje.moduller.find((x) => x.id === sec.modulId);
+    const secenek = (L, v) => L.map(([k, ad]) => `<option value="${esc(k)}"${String(k) === String(v) ? ' selected' : ''}>${esc(ad)}</option>`).join('');
+    const sayiAlan = (ad, alan, v, ek) => `<label>${ad}<input type="number" inputmode="decimal" data-um-alan="${alan}" value="${esc(v == null ? '' : v)}"${ek || ''}></label>`;
+    const olcuYaz = (x) => {
+      const s = sonuc && sonuc.modulSonuclari[x.id];
+      return s && s.geo ? `${Math.round(s.geo.W)} × ${Math.round(s.geo.H)} × ${Math.round(s.geo.D)}` : '';
+    };
+    if (!sec) {
+      const L = proje.moduller.map((x) => {
+        const r = Hesap.modulRenkleri ? Hesap.modulRenkleri(x, A) : null;
+        const renk = r && (r.kapak || r.govde);
+        return `<button type="button" class="up-nesne${x.id === seciliId ? ' secili' : ''}" data-um-sec="${esc(x.id)}">${renk ? `<span class="up-renk" style="background:${esc(typeof renk === 'string' ? renk : '#ccc')}"></span>` : ''}<b>${esc(x.ad)}</b><small>${esc(olcuYaz(x))}</small></button>`;
+      }).join('');
+      ucPanelYaz(`${panelBaslik('Sahne', 'Düzenlemek için 3B\'de bir parçaya tıklayın ya da aşağıdan seçin.')}
+        <div class="up-hizli"><button data-um="ekle" class="kucuk-buton">＋ Ekle</button>${proje.yerlesim.tezgah && proje.yerlesim.tezgah.acik ? '<button data-um="tezgahSec" class="ikincil kucuk-buton">Tezgah</button>' : ''}</div>
+        ${bolum('nesneler', `Nesneler (${proje.moduller.length})`, `<div class="up-liste">${L || '<p class="not">Henüz nesne yok. ＋ Ekle ile başlayın.</p>'}</div>`)}`);
+      return;
+    }
     if (sec.modulId === '__tezgah') {
       const t = proje.yerlesim.tezgah;
       const tt = Hesap.TEZGAH_TURLERI[t.tur];
-      kutu.innerHTML = `<h4><span>Tezgah</span><button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4>
-        <div class="alt">${esc(tt.ad)} · ${t.kalinlik} mm · önden ${t.tasma} mm taşma</div>
-        <fieldset><legend>Tezgah</legend>
+      ucPanelYaz(`${panelBaslik('Tezgah', `${esc(tt.ad)} · ${t.kalinlik} mm`, t.renk || tt.renk)}
+        ${bolum('tezgah', 'Tezgah', `
           <label class="tam">Tür<select data-tz="tur">${Object.entries(Hesap.TEZGAH_TURLERI).map(([k, v]) => `<option value="${k}"${k === t.tur ? ' selected' : ''}>${esc(v.ad)}</option>`).join('')}</select></label>
           <div class="paletler">${Hesap.RENK_PALETI.map(([ad, r]) => `<button type="button" class="renk-kare${t.renk === r ? ' secili' : ''}" data-tz-renk="${r}" title="${esc(ad)}" style="background:${r}"></button>`).join('')}<input type="color" data-tz-ozel value="${esc(t.renk || tt.renk)}" title="Özel renk"></div>
           <label>Kalınlık (mm)<input type="number" data-tz="kalinlik" value="${t.kalinlik}" min="10" max="80"></label>
           <label>Önden taşma (mm)<input type="number" data-tz="tasma" value="${t.tasma}" min="0" max="80"></label>
-          <label class="onay"><input type="checkbox" data-tz="arasi"${t.arasi ? ' checked' : ''}> Tezgah arası kaplama</label>
-          <div class="dugmeler"><button data-um="tezgahKapat" class="ikincil kucuk-buton">Tezgahı gizle</button></div>
-        </fieldset>`;
-      kutu.hidden = false;
+          <label class="onay tam"><input type="checkbox" data-tz="arasi"${t.arasi ? ' checked' : ''}> Tezgah arası kaplama</label>
+          <div class="dugmeler"><button data-um="tezgahKapat" class="ikincil kucuk-buton">Tezgahı gizle</button></div>`)}
+        <div class="up-hizli"><button data-um="secimBirak" class="ikincil kucuk-buton">← Sahne</button></div>`);
       return;
     }
     if (!m) {
-      kutu.innerHTML = `<h4>Süs / eşya (otomatik) <button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4><div class="alt">Yalnız görsel; projede değil.</div><div class="dugmeler"><button data-um="karistir" class="ikincil kucuk-buton">🎲 Süsleri karıştır</button><button data-um="susEkle" class="ikincil kucuk-buton">Projeye ekle</button><button data-um="susKapat" class="ikincil kucuk-buton">Süsleri kapat</button></div>`;
-      kutu.hidden = false;
+      ucPanelYaz(`${panelBaslik('Süs / eşya (otomatik)', 'Yalnız görsel; projede değil.')}
+        <div class="up-hizli"><button data-um="karistir" class="ikincil kucuk-buton">🎲 Süsleri karıştır</button><button data-um="susEkle" class="ikincil kucuk-buton">Projeye ekle</button><button data-um="susKapat" class="ikincil kucuk-buton">Süsleri kapat</button><button data-um="secimBirak" class="ikincil kucuk-buton">← Sahne</button></div>`);
       return;
     }
+    const pn = m.tip === 'panel';
+    const nesne = pn && m.panelTuru === 'nesne';
     const satir = sec.satir && m.sutunlar && m.sutunlar[sec.satir[0]] ? m.sutunlar[sec.satir[0]].satirlar[sec.satir[1]] : null;
-    const kul = m.tip === 'panel' ? (m.panelMalzeme === 'govde' ? 'govde' : m.panelMalzeme === 'ayna' ? null : 'kapak') : sec.kul;
+    // Listeden seçilen dolapta parça belli değildir: renk bölümü ön yüzle başlar
+    if (!pn && !sec.kul && !sec.tur) sec.kul = 'kapak';
+    const kul = pn ? (m.panelMalzeme === 'govde' ? 'govde' : m.panelMalzeme === 'ayna' || nesne ? null : 'kapak') : sec.kul;
     const M = Hesap.malzemeCoz(m, A);
     const simdiMalz = kul ? (satir && kul === 'kapak' && satir.onMalzeme ? Hesap.malzemeBul(A, satir.onMalzeme) || M.kapak : M[kul]) : null;
-    const secenek = (L, v) => L.map(([k, ad]) => `<option value="${esc(k)}"${String(k) === String(v) ? ' selected' : ''}>${esc(ad)}</option>`).join('');
-    const sayiAlan = (ad, alan, v, ek) => `<label>${ad}<input type="number" inputmode="decimal" data-um-alan="${alan}" value="${esc(v == null ? '' : v)}"${ek || ''}></label>`;
-    let h = `<h4><span>${esc(m.ad)}</span><button data-um="kapat" class="ikincil kucuk-buton" title="Kapat">✕</button></h4>`;
-    h += `<div class="alt">${esc(TUR_AD[sec.tur] || sec.tur)}${satir ? ` · ${m.sutunlar.length > 1 ? `bölme ${sec.satir[0] + 1}, ` : ''}satır ${sec.satir[1] + 1}` : ''}${simdiMalz ? ` · ${esc(simdiMalz.ad)}` : ''}</div>`;
+    const y = $('#ucKapsam').value === 'proje' ? secYer(m) : null;
+    const tur = nesne ? 'Eşya' : pn ? (m.panelTuru === 'masa' ? 'Masa' : 'Panel') : m.tip === 'lkose' ? 'L köşe dolabı' : 'Dolap';
+    const altSatir = [tur, olcuYaz(m), sec.tur && TUR_AD[sec.tur] ? `tıklanan: ${TUR_AD[sec.tur]}` : ''].filter(Boolean).map(esc).join(' · ');
+    let h = panelBaslik(`<input class="up-ad" data-um-ad value="${esc(m.ad)}" aria-label="Ad" title="Adı değiştir">`, altSatir, simdiMalz && simdiMalz.renk);
+    h += `<div class="up-hizli">
+      <button data-um="kopya" class="ikincil kucuk-buton" title="Çoğalt (Ctrl+D)">⧉ Çoğalt</button>
+      ${!pn ? `<button data-um="kapaksiz" class="ikincil kucuk-buton">${$('#ucKapaksiz').checked ? '🚪 Kapakları göster' : '👁 İçini göster'}</button>` : ''}
+      <button data-um="form" class="ikincil kucuk-buton" title="Bütün ayarlar (yapı, baza, bölmeler, hırdavat) soldaki formda">☰ Tüm ayarlar</button>
+      <button data-um="sil" class="ikincil kucuk-buton tehlike" title="Sil (Delete)">🗑 Sil</button>
+      <button data-um="secimBirak" class="ikincil kucuk-buton" title="Seçimi bırak (Esc)">← Sahne</button>
+    </div>`;
+    // Renk / malzeme
     if (kul && simdiMalz) {
       const ayni = A.malzemeler.filter((x) => !Hesap.camMi(x) && x.kalinlik === simdiMalz.kalinlik);
-      h += `<fieldset><legend>Renk / malzeme</legend>
+      const kulSec = !pn ? `<label class="tam">Parça<select data-um-kul>${secenek([['kapak', 'Ön yüz (kapak / çekmece önü)'], ['govde', 'Gövde'], ['cekmece', 'Çekmece kutusu'], ['arkalik', 'Arkalık']].filter(([k]) => M[k]), kul)}</select></label>` : '';
+      h += bolum('renk', '🎨 Renk / malzeme', `${kulSec}
         <div class="paletler">${Hesap.RENK_PALETI.map(([ad, r]) => `<button type="button" class="renk-kare${simdiMalz.renk === r ? ' secili' : ''}" data-um-boya="${r}" data-ad="${esc(ad)}" title="${esc(ad)}" style="background:${r}"></button>`).join('')}<input type="color" data-um-ozel value="${esc(simdiMalz.renk || '#cccccc')}" title="Özel renk"></div>
         <label class="tam">Malzeme<select data-um-malz>${ayni.map((x) => `<option value="${esc(x.id)}"${x.id === simdiMalz.id ? ' selected' : ''}>${esc(x.ad)}${x.oto ? ' (renk tabakası)' : ''}</option>`).join('')}</select></label>
-        <label class="tam">Uygula<select data-um-kapsam>${secenek([...(satir && kul === 'kapak' ? [['satir', 'Yalnız bu satırın ön yüzü']] : []), ['modul', `Bu modülün ${KUL_AD[kul] || kul}`], ['proje', `Tüm projede ${KUL_AD[kul] || kul}`]], ucMenuKapsam && (ucMenuKapsam !== 'satir' || (satir && kul === 'kapak')) ? ucMenuKapsam : satir && kul === 'kapak' ? 'satir' : 'modul')}</select></label>
-      </fieldset>`;
+        <label class="tam">Uygula<select data-um-kapsam>${secenek([...(satir && kul === 'kapak' ? [['satir', 'Yalnız bu satırın ön yüzü']] : []), ['modul', `Bu modülün ${KUL_AD[kul] || kul}`], ['proje', `Tüm projede ${KUL_AD[kul] || kul}`]], ucMenuKapsam && (ucMenuKapsam !== 'satir' || (satir && kul === 'kapak')) ? ucMenuKapsam : satir && kul === 'kapak' ? 'satir' : 'modul')}</select></label>`);
     }
-    if (m.tip === 'panel') {
-      if (m.panelTuru === 'masa') {
-        h += `<fieldset><legend>Masa</legend>${sayiAlan('Uzunluk', 'boy', m.boy)}${sayiAlan('Derinlik', 'en', m.en)}${sayiAlan('Yükseklik', 'masaH', m.masaH)}${sayiAlan('Tabla taşması', 'masaTasma', m.masaTasma)}
+    // Ölçü
+    if (nesne) h += bolum('olcu', '📏 Ölçü', `${sayiAlan('Genişlik', 'en', m.en)}${sayiAlan('Yükseklik', 'boy', m.boy)}${sayiAlan('Derinlik', 'nesneD', m.nesneD)}`);
+    else if (pn && m.panelTuru === 'masa') {
+      h += bolum('olcu', '📏 Masa', `${sayiAlan('Uzunluk', 'boy', m.boy)}${sayiAlan('Derinlik', 'en', m.en)}${sayiAlan('Yükseklik', 'masaH', m.masaH)}${sayiAlan('Tabla taşması', 'masaTasma', m.masaTasma)}
           <label class="tam">Ayak<select data-um-alan-sec="masaAyak">${secenek(Object.entries(Hesap.MASA_AYAKLARI).map(([k, v]) => [k, v.ad]), m.masaAyak)}</select></label>
           <label class="tam">Tabla biçimi<select data-um-alan-sec="sekil">${secenek([['dikdortgen', 'Dikdörtgen'], ['radyus', 'Köşeleri yuvarlak'], ['oval', 'Oval'], ['daire', 'Yuvarlak'], ['kapsul', 'Kapsül']], m.sekil)}</select></label>
-          ${m.masaAyak === 'panel' ? `<label class="onay"><input type="checkbox" data-um-alan-onay="masaArka"${m.masaArka ? ' checked' : ''}> Bacak paneli</label>` : ''}
-          ${m.masaAyak !== 'merkez' && m.masaAyak !== 'ahsap4' ? `<label class="onay"><input type="checkbox" data-um-alan-onay="masaKayit"${m.masaKayit ? ' checked' : ''}> Kayıt (etek)</label>` : ''}</fieldset>`;
-      } else h += `<fieldset><legend>Ölçü</legend>${sayiAlan('Boy', 'boy', m.boy)}${sayiAlan('En', 'en', m.en)}${sayiAlan('Montaj yüksekliği', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
-    } else if (m.tip !== 'lkose') {
-      h += `<fieldset><legend>Modül ölçüsü</legend>${sayiAlan('Genişlik', 'genislik', m.genislik)}${sayiAlan('Yükseklik', 'yukseklik', m.yukseklik)}${sayiAlan('Derinlik', 'derinlik', m.derinlik)}${sayiAlan('Montaj yüks.', 'montajYuksekligi', m.montajYuksekligi)}</fieldset>`;
+          ${m.masaAyak === 'panel' ? `<label class="onay tam"><input type="checkbox" data-um-alan-onay="masaArka"${m.masaArka ? ' checked' : ''}> Bacak paneli</label>` : ''}
+          ${m.masaAyak !== 'merkez' && m.masaAyak !== 'ahsap4' ? `<label class="onay tam"><input type="checkbox" data-um-alan-onay="masaKayit"${m.masaKayit ? ' checked' : ''}> Kayıt (etek)</label>` : ''}`);
+    } else if (pn) h += bolum('olcu', '📏 Ölçü', `${sayiAlan('Boy', 'boy', m.boy)}${sayiAlan('En', 'en', m.en)}`);
+    else if (m.tip === 'lkose') h += bolum('olcu', '📏 Ölçü', `${sayiAlan('A kolu', 'genislik', m.genislik)}${sayiAlan('B kolu', 'genislik2', m.genislik2)}${sayiAlan('Yükseklik', 'yukseklik', m.yukseklik)}${sayiAlan('Derinlik', 'derinlik', m.derinlik)}`);
+    else h += bolum('olcu', '📏 Ölçü', `${sayiAlan('Genişlik', 'genislik', m.genislik)}${sayiAlan('Yükseklik', 'yukseklik', m.yukseklik)}${sayiAlan('Derinlik', 'derinlik', m.derinlik)}${sayiAlan('Adet', 'adet', m.adet, ' min="1"')}`);
+    // Konum
+    const L = proje.yerlesim.tip === 'L';
+    const masaZemin = pn && ['masa', 'baza', 'bosluk', 'yan_kapama'].includes(m.panelTuru);
+    h += bolum('konum', '📍 Konum', `
+      ${L && m.tip !== 'lkose' ? `<label class="tam">Duvar<select data-um-alan-sec="duvar">${secenek([['A', 'A duvarı'], ['B', 'B duvarı']], m.duvar)}</select></label>` : ''}
+      ${m.tip !== 'lkose' ? sayiAlan('Duvarda konum', 'konum', m.konum, ` min="0" placeholder="${y ? Math.round(y.bas) + ' (sıradan)' : 'sıradan'}"`) : ''}
+      ${!masaZemin ? sayiAlan(nesne ? 'Zeminden' : 'Montaj yüks.', 'montajYuksekligi', m.montajYuksekligi, ' min="0"') : ''}
+      ${nesne ? sayiAlan('Duvardan', 'duvarMesafe', m.duvarMesafe, ' min="0"') : ''}
+      ${m.konum != null && m.tip !== 'lkose' ? '<div class="dugmeler"><button data-um="otokonum" class="ikincil kucuk-buton">⟲ Otomatik sıraya dön</button></div>' : ''}
+      <p class="not tam">İpucu: seçiliyi sürükleyerek de taşıyabilirsiniz; ←→ 10 mm kaydırır.</p>`);
+    // Ön yüz ve kulp
+    if (!pn) {
+      h += bolum('on', '🚪 Ön yüz ve kulp', `
+        <label class="tam">Kapak deseni<select data-um-alan-sec="kapakDesen">${secenek(Object.entries(Hesap.KAPAK_DESENLERI), m.kapakDesen)}</select></label>
+        <label>Kulp yönü<select data-um-alan-sec="kulpYon">${secenek([['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_YONLERI)], m.kulpYon)}</select></label>
+        <label>Kulp konumu<select data-um-alan-sec="kulpKonum">${secenek([['proje', 'Proje ayarı'], ...Object.entries(Hesap.KULP_KONUMLARI).map(([k, v]) => [k, v.split(' (')[0]])], m.kulpKonum)}</select></label>
+        ${sayiAlan('Kulp boyu (mm)', 'kulpBoy', m.kulpBoy, ' min="0" step="32"')}
+        <label class="onay"><input type="checkbox" data-um-alan-onay="ledAlt"${m.ledAlt ? ' checked' : ''}> Alttan LED</label>`, false);
+    }
+    // Bölmeler: satıra tıklayınca o satır seçilir
+    if (m.sutunlar && m.sutunlar.length && m.tip !== 'panel') {
+      const SA = Hesap.SATIR_TIPLERI;
+      const kisa = (r) => `${SA[r.tip] || r.tip}${r.adet > 1 ? ` ×${r.adet}` : ''}${r.raf ? ` · ${r.raf} raf` : ''}`;
+      const sutunlar = m.sutunlar.map((c, si) => `<div class="up-sutun">${m.sutunlar.length > 1 ? `<small>Bölme ${si + 1}</small>` : ''}${c.satirlar.map((r, ri) => `<button type="button" class="up-satir${sec.satir && sec.satir[0] === si && sec.satir[1] === ri ? ' secili' : ''}" data-um-satir-sec="${si},${ri}">${esc(kisa(r))}</button>`).join('') || '<small>boş</small>'}</div>`).join('');
+      h += bolum('bolme', '▦ Bölmeler ve satırlar', `<div class="up-bolmeler">${sutunlar}</div>`, !!satir);
     }
     if (satir) {
-      h += `<fieldset><legend>Bu satır</legend>
+      h += bolum('satir', `Seçili satır · ${m.sutunlar.length > 1 ? `bölme ${sec.satir[0] + 1}, ` : ''}${sec.satir[1] + 1}`, `
         <label>Tip<select data-um-satir="tip">${secenek(Object.entries(Hesap.SATIR_TIPLERI), satir.tip)}</select></label>
         ${sayiAlan(satir.tip === 'cekmece' ? 'Çekmece sayısı' : 'Kapak sayısı', 'satir:adet', satir.adet, ' min="1" max="8"')}
         ${satir.tip === 'kapak' ? `<label class="tam">Kapak türü<select data-um-satir="kapakTuru">${secenek(Object.entries(Hesap.KAPAK_TURLERI), satir.kapakTuru)}</select></label>` : ''}
@@ -1781,21 +1855,24 @@
         ${sayiAlan('Yükseklik (boş = eşit)', 'satir:yukseklik', satir.yukseklik)}
         ${satir.tip !== 'cekmece' ? `<label class="onay"><input type="checkbox" data-um-satir="led"${satir.led ? ' checked' : ''}> LED</label>` : ''}
         ${satir.tip === 'kapak' ? `<label class="onay"><input type="checkbox" data-um-satir="aski"${satir.aski ? ' checked' : ''}> Askı</label>` : ''}
-      </fieldset>`;
+        <div class="dugmeler"><button data-um="satirKopya" class="ikincil kucuk-buton">+ Satırı çoğalt</button><button data-um="satirSil" class="ikincil kucuk-buton">− Satırı sil</button></div>`);
     }
-    h += `<fieldset><legend>İşlem</legend><div class="dugmeler">
-      <button data-um="form" class="kucuk-buton">✎ Formda aç</button>
-      <button data-um="kopya" class="ikincil kucuk-buton">⧉ Çoğalt</button>
-      ${satir ? '<button data-um="satirKopya" class="ikincil kucuk-buton">+ Satırı çoğalt</button><button data-um="satirSil" class="ikincil kucuk-buton">− Satırı sil</button>' : ''}
-      <button data-um="kapaksiz" class="ikincil kucuk-buton">${$('#ucKapaksiz').checked ? 'Kapakları göster' : 'İçini göster'}</button>
-      <button data-um="sil" class="ikincil kucuk-buton">✕ Modülü sil</button>
-    </div></fieldset>`;
-    kutu.innerHTML = h;
-    kutu.hidden = false;
+    const uy = sonuc && sonuc.modulSonuclari[m.id] && sonuc.modulSonuclari[m.id].uyarilar;
+    if (uy && uy.length) h += bolum('uyari', `⚠ Uyarılar (${uy.length})`, `<ul class="up-uyari">${uy.map((u) => `<li>${esc(u)}</li>`).join('')}</ul>`);
+    ucPanelYaz(h);
+  }
+  /** 3B'de seçimi değiştirir; soldaki liste ve ölçü formu da aynı modüle geçer. */
+  function ucSecimYap(sec) {
+    ucSecim = sec;
+    const id = sec && sec.modulId;
+    if (id && proje.moduller.some((m) => m.id === id) && seciliId !== id) {
+      seciliId = id;
+      modulFormCiz();
+    }
+    modulListesiCiz();
   }
   let ucMenuKapsam = null;
   // Menü 3B alanının sağ üstüne (dar ekranda alta) yerleşir; modeli tıklanan yerde kapatmaz
-  function ucMenuKonumla() { $('#ucMenu').scrollTop = 0; }
   function ucTikla(x, y) {
     $('#ucAlan').focus({ preventScroll: true });
     if (!glAcik()) { bildir('Parçaya tıklayarak düzenlemek için "Gerçekçi" görünümü açın.'); return; }
@@ -1803,12 +1880,9 @@
     const p = i >= 0 ? ucParcalar[i] : null;
     if (!p || p.modulId == null) { ucSecim = null; ucMenuCiz(); ucVurgula(); sahne.ciz(); tutamakYerlestir(); return; }
     const sec = { modulId: p.modulId, satir: p.satir || null, kul: p.kul || null, tur: p.tur };
-    if (boyaModu && boyaRenk) { ucSecim = sec; boya(sec, boyaRenk, $('#ucBoyaKapsam').value); return; }
-    ucSecim = sec;
-    if (proje.moduller.some((m) => m.id === p.modulId)) seciliId = p.modulId;
-    modulListesiCiz();
+    if (boyaModu && boyaRenk) { ucSecimYap(sec); boya(sec, boyaRenk, $('#ucBoyaKapsam').value); return; }
+    ucSecimYap(sec);
     ucMenuCiz();
-    ucMenuKonumla(x, y);
     ucVurgula();
     sahne.ciz();
     tutamakYerlestir();
@@ -1820,17 +1894,27 @@
     f(m);
     tumunuCiz(true);
   }
+  $('#ucPanelAc').addEventListener('click', () => { menuAcikYaz(!menuAcik); ucMenuCiz(); });
+  // <details> 'toggle' olayı kabarcıklanmaz; yakalama evresinde dinlenir
+  $('#ucMenu').addEventListener('toggle', (e) => { const d = e.target; if (d.dataset && d.dataset.bolum) ucBolumAcik[d.dataset.bolum] = d.open; }, true);
   $('#ucMenu').addEventListener('pointerdown', (e) => e.stopPropagation());
   $('#ucMenu').addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
   $('#ucMenu').addEventListener('click', (e) => {
     const tr = e.target.closest('[data-tz-renk]');
     if (tr) { tezgahDegis((t) => { t.renk = tr.dataset.tzRenk; }); return; }
+    const ns = e.target.closest('[data-um-sec]');
+    if (ns) { ucSecimYap({ modulId: ns.dataset.umSec, satir: null, kul: null, tur: '' }); ucCiz(); return; }
+    const ss = e.target.closest('[data-um-satir-sec]');
+    if (ss) { const [a, b2] = ss.dataset.umSatirSec.split(',').map(Number); ucSecim = Object.assign({}, ucSecim, { satir: [a, b2], kul: 'kapak', tur: 'kapak' }); ucBolumAcik.satir = true; ucCiz(); return; }
     const b = e.target.closest('[data-um], [data-um-boya]');
     if (!b) return;
     if (b.dataset.umBoya) { boya(ucSecim, { renk: b.dataset.umBoya, ad: b.dataset.ad }, $('#ucMenu [data-um-kapsam]').value); return; }
     const islem = b.dataset.um;
     const m = proje.moduller.find((x) => x.id === (ucSecim && ucSecim.modulId));
-    if (islem === 'kapat') { menuAcik = false; ucMenuCiz(); return; }
+    if (islem === 'kapat') { menuAcikYaz(false); ucMenuCiz(); return; }
+    if (islem === 'ekle') { $('#ucEkle').click(); return; }
+    if (islem === 'secimBirak') { ucSecim = null; ucCiz(); return; }
+    if (islem === 'tezgahSec') { ucSecim = { modulId: '__tezgah', satir: null, kul: null, tur: 'tezgah' }; ucCiz(); return; }
     if (islem === 'karistir') { $('#ucSusKaristir').click(); return; }
     if (islem === 'susEkle') { ucSecim = null; $('#ucSusEkle').click(); return; }
     if (islem === 'susKapat') { ucSecim = null; $('#ucSus').checked = false; susKaydet(); ucCiz(); ucMenuCiz(); return; }
@@ -1844,25 +1928,9 @@
       $('#modulForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    if (islem === 'kopya') {
-      const k = JSON.parse(JSON.stringify(m));
-      k.id = Hesap.yeniModul('alt').id;
-      k.ad = benzersizAd(m.ad);
-      proje.moduller.splice(proje.moduller.indexOf(m) + 1, 0, k);
-      ucSecim = Object.assign({}, ucSecim, { modulId: k.id });
-      seciliId = k.id;
-      bildir(`"${k.ad}" eklendi.`, true);
-      tumunuCiz(true);
-      return;
-    }
-    if (islem === 'sil') {
-      if (!confirm(`"${m.ad}" silinsin mi?`)) return;
-      proje.moduller.splice(proje.moduller.indexOf(m), 1);
-      ucSecim = null;
-      if (seciliId === m.id) seciliId = proje.moduller[0] ? proje.moduller[0].id : null;
-      tumunuCiz(true);
-      return;
-    }
+    if (islem === 'kopya') { modulCogalt(m); return; }
+    if (islem === 'sil') { modulSil(m, true); return; }
+    if (islem === 'otokonum') { m.konum = null; tumunuCiz(true); return; }
     if ((islem === 'satirKopya' || islem === 'satirSil') && ucSecim.satir) {
       const S = m.sutunlar[ucSecim.satir[0]].satirlar;
       const i = ucSecim.satir[1];
@@ -1885,6 +1953,8 @@
       return;
     }
     if (el.matches('[data-um-kapsam]')) { ucMenuKapsam = el.value; return; }
+    if (el.matches('[data-um-kul]')) { ucSecim = Object.assign({}, ucSecim, { kul: el.value }); ucMenuCiz(); return; }
+    if (el.matches('[data-um-ad]')) { const v = el.value.trim(); if (v) ucMenuDegis((m) => { m.ad = v; }); return; }
     if (el.matches('[data-um-ozel]')) { boya(ucSecim, { renk: el.value, ad: null }, $('#ucMenu [data-um-kapsam]').value); return; }
     if (el.matches('[data-um-malz]')) { boya(ucSecim, { malzeme: el.value }, $('#ucMenu [data-um-kapsam]').value); return; }
     if (el.dataset.umAlanSec || el.dataset.umAlanOnay) {
@@ -1904,7 +1974,7 @@
       const satir = ucSecim.satir ? m.sutunlar[ucSecim.satir[0]].satirlar[ucSecim.satir[1]] : null;
       const sayi = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
       if (alan && alan.startsWith('satir:') && satir) satir[alan.slice(6)] = sayi(el.value);
-      else if (alan) { const v = sayi(el.value); if (v != null && Number.isFinite(v)) m[alan] = v; }
+      else if (alan) { const v = sayi(el.value); if (v != null && Number.isFinite(v)) m[alan] = v; else if (v == null && alan === 'konum') m.konum = null; }
       else if (sa && satir) satir[sa] = el.type === 'checkbox' ? el.checked : el.value;
       // Normalleştirme (sınırlar) için proje baştan geçirilir
       const N = Hesap.projeyiNormallestir(proje);
@@ -2084,7 +2154,7 @@
     if (i === 'sil') modulSil(m, false);
     else if (i === 'kopya') modulCogalt(m);
     else if (i === 'otokonum') { m.konum = null; tumunuCiz(true); }
-    else if (i === 'ozellik') { menuAcik = !menuAcik; ucMenuCiz(); }
+    else if (i === 'ozellik') { menuAcikYaz(!menuAcik); ucMenuCiz(); }
   });
   /** Gövdeyi sürükleyerek duvar boyunca taşıma başlatılabilir mi? */
   function tasimaBaslat(e, x, y) {

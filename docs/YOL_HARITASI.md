@@ -93,6 +93,9 @@ Atölye sekmesinde ve "Kurulum şeması PDF" çıktısında.
 - **3B'de doğrudan düzenleme**: 3D açılış sekmesi; "＋ Ekle"; seçince küçük araç çubuğu (ölçü, özellikler,
   çoğalt, otomatik konum, sil); seçiliyi sürükleyerek duvar boyunca taşıma (komşuya / duvar ucuna yapışma);
   ⇔ ⇕ ↕ tutamaklarla genişlik, yükseklik, montaj yüksekliği (canlı ölçü etiketi); klavye kısayolları.
+- **3B sağ düzenleme paneli**: seçilen nesnenin renk/malzeme, ölçü, konum, ön yüz/kulp, bölme-satır ve uyarıları
+  açılır-kapanır bölümlerde; satır çipleriyle satır seçimi; seçim yokken sahnedeki nesne listesi. 3B seçimi soldaki
+  liste ve ölçü formuyla eşzamanlı.
 - **Malzemeler**: seçimler kullanıma göre süzülür ve türe göre gruplanır, renk karesiyle; modül formunda yalnız o
   modülde kullanılan malzeme alanları; kütüphane türe göre gruplu, aranabilir, "yalnız kullanılanlar".
 

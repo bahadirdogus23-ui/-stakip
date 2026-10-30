@@ -80,6 +80,7 @@
             <button data-uc="ust" class="ikincil">Üstten</button>
             <button data-uc="yak" class="ikincil" title="Yakınlaştır">＋</button>
             <button data-uc="uzak" class="ikincil" title="Uzaklaştır">－</button>
+            <button id="ucPanelAc" type="button" class="ikincil" title="Sağdaki düzenleme panelini aç / kapat">☰ Panel</button>
           </div>
           <div class="arac-satir uc-arac uc-arac2">
             <label class="onay" title="WebGL: gerçek derinlik, gölge, LED ışığı; kapalıysa çizim görünüşü"><input type="checkbox" id="ucGercek" checked> Gerçekçi</label>
@@ -101,7 +102,10 @@
             </span>
             <span class="not">Tıkla: seç · seçiliyi sürükle: duvar boyunca taşı · ⇔ ⇕ tutamak: boyutlandır · boşluğu sürükle: döndür · sağ tuş / iki parmak: kaydır · Delete: sil · Ctrl+D: çoğalt · ←→: kaydır</span>
           </div>
-          <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"><canvas id="ucTuval" class="uc-tuval"></canvas><div id="ucSvg" class="uc-svgkap"></div><div id="ucMenu" class="uc-menu" hidden></div><div id="ucIpucu" class="uc-ipucu" hidden></div></div>
+          <div class="uc-cerceve">
+            <div id="ucAlan" class="uc-alan" tabindex="0" aria-label="3D görünüm"><canvas id="ucTuval" class="uc-tuval"></canvas><div id="ucSvg" class="uc-svgkap"></div><div id="ucIpucu" class="uc-ipucu" hidden></div></div>
+            <aside id="ucMenu" class="uc-panel" aria-label="Düzenleme paneli" hidden></aside>
+          </div>
         </div>
 
         <div class="sekme" id="sekme-atolye">
@@ -244,7 +248,7 @@
     <div class="yardim-icerik">
       <ol>
         <li><b>Ekleyin:</b> 3D sekmesinde "＋ Ekle" (ya da soldaki katalog) ile dolap, <b>masa</b>, panel ya da eşya seçin.</li>
-        <li><b>3D'de düzenleyin:</b> parçaya tıklayın; seçili parçayı sürükleyince duvar boyunca kayar (komşuya yapışır), turuncu ⇔ ⇕ tutamaklarla genişlik ve yükseklik, mavi ↕ ile yerden yükseklik değişir. Üstteki küçük çubuktan ✎ özellikler, ⧉ çoğalt, 🗑 sil. Klavye: Delete sil, Ctrl+D çoğalt, ←→ kaydır, ↑↓ yükselt, Esc bırak.</li>
+        <li><b>3D'de düzenleyin:</b> parçaya tıklayın; seçili parçayı sürükleyince duvar boyunca kayar (komşuya yapışır), turuncu ⇔ ⇕ tutamaklarla genişlik ve yükseklik, mavi ↕ ile yerden yükseklik değişir. Seçilen nesnenin bütün ayarları (renk, ölçü, konum, kulp, bölmeler ve satırlar) sağdaki panelde açılır; panel "☰ Panel" ya da küçük çubuktaki ✎ ile açılıp kapanır. Seçim yokken panel sahnedeki nesneleri listeler. Klavye: Delete sil, Ctrl+D çoğalt, ←→ kaydır, ↑↓ yükselt, Esc bırak.</li>
         <li><b>Ölçüleri girin:</b> genişlik, yükseklik (zeminden, ayak dahil) ve derinlik (kapak hariç). Çizim yazarken güncellenir.</li>
         <li><b>İçini düzenleyin:</b> "Bölmeler ve iç düzen" bölümünde dikey bölme ekleyin; her bölmeye kapak, çekmece, açık raf veya cihaz nişi satırları ekleyin. Yükseklik boş bırakılırsa kalan yer paylaştırılır.</li>
         <li><b>Mutfak / yerleşim:</b> duvar ölçülerini girin, L mutfakta her modülün duvarını seçin; taşma ve boşluklar gösterilir.</li>
