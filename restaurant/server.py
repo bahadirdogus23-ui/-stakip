@@ -11,6 +11,8 @@ def serve(store, host='0.0.0.0', port=8765):
     attempts = {}
     lock = threading.Lock()
     class Handler(BaseHTTPRequestHandler):
+        def setup(self):
+            super().setup();self.connection.settimeout(15)
         def log_message(self, *args): pass
         def reply(self, status, obj):
             body = json.dumps(obj, ensure_ascii=False).encode()
@@ -72,5 +74,7 @@ def serve(store, host='0.0.0.0', port=8765):
             except (ValueError,KeyError,TypeError) as error: self.reply(400,{'error':str(error) if isinstance(error,ValueError) else 'Sipariş bilgilerini kontrol edin.'})
             except Exception: self.reply(500,{'error':'İşlem tamamlanamadı; tekrar göndermeden önce masayı kontrol edin.'})
     server=ThreadingHTTPServer((host,port),Handler)
+    # Shutdown must wait for in-flight writes before a backup can replace the database.
+    server.daemon_threads=False
     threading.Thread(target=server.serve_forever,daemon=True).start()
     return server

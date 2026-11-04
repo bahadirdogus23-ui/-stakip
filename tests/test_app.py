@@ -240,6 +240,30 @@ class AppTest(unittest.TestCase):
                 with InstanceLock(self.temp.name):pass
         with InstanceLock(self.temp.name):pass
 
+    def test_http_shutdown_finishes_inflight_write_before_restore(self):
+        import threading
+        from unittest.mock import patch
+        self.store.save_waiter('ali','Ali','sifre123')
+        server=serve(self.store,'127.0.0.1',0);base=f'http://127.0.0.1:{server.server_port}'
+        def request(path,data,token=''):
+            req=urllib.request.Request(base+path,data=json.dumps(data).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+            with urllib.request.urlopen(req) as response:return json.load(response)
+        token=request('/api/login',dict(username='ali',password='sifre123'))['token']
+        entered=threading.Event();release=threading.Event();closed=threading.Event()
+        original=self.store.add_batch
+        def delayed(*args,**kwargs):
+            entered.set();release.wait(5);return original(*args,**kwargs)
+        def close():server.shutdown();server.server_close();closed.set()
+        with concurrent.futures.ThreadPoolExecutor() as pool,patch.object(self.store,'add_batch',side_effect=delayed):
+            future=pool.submit(request,'/api/order',dict(table=1,epoch=0,request_id='shutdown-batch-0001',items=[dict(product=1,qty=1)]),token)
+            self.assertTrue(entered.wait(3))
+            shutdown=threading.Thread(target=close);shutdown.start()
+            try:self.assertFalse(closed.wait(.7),'Shutdown must wait for pending database writes')
+            finally:release.set()
+            self.assertTrue(future.result(timeout=5)['ok']);shutdown.join(timeout=5)
+            self.assertTrue(closed.is_set())
+        self.assertEqual(self.store.snapshot()['tables'][0]['total'],9000)
+
     def test_waiter_credentials_persist_securely(self):
         self.store.save_waiter('ali','Ali Kaya','sifre123')
         user=self.store.authenticate('ALI','sifre123')
