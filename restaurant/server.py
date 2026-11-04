@@ -29,7 +29,7 @@ def serve(store, host='0.0.0.0', port=8765):
                 self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.end_headers(); self.wfile.write(body)
             elif self.path=='/api/state':
                 if not self.authorized(): return self.reply(401,{'error':'Giriş yapın.'})
-                state=store.snapshot(); state.pop('report',None); self.reply(200,state)
+                state=store.snapshot(); state.pop('report',None); state.pop('payments',None); self.reply(200,state)
             elif self.path=='/health': self.reply(200,{'status':'ok'})
             else: self.reply(404,{'error':'Bulunamadı.'})
         def do_POST(self):

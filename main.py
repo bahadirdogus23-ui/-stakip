@@ -24,6 +24,17 @@ def main():
             try:
                 desktop.root.update()
                 assert desktop.tree.get_children()
+                store.add_section('Bahçe')
+                section=store.snapshot()['sections'][-1]['id']
+                store.save_table('Bahçe 1',section)
+                desktop.refresh(False)
+                assert len(desktop.buttons)==13
+                desktop.section.set('Bahçe')
+                desktop.refresh(False)
+                assert len(desktop.buttons)==1
+                desktop.manage()
+                desktop.history()
+                desktop.root.update()
             finally:
                 desktop.root.destroy()
         return

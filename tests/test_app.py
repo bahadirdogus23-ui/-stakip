@@ -29,6 +29,49 @@ class AppTest(unittest.TestCase):
             with self.assertRaises(ValueError):self.store.add(1,1,qty)
         with self.assertRaises(ValueError):self.store.add(99,1)
         self.assertEqual(self.store.snapshot()['items'],[])
+    def test_sections_tables_and_history(self):
+        self.store.add_section('Bahçe')
+        section=self.store.snapshot()['sections'][-1]['id']
+        self.store.save_table('Bahçe 1',section)
+        table=self.store.snapshot()['tables'][-1]['id']
+        self.store.add(table,1)
+        with self.assertRaises(ValueError):self.store.remove_table(table)
+        with self.assertRaises(ValueError):self.store.remove_section(section)
+        self.store.pay(table,'Nakit',10000)
+        self.store.remove_table(table)
+        self.store.remove_section(section)
+        state=Store(self.temp.name).snapshot()
+        self.assertNotIn(table,[t['id'] for t in state['tables']])
+        self.assertEqual(state['payments'][0]['table_name'],'Bahçe 1')
+        self.assertEqual(state['payments'][0]['change_amount'],1000)
+        self.assertEqual(len(state['sections']),1)
+
+    def test_payment_rejects_stale_total_and_insufficient_cash(self):
+        self.store.add(1,1)
+        with self.assertRaises(ValueError):self.store.pay(1,'Nakit',8000)
+        self.store.add(1,1)
+        with self.assertRaises(ValueError):self.store.pay(1,'Kart',expected_total=9000)
+        self.assertEqual(self.store.snapshot()['payments'],[])
+        result=self.store.pay(1,'Nakit',20000,expected_total=18000)
+        self.assertEqual(result['change'],2000)
+        with self.assertRaises(ValueError):self.store.pay(1,'Nakit',20000)
+        self.assertEqual(len(self.store.snapshot()['payments']),1)
+
+    def test_existing_database_migration(self):
+        legacy=tempfile.TemporaryDirectory()
+        try:
+            from pathlib import Path
+            with closing(sqlite3.connect(Path(legacy.name)/'lokanta.sqlite3')) as db:
+                db.execute('CREATE TABLE tables(id INTEGER PRIMARY KEY, name TEXT NOT NULL)')
+                db.execute("INSERT INTO tables VALUES(42,'Eski masa')")
+                db.commit()
+            migrated=Store(legacy.name)
+            self.assertEqual(migrated.snapshot()['tables'][0]['id'],42)
+            self.assertEqual(migrated.snapshot()['tables'][0]['section_id'],1)
+            migrated.add(42,1)
+            self.assertEqual(migrated.snapshot()['tables'][0]['total'],9000)
+        finally:legacy.cleanup()
+
     def test_http_waiter_permissions(self):
         server=serve(self.store,'127.0.0.1',0);base=f'http://127.0.0.1:{server.server_port}'
         def req(path,data=None,token=''):
@@ -43,6 +86,7 @@ class AppTest(unittest.TestCase):
             state=req('/api/state',token=token)
             self.assertEqual(state['tables'][1]['total'],27000)
             self.assertNotIn('report',state)
+            self.assertNotIn('payments',state)
             with self.assertRaises(urllib.error.HTTPError) as e:req('/api/pay',{},token)
             self.assertEqual(e.exception.code,404)
         finally:server.shutdown();server.server_close()

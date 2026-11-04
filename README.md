@@ -20,7 +20,7 @@ Geri yükleme: uygulamayı kapatın, mevcut `lokanta.sqlite3` dosyasını ayrı 
 
 ## Mevcut kapsam
 
-12 masa, örnek menü, ürün ekleme, sipariş notu ve garson adı, mutfak durumları, nakit/kart ödeme kaydı, günlük toplam, yerel PIN girişi ve otomatik yedek. Kart kaydı banka entegrasyonu değildir. Tutarlar kuruş olarak saklanır; geçmiş sipariş fiyatı sonradan değişmez.
+Başlangıçta 12 masa, masa ekleme/kaldırma/adlandırma, bölüm oluşturma/kaldırma, masayı bölüme taşıma, bölüm filtreleri, renkli boş/dolu masa kartları, örnek menü, ürün ekleme, sipariş notu ve garson adı, mutfak durumları, nakit/kart ödeme penceresi, alınan tutar ve para üstü, ödeme alındı bildirimi, son 100 ödeme geçmişi, günlük toplam, yerel PIN girişi ve otomatik yedek. Açık hesabı olan masa kaldırılamaz; kaldırılan masanın ödeme geçmişi korunur. Eski veritabanları açılışta mevcut masalar Salon bölümünde kalacak şekilde güncellenir. Ödeme sırasında eklenen yeni siparişler tutar yeniden kontrol edilmeden kapatılamaz. Kart kaydı banka entegrasyonu değildir. Tutarlar kuruş olarak saklanır; geçmiş sipariş fiyatı sonradan değişmez.
 
 Bu ilk sürümde masa taşıma/birleştirme, kısmi ödeme, iptal/iade kayıtları, stok, yazıcı, mali fiş/e-fatura, kullanıcı bazında yetki ve uzak internet erişimi bulunmaz. PIN ortak servis erişimi içindir; güvenilir özel ağda kullanın, portu internete açmayın. Şifreli HTTPS ve bireysel hesaplar olmadan internetten erişim için uygun değildir. Ana bilgisayar kapanınca garson sipariş gönderemez; çevrimdışı sipariş kuyruğu yoktur.
 
