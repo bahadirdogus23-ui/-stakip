@@ -27,6 +27,14 @@ jobs:
         run: python tests/ui_smoke.py
       - name: Test waiter offline queue
         run: node tests/test_waiter.cjs
+      - name: Test modern waiter UI in Microsoft Edge
+        shell: pwsh
+        run: |
+          npm install --prefix "$env:RUNNER_TEMP/lokanta-browser" playwright-core@1.56.1 --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Browser test dependency installation failed.' }
+          $env:NODE_PATH = "$env:RUNNER_TEMP/lokanta-browser/node_modules"
+          python tests/run_browser_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'Waiter browser smoke test failed.' }
       - name: Build standalone desktop executable
         run: python -m PyInstaller --noconfirm --clean LokantaTakip.spec
       - name: Verify packaged Tk window, database and waiter page

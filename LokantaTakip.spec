@@ -6,7 +6,7 @@ a = Analysis(
     [str(root / 'main.py')],
     pathex=[str(root)],
     binaries=[],
-    datas=[(str(root / 'restaurant' / 'waiter.html'), 'restaurant')],
+    datas=[(str(root / 'restaurant' / name), 'restaurant') for name in ('waiter.html','waiter.js','waiter.css')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

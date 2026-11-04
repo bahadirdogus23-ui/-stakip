@@ -127,6 +127,119 @@ class AppTest(unittest.TestCase):
         for value in ['NaN','Infinity','-1','1.234','abc','0,001','9999999999']:
             with self.assertRaises(ValueError):parse_money(value)
 
+    def test_batch_atomicity_retry_and_notifications(self):
+        self.store.save_waiter('ali','Ali','sifre123')
+        user=self.store.authenticate('ali','sifre123')
+        batch=[dict(product=1,qty=2,note='Az tuzlu'),dict(product=2,qty=1,note='')]
+        with self.assertRaises(ValueError):self.store.add_batch(1,batch+[dict(product=999,qty=1)],user['id'],'invalid-batch-00001',0)
+        self.assertEqual(self.store.snapshot()['items'],[])
+        self.assertEqual(self.store.latest_event(),0)
+        result=self.store.add_batch(1,batch,user['id'],'valid-batch-000001',0)
+        self.assertFalse(result['duplicate'])
+        self.assertTrue(self.store.add_batch(1,batch,user['id'],'valid-batch-000001',0)['duplicate'])
+        self.assertEqual(len(self.store.snapshot()['items']),2)
+        self.assertEqual(self.store.snapshot()['tables'][0]['total'],43000)
+        events=self.store.events_since(0)
+        self.assertEqual(len(events),1)
+        self.assertEqual(events[0]['actor'],'Ali')
+        self.assertIn('Izgara köfte',events[0]['detail'])
+
+    def test_cancellations_permissions_audit_and_payment(self):
+        self.store.save_waiter('ali','Ali','sifre123');self.store.save_waiter('ayse','Ayşe','sifre123')
+        ali=self.store.authenticate('ali','sifre123');ayse=self.store.authenticate('ayse','sifre123')
+        self.store.add(1,1,2,waiter_id=ali['id']);self.store.add(1,2,waiter_id=ayse['id'])
+        rows=self.store.snapshot()['items'];first,second=rows[0]['id'],rows[1]['id']
+        with self.assertRaises(ValueError):self.store.cancel_items([first],'Yanlış ürün',waiter_id=ayse['id'])
+        with self.assertRaises(ValueError):self.store.cancel_items([first,second],'Yanlış ürün',waiter_id=ali['id'])
+        self.assertEqual(self.store.cancellation_history(),[])
+        self.assertEqual(self.store.cancel_items([first],'Müşteri vazgeçti',waiter_id=ali['id']),1)
+        self.assertEqual(self.store.cancel_items([first],'Müşteri vazgeçti',waiter_id=ali['id']),0)
+        self.store.set_state(first,'Servis edildi')
+        self.assertEqual(self.store.snapshot()['items'][0]['state'],'İptal')
+        self.assertEqual(self.store.snapshot()['tables'][0]['total'],25000)
+        result=self.store.pay(1,'Nakit',30000)
+        self.assertEqual(result['total'],25000)
+        self.assertEqual(self.store.period_report()['summary']['cash'],25000)
+        with self.assertRaises(ValueError):self.store.cancel_items([second],'Hatalı sipariş')
+        history=self.store.cancellation_history()
+        self.assertEqual(history[0]['actor'],'Ali')
+        self.assertEqual(history[0]['reason'],'Müşteri vazgeçti')
+
+    def test_last_item_cancel_closes_table_and_invalidates_old_cart(self):
+        self.store.save_waiter('ali','Ali','sifre123');user=self.store.authenticate('ali','sifre123')
+        batch=[dict(product=1,qty=1,note='')]
+        self.store.add_batch(1,batch,user['id'],'cancelled-batch-001',0)
+        item=self.store.snapshot()['items'][0]['id']
+        self.store.cancel_items([item],'Müşteri vazgeçti')
+        self.assertIsNone(self.store.snapshot()['tables'][0]['order_id'])
+        self.assertEqual(self.store.snapshot()['tables'][0]['epoch'],1)
+        self.store.add_batch(1,batch,user['id'],'cancelled-batch-001',0)
+        with self.assertRaises(ValueError):self.store.add_batch(1,batch,user['id'],'stale-batch-000001',0)
+        self.assertEqual(self.store.snapshot()['report']['count'],0)
+        self.assertEqual(len(self.store.cancellation_history()),1)
+
+    def test_verified_restore_and_corruption_rejection(self):
+        from restaurant.backups import verify,restore
+        from pathlib import Path
+        self.store.add(1,1)
+        selected=self.store.backup()
+        self.assertTrue(selected.with_suffix('.sha256').exists())
+        self.store.add(1,2)
+        archive=restore(self.store.directory,selected)
+        self.assertTrue(verify(archive))
+        recovered=Store(self.temp.name)
+        self.assertEqual(recovered.snapshot()['tables'][0]['total'],9000)
+        with closing(sqlite3.connect(archive)) as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM items').fetchone()[0],2)
+        corrupt=Path(self.temp.name)/'bozuk.sqlite3';corrupt.write_bytes(selected.read_bytes())
+        corrupt.with_suffix('.sha256').write_text('0'*64)
+        with self.assertRaises(ValueError):restore(recovered.directory,corrupt)
+        self.assertEqual(recovered.snapshot()['tables'][0]['total'],9000)
+        self.assertTrue(list((recovered.directory/'yedekler'/'saatlik').glob('*.sqlite3')))
+
+    def test_http_batch_cancel_and_packaged_assets(self):
+        self.store.save_waiter('ali','Ali','sifre123');self.store.save_waiter('ayse','Ayşe','sifre123')
+        server=serve(self.store,'127.0.0.1',0);base=f'http://127.0.0.1:{server.server_port}'
+        def request(path,data=None,token=''):
+            req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+            with urllib.request.urlopen(req) as response:return json.load(response)
+        try:
+            for path,mime in [('/','text/html'),('/waiter.js','application/javascript'),('/waiter.css','text/css')]:
+                with urllib.request.urlopen(base+path) as response:
+                    self.assertIn(mime,response.headers['Content-Type']);self.assertEqual(response.headers['Cache-Control'],'no-store')
+            ali=request('/api/login',dict(username='ali',password='sifre123'))['token']
+            ayse=request('/api/login',dict(username='ayse',password='sifre123'))['token']
+            batch=dict(table=1,epoch=0,request_id='http-batch-cancel-001',items=[dict(product=1,qty=2,note=''),dict(product=2,qty=1,note='')])
+            request('/api/order',batch,ali);request('/api/order',batch,ali)
+            state=request('/api/state',token=ali);self.assertEqual(len(state['items']),2)
+            item=state['items'][0]['id']
+            with self.assertRaises(urllib.error.HTTPError):request('/api/cancel',dict(items=[item],reason='Yanlış sipariş'),ayse)
+            request('/api/cancel',dict(items=[item],reason='Müşteri vazgeçti',waiter_id=999),ali)
+            self.assertEqual(request('/api/state',token=ali)['tables'][0]['total'],25000)
+            self.assertEqual(len(self.store.events_since(0)),2)
+        finally:server.shutdown();server.server_close()
+
+    def test_pre_upgrade_backup_and_retention_checksums(self):
+        from restaurant.backups import copy_backup,verify
+        with self.store.connect() as db:db.execute('PRAGMA user_version=1')
+        upgraded=Store(self.temp.name)
+        archives=list((upgraded.directory/'yedekler'/'gecis-oncesi').glob('*.sqlite3'))
+        self.assertEqual(len(archives),1);verify(archives[0])
+        folder=upgraded.directory/'yedekler'
+        original=upgraded.backup()
+        for index in range(101):copy_backup(original,folder/f'19990101-{index:06d}.sqlite3')
+        upgraded.backup()
+        snapshots=list(folder.glob('*.sqlite3'));self.assertEqual(len(snapshots),100)
+        self.assertEqual(len(list(folder.glob('*.sha256'))),100)
+        self.assertFalse((folder/'19990101-000000.sqlite3').exists())
+        verify(max(snapshots))
+
+    def test_data_directory_instance_lock(self):
+        from restaurant.instance import InstanceLock
+        with InstanceLock(self.temp.name):
+            with self.assertRaises(RuntimeError):
+                with InstanceLock(self.temp.name):pass
+        with InstanceLock(self.temp.name):pass
+
     def test_waiter_credentials_persist_securely(self):
         self.store.save_waiter('ali','Ali Kaya','sifre123')
         user=self.store.authenticate('ALI','sifre123')

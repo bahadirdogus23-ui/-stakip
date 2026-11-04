@@ -25,9 +25,10 @@ def serve(store, host='0.0.0.0', port=8765):
             if not session or session['expires']<=time.time():return None
             return store.session_waiter(session['id'],session['version'])
         def do_GET(self):
-            if self.path=='/':
-                body=Path(__file__).with_name('waiter.html').read_bytes()
-                self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.end_headers(); self.wfile.write(body)
+            assets={'/':('waiter.html','text/html'),'/waiter.js':('waiter.js','application/javascript'),'/waiter.css':('waiter.css','text/css')}
+            if self.path in assets:
+                name,mime=assets[self.path];body=Path(__file__).with_name(name).read_bytes()
+                self.send_response(200);self.send_header('Content-Type',mime+'; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(body)
             elif self.path=='/api/state':
                 user=self.authorized()
                 if not user: return self.reply(401,{'error':'Giriş yapın.'})
@@ -37,7 +38,7 @@ def serve(store, host='0.0.0.0', port=8765):
         def do_POST(self):
             try:
                 length=int(self.headers.get('Content-Length','0'))
-                if not 0<length<=4096: return self.reply(413,{'error':'İstek boyutu geçersiz.'})
+                if not 0<length<=131072: return self.reply(413,{'error':'İstek boyutu geçersiz.'})
                 data=json.loads(self.rfile.read(length))
                 if not isinstance(data,dict): raise ValueError('Geçersiz istek.')
                 if self.path=='/api/login':
@@ -58,8 +59,15 @@ def serve(store, host='0.0.0.0', port=8765):
                 if self.path=='/api/logout':
                     with lock:sessions.pop(self.headers.get('Authorization','').removeprefix('Bearer '),None)
                     return self.reply(200,{'ok':True})
+                if self.path=='/api/cancel':
+                    store.cancel_items(data.get('items'),data.get('reason'),waiter_id=user['id'])
+                    return self.reply(200,{'ok':True})
                 if self.path!='/api/order': return self.reply(404,{'error':'Bulunamadı.'})
-                store.add(int(data['table']),int(data['product']),data.get('qty',1),str(data.get('note','')),user['name'],waiter_id=user['id'],request_id=data.get('request_id'),expected_epoch=data.get('epoch'))
+                if 'items' in data:
+                    if not data.get('request_id'):raise ValueError('Sipariş kimliği gerekli.')
+                    result=store.add_batch(data['table'],data['items'],user['id'],data['request_id'],data.get('epoch'))
+                else:
+                    result=store.add(int(data['table']),int(data['product']),data.get('qty',1),str(data.get('note','')),user['name'],waiter_id=user['id'],request_id=data.get('request_id'),expected_epoch=data.get('epoch'))
                 self.reply(200,{'ok':True})
             except (ValueError,KeyError,TypeError) as error: self.reply(400,{'error':str(error) if isinstance(error,ValueError) else 'Sipariş bilgilerini kontrol edin.'})
             except Exception: self.reply(500,{'error':'İşlem tamamlanamadı; tekrar göndermeden önce masayı kontrol edin.'})

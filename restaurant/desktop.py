@@ -12,11 +12,14 @@ from restaurant.formatting import money, parse_money
 
 class Desktop:
     def __init__(self, store, port):
-        self.store=store;self.selected=1;self._cards_signature=None;self._items_signature=None
+        self.store=store;self.selected=1;self._cards_signature=None;self._items_signature=None;self.requested_restore=None;self.port=port
         self.root=tk.Tk();self.root.title('Lokanta Takip | Kasa')
         self.font='Segoe UI' if 'Segoe UI' in tkfont.families(self.root) else 'Helvetica'
         width=min(1360,self.root.winfo_screenwidth()-40);height=min(880,self.root.winfo_screenheight()-80)
         self.root.geometry(f'{width}x{height}+20+20');self.root.minsize(min(1000,width),min(650,height))
+        from restaurant.notifications import OrderSound
+        self.sound=OrderSound(self.root,store.directory);self.event_cursor=store.latest_event()
+        self.sound_enabled=store.setting('order_sound','1')=='1'
         self.root.configure(bg='#eef2f6')
         style=ttk.Style();style.theme_use('clam')
         style.configure('.',font=(self.font,10),background='#eef2f6',foreground='#1c3040')
@@ -34,8 +37,10 @@ class Desktop:
         tk.Label(top,text='LOKANTA',font=(self.font,20,'bold'),bg='#153c32',fg='white').pack(side='left')
         tk.Label(top,text='MASA VE ADİSYON',font=(self.font,10),bg='#153c32',fg='#bbd8ca').pack(side='left',padx=20)
         self.header_total=tk.Label(top,text='',font=(self.font,12,'bold'),bg='#153c32',fg='white');self.header_total.pack(side='right')
+        self.sound_button=tk.Button(top,text='Ses açık' if self.sound_enabled else 'Ses kapalı',command=self.toggle_sound,bg='#255444',fg='white',relief='flat',font=(self.font,10),padx=12,pady=6)
+        self.sound_button.pack(side='right',padx=16)
         nav=ttk.Frame(self.root,padding=(16,8));nav.pack(fill='x')
-        for text,command in [('Masa / Bölüm',self.manage),('Menüye ürün ekle',self.product),('Garsonlar',self.staff),('Özet ve raporlar',self.reports),('Ödeme geçmişi',self.history),('Yedekleme',self.backup)]:
+        for text,command in [('Masa / Bölüm',self.manage),('Menüye ürün ekle',self.product),('Garsonlar',self.staff),('Özet ve raporlar',self.reports),('Ödeme geçmişi',self.history),('İptaller',self.cancellations),('Yedekleme',self.backup)]:
             ttk.Button(nav,text=text,command=command).pack(side='left',padx=(0,5))
         self.report=ttk.Label(self.root,padding=(18,8),style='Muted.TLabel',wraplength=1100);self.report.pack(side='bottom',fill='x')
         body=ttk.Panedwindow(self.root,orient='horizontal');body.pack(fill='both',expand=True,padx=16,pady=(0,8))
@@ -74,15 +79,60 @@ class Desktop:
         self.note=ttk.Entry(editor);self.note.pack(fill='x');self.note.bind('<Return>',lambda e:self.add())
         actions=ttk.Frame(right);actions.pack(side='bottom',fill='x',pady=6)
         ttk.Button(actions,text='Sipariş detayı',command=self.item_detail).pack(side='left')
+        ttk.Button(actions,text='İptal et',command=self.cancel_selected).pack(side='right')
         for state in ('Hazırlanıyor','Servis edildi'):ttk.Button(actions,text=state,command=lambda s=state:self.state(s)).pack(side='left',padx=4)
         self.tree=self.table_widget(right,[('product','Ürün',150),('qty','Adet',50),('sum','Tutar',100),('state','Durum',110),('waiter','Garson',130),('note','Not',160)])
         self.tree.bind('<Double-1>',lambda e:self.item_detail())
-        self.tree.tag_configure('Yeni',foreground='#9a5d0a');self.tree.tag_configure('Servis edildi',foreground='#146b50')
+        self.tree.tag_configure('İptal',foreground='#a0a6ae');self.tree.tag_configure('Yeni',foreground='#9a5d0a');self.tree.tag_configure('Servis edildi',foreground='#146b50')
         self.root.protocol('WM_DELETE_WINDOW',self.close)
         self.refresh()
 
+    def toggle_sound(self):
+        self.sound_enabled=not self.sound_enabled
+        self.store.set_setting('order_sound','1' if self.sound_enabled else '0')
+        self.sound_button.configure(text='Ses açık' if self.sound_enabled else 'Ses kapalı')
+        if self.sound_enabled:self.sound.play()
+
+    def check_notifications(self):
+        events=self.store.events_since(self.event_cursor)
+        if not events:return
+        self.event_cursor=events[-1]['id']
+        incoming=[event for event in events if event['kind']=='order']
+        latest=events[-1]
+        self.feedback.configure(text=f"{'Yeni sipariş' if latest['kind']=='order' else 'Sipariş iptali'} | {latest['table_name']} | {latest['actor']} | {latest['detail'][:180]}")
+        if incoming and self.sound_enabled:
+            try:self.sound.play()
+            except (OSError,RuntimeError,tk.TclError):self.feedback.configure(text=self.feedback.cget('text')+' | Ses çalınamadı; bilgisayarın sesini kontrol edin.')
+
+    def cancel_selected(self):
+        rows=[i for i in self.store.snapshot()['items'] if str(i['id']) in self.tree.selection() and not i['cancelled']]
+        if not rows:return self.feedback.configure(text='İptal için listeden aktif bir sipariş seçin.')
+        reason=simpledialog.askstring('Sipariş iptali',f"{len(rows)} sipariş satırı tamamen iptal edilecek.\nİptal nedeni (en az 3 karakter):",parent=self.root)
+        if reason is None:return
+        def cancel():
+            self.store.cancel_items([i['id'] for i in rows],reason)
+            self.feedback.configure(text='Sipariş iptal edildi. Hesap güncellendi; iptal kaydı saklandı.')
+        self.call(cancel)
+
+    def cancellations(self):
+        dialog=self.dialog('İptal geçmişi',1000,600)
+        box=ttk.Frame(dialog,padding=20);box.pack(fill='both',expand=True)
+        ttk.Label(box,text='İptal geçmişi',font=(self.font,20,'bold')).pack(anchor='w')
+        ttk.Label(box,text='Son 200 iptal | Kayıtlar silinmez; iptal edilen ürünler tahsilata dahil edilmez.').pack(anchor='w',pady=10)
+        tree=self.table_widget(box,[('date','Tarih',150),('table','Masa',100),('product','Ürün / adet',180),('actor','İptal eden',130),('reason','Neden',260)])
+        rows=self.store.cancellation_history()
+        from datetime import datetime, timezone
+        for row in rows:
+            local=datetime.fromisoformat(row['created']).replace(tzinfo=timezone.utc).astimezone().strftime('%d.%m.%Y %H:%M')
+            tree.insert('','end',iid=str(row['item_id']),values=(local,row['table_name'],f"{row['qty']} × {row['name']}",row['actor'],row['reason']))
+        def detail(event):
+            if tree.selection():
+                row=next(r for r in rows if str(r['item_id'])==tree.selection()[0])
+                messagebox.showinfo('İptal detayı',f"{row['table_name']} | {row['qty']} × {row['name']}\nSiparişi giren: {row['waiter']}\nİptal eden: {row['actor']}\nNeden: {row['reason']}",parent=dialog)
+        tree.bind('<Double-1>',detail)
+
     def close(self):
-        if messagebox.askyesno('Programı kapat','Kasa kapanınca garson bağlantısı kesilecek. Kapatılsın mı?',parent=self.root):self.root.destroy()
+        if messagebox.askyesno('Programı kapat','Kasa kapanınca garson bağlantısı kesilecek. Kapatılsın mı?',parent=self.root):self.sound.stop();self.root.destroy()
 
     def dialog(self,title,width,height):
         window=tk.Toplevel(self.root);window.title(title);window.transient(self.root)
@@ -104,7 +154,7 @@ class Desktop:
 
     def table_widget(self,parent,columns):
         frame=ttk.Frame(parent);frame.pack(fill='both',expand=True)
-        tree=ttk.Treeview(frame,columns=[c[0] for c in columns],show='headings',selectmode='browse',height=6)
+        tree=ttk.Treeview(frame,columns=[c[0] for c in columns],show='headings',selectmode='extended',height=6)
         for key,label,width in columns:tree.heading(key,text=label);tree.column(key,width=width,minwidth=45,stretch=True)
         vertical=ttk.Scrollbar(frame,orient='vertical',command=tree.yview);horizontal=ttk.Scrollbar(frame,orient='horizontal',command=tree.xview)
         frame.rowconfigure(0,weight=1);frame.columnconfigure(0,weight=1)
@@ -152,7 +202,7 @@ class Desktop:
             self._items_signature=items
             selected=self.tree.selection();position=self.tree.yview()
             self.tree.delete(*self.tree.get_children())
-            for i in items:self.tree.insert('', 'end',iid=str(i['id']),values=(i['name'],i['qty'],money(i['price']*i['qty']),i['state'],i['waiter'],i['note']),tags=(i['state'],))
+            for i in items:self.tree.insert('', 'end',iid=str(i['id']),values=(i['name'],i['qty'],money(0 if i['cancelled'] else i['price']*i['qty']),i['state'],i['waiter'],i['note']),tags=(i['state'],))
             if selected and self.tree.exists(selected[0]):self.tree.selection_set(selected[0])
             if position:self.tree.yview_moveto(position[0])
         self.add_button.configure(state='normal' if t and data['products'] else 'disabled')
@@ -161,7 +211,8 @@ class Desktop:
         if data['products']:self.products.current(max(0,min(idx,len(data['products'])-1)))
         self.report.configure(text=f"Bugün {data['report']['count']} adisyon kapandı  |  Veriler yerel bilgisayarda  |  Otomatik yedekleme açık")
         if self.store.backup_status().get('error'):self.report.configure(text=self.report.cget('text')+'   Uyarı: '+self.store.backup_status()['error'])
-        if schedule:self.root.after(3000,self.refresh)
+        self.check_notifications()
+        if schedule:self.root.after(1000,self.refresh)
     def add(self):
         def action():
             if self.selected is None:raise ValueError('Önce bir masa seçin.')
@@ -203,11 +254,29 @@ class Desktop:
         ttk.Button(box,text='Ödemeyi onayla ve masayı kapat',style='Accent.TButton',command=complete).pack(fill='x',pady=12)
         ttk.Button(box,text='Vazgeç',command=dialog.destroy).pack(fill='x')
 
+    def connection_info(self):
+        dialog=self.dialog('Garson bağlantısı',650,400)
+        box=ttk.Frame(dialog,padding=24);box.pack(fill='both',expand=True)
+        ttk.Label(box,text='Garson telefonunu bağlayın',font=(self.font,20,'bold')).pack(anchor='w')
+        ttk.Label(box,text='Telefon ve kasa aynı yerel ağa bağlı olmalı. Aşağıdaki adresi telefonun tarayıcısına yazın; ardından garson hesabıyla giriş yapın.',wraplength=580).pack(anchor='w',pady=16)
+        try:addresses=sorted({ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith('127.')})
+        except OSError:addresses=[]
+        if not addresses:ttk.Label(box,text='Yerel ağ adresi bulunamadı. Bilgisayarın Wi-Fi veya Ethernet bağlantısını kontrol edin.',wraplength=580).pack(anchor='w')
+        for address in addresses:
+            url=f'http://{address}:{self.port}'
+            row=ttk.Frame(box);row.pack(fill='x',pady=6)
+            entry=ttk.Entry(row);entry.insert(0,url);entry.configure(state='readonly');entry.pack(side='left',fill='x',expand=True)
+            def copy(value=url):
+                self.root.clipboard_clear();self.root.clipboard_append(value)
+            ttk.Button(row,text='Kopyala',command=copy).pack(side='right',padx=8)
+        ttk.Label(box,text='Birden çok adres varsa telefonla aynı ağdaki Wi-Fi / Ethernet adresini kullanın.',wraplength=580,style='Muted.TLabel').pack(anchor='w',pady=12)
+
     def staff(self):
         dialog=self.dialog('Garson hesapları',760,660)
         box=self.form_panel(dialog)
         ttk.Label(box,text='Garson hesapları',font=(self.font,20,'bold')).pack(anchor='w')
         ttk.Label(box,text='Hesap oluşturun; şifre değişince ve hesap pasife alınınca eski girişler kapanır.',wraplength=680).pack(anchor='w',pady=8)
+        ttk.Button(box,text='Garson bağlantı adreslerini göster',command=self.connection_info).pack(anchor='w',pady=(0,10))
         tree=self.table_widget(box,[('name','Ad soyad',210),('username','Kullanıcı adı',190),('active','Durum',100)])
         fields={}
         for key,label in [('name','Ad soyad'),('username','Kullanıcı adı'),('password','Şifre (en az 6 karakter)')]:
@@ -337,7 +406,7 @@ class Desktop:
         dialog=self.dialog('Yedekleme merkezi',760,560)
         box=self.form_panel(dialog)
         ttk.Label(box,text='Yedekleme merkezi',font=(self.font,22,'bold')).pack(anchor='w')
-        ttk.Label(box,text='Her işlemde otomatik | Son 100 işlem yedeği | 30 günlük | 12 aylık',wraplength=700).pack(anchor='w',pady=12)
+        ttk.Label(box,text='Her işlemde + 5 dakikada bir | SHA-256 | 100 işlem / 48 saat / 30 gün / 12 ay',wraplength=700).pack(anchor='w',pady=12)
         status=ttk.Label(box,wraplength=700);status.pack(anchor='w',pady=8)
         files=tk.Listbox(box,font=(self.font,10));files.pack(fill='both',expand=True)
         def reload():
@@ -346,23 +415,36 @@ class Desktop:
             files.delete(0,'end')
             for f in sorted((self.store.directory/'yedekler').rglob('*.sqlite3'),reverse=True):files.insert('end',str(f.relative_to(self.store.directory)))
         def run(fn):
-            try:fn();name.delete(0,'end');reload()
+            try:fn();reload()
             except Exception as e:messagebox.showerror('Yedekleme hatası',str(e),parent=dialog)
         def choose():
             folder=filedialog.askdirectory(title='Harici disk veya yedek klasörü',parent=dialog)
             if folder:self.store.set_backup_directory(folder)
+        def choose_backup():
+            return filedialog.askopenfilename(title='Yedek seçin',filetypes=[('SQLite yedeği','*.sqlite3')],parent=dialog)
         def verify():
-            path=filedialog.askopenfilename(title='Doğrulanacak yedek',filetypes=[('SQLite yedeği','*.sqlite3')],parent=dialog)
+            from restaurant.backups import verify as verify_file
+            path=choose_backup()
+            if path:
+                verify_file(path)
+                messagebox.showinfo('Doğrulandı','Yedek bütünlüğü, kayıt ilişkileri ve varsa SHA-256 sağlama toplamı doğrulandı.',parent=dialog)
+        def restore_backup():
+            from restaurant.backups import verify as verify_file
+            path=choose_backup()
             if not path:return
-            with closing(sqlite3.connect(Path(path).resolve().as_uri()+'?mode=ro',uri=True)) as db:
-                if db.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('Yedek bozuk.')
-                tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                if not {'tables','orders','items','products','settings'}<=tables:raise ValueError('Bu dosya Lokanta Takip yedeği değil.')
-            messagebox.showinfo('Doğrulandı','Yedek sağlam. Geri yüklemek için uygulamayı kapatın, mevcut veriyi ayrı yere kopyalayın ve yedeği veri klasörüne lokanta.sqlite3 adıyla yerleştirin.',parent=dialog)
+            verify_file(path)
+            if Path(path).resolve()==self.store.path.resolve():raise ValueError('Canlı veritabanını seçmeyin.')
+            if messagebox.askyesno('Yedeğe geri dön',
+                'Program ve garson bağlantıları kapatılacak. Mevcut veriler ayrı bir arşive alındıktan sonra seçilen yedek geri yüklenecek. Yedekten sonraki işlemler yalnız arşivde kalır. Devam edilsin mi?',parent=dialog):
+                self.requested_restore=path;self.sound.stop();self.root.destroy()
         ttk.Button(box,text='Şimdi yedek al',command=lambda:run(self.store.backup)).pack(fill='x',pady=4)
         ttk.Button(box,text='Harici yedek klasörü seç',command=lambda:run(choose)).pack(fill='x',pady=4)
         ttk.Button(box,text='Harici yedeği kapat',command=lambda:run(lambda:self.store.set_backup_directory(''))).pack(fill='x',pady=4)
         ttk.Button(box,text='Yedek dosyasını doğrula',command=lambda:run(verify)).pack(fill='x',pady=4)
+        ttk.Button(box,text='Doğrulanmış yedeğe geri dön…',command=lambda:restore_action()).pack(fill='x',pady=4)
+        def restore_action():
+            try:restore_backup()
+            except Exception as e:messagebox.showerror('Geri yükleme başlatılamadı',str(e),parent=dialog)
         reload()
     def product(self):
         name=simpledialog.askstring('Yeni ürün','Ürün adı:')
