@@ -18,6 +18,8 @@ class Desktop:
         top=ttk.Frame(self.root,padding=18); top.pack(fill='x')
         ttk.Label(top,text='LOKANTA  /  Masa ve Adisyon',font=('Segoe UI',22,'bold')).pack(side='left')
         ttk.Button(top,text='Masa / Bölüm',command=self.manage).pack(side='right',padx=8)
+        ttk.Button(top,text='Garsonlar',command=self.staff).pack(side='right',padx=8)
+        ttk.Button(top,text='Özet ve raporlar',command=self.reports).pack(side='right',padx=8)
         ttk.Button(top,text='Ödeme geçmişi',command=self.history).pack(side='right',padx=8)
         ttk.Button(top,text='Yedek al',command=self.backup).pack(side='right')
         ttk.Button(top,text='Ürün ekle',command=self.product).pack(side='right',padx=8)
@@ -25,7 +27,7 @@ class Desktop:
             addresses=sorted(set(socket.gethostbyname_ex(socket.gethostname())[2]))
         except OSError: addresses=[]
         address=', '.join(f'http://{a}:{port}' for a in addresses if not a.startswith('127.')) or f'Bilgisayarın yerel IP adresi:{port}'
-        ttk.Label(self.root,text=f'Garson bağlantısı: {address}     •     PIN: {store.pin()}',padding=12).pack(fill='x')
+        ttk.Label(self.root,text=f'Garson bağlantısı: {address}   •   Garson hesaplarını Garsonlar menüsünden tanımlayın.',padding=12).pack(fill='x')
         body=ttk.Frame(self.root,padding=16); body.pack(fill='both',expand=True)
         left=ttk.Frame(body);left.pack(side='left',fill='both',padx=(0,20))
         self.summary=ttk.Label(left,font=('Segoe UI',12,'bold'));self.summary.pack(anchor='w',pady=8)
@@ -133,6 +135,67 @@ class Desktop:
             self.refresh(False)
         ttk.Button(box,text='Ödemeyi onayla ve masayı kapat',style='Accent.TButton',command=complete).pack(fill='x',pady=12)
         ttk.Button(box,text='Vazgeç',command=dialog.destroy).pack(fill='x')
+
+    def staff(self):
+        dialog=tk.Toplevel(self.root);dialog.title('Garson hesapları');dialog.geometry('760x660');dialog.transient(self.root)
+        box=ttk.Frame(dialog,padding=20);box.pack(fill='both',expand=True)
+        ttk.Label(box,text='Garson hesapları',font=('Segoe UI',20,'bold')).pack(anchor='w')
+        ttk.Label(box,text='Hesap oluşturun; şifre değişince ve hesap pasife alınınca eski girişler kapanır.',wraplength=680).pack(anchor='w',pady=8)
+        tree=ttk.Treeview(box,columns=('name','username','active'),show='headings',height=6)
+        for key,title in [('name','Ad soyad'),('username','Kullanıcı adı'),('active','Durum')]:tree.heading(key,text=title)
+        tree.pack(fill='both',expand=True)
+        fields={}
+        for key,label in [('name','Ad soyad'),('username','Kullanıcı adı'),('password','Şifre (en az 6 karakter)')]:
+            ttk.Label(box,text=label).pack(anchor='w',pady=(8,0))
+            fields[key]=ttk.Entry(box,show='•' if key=='password' else '')
+            fields[key].pack(fill='x')
+        def reload():
+            tree.delete(*tree.get_children())
+            for u in self.store.waiters():tree.insert('','end',iid=str(u['id']),values=(u['name'],u['username'],'Aktif' if u['active'] else 'Pasif'))
+        def choose(event):
+            if not tree.selection():return
+            values=tree.item(tree.selection()[0],'values')
+            for key,value in [('name',values[0]),('username',values[1]),('password','')]:fields[key].delete(0,'end');fields[key].insert(0,value)
+        tree.bind('<<TreeviewSelect>>',choose)
+        def save(update=False):
+            try:
+                if update and not tree.selection():raise ValueError('Önce garson seçin.')
+                waiter_id=int(tree.selection()[0]) if update else None
+                self.store.save_waiter(fields['username'].get(),fields['name'].get(),fields['password'].get(),waiter_id)
+                fields['password'].delete(0,'end');reload()
+                messagebox.showinfo('Garson hesabı','Hesap kaydedildi. Garson bu kullanıcı adı ve şifreyle giriş yapabilir.',parent=dialog)
+            except Exception as e:messagebox.showerror('Hesap kaydedilemedi',str(e),parent=dialog)
+        def toggle():
+            if not tree.selection():return
+            user=next(u for u in self.store.waiters() if u['id']==int(tree.selection()[0]))
+            self.store.set_waiter_active(user['id'],not user['active']);reload()
+        ttk.Button(box,text='+ Yeni garson oluştur',command=save).pack(fill='x',pady=(12,4))
+        ttk.Button(box,text='Seçili hesabı güncelle / yeni şifre ata',command=lambda:save(True)).pack(fill='x',pady=4)
+        ttk.Button(box,text='Seçili hesabı aktif / pasif yap',command=toggle).pack(fill='x',pady=4)
+        reload()
+
+    def reports(self):
+        dialog=tk.Toplevel(self.root);dialog.title('Özet ve raporlar');dialog.geometry('1000x650');dialog.transient(self.root)
+        box=ttk.Frame(dialog,padding=20);box.pack(fill='both',expand=True)
+        ttk.Label(box,text='Özet ve raporlar',font=('Segoe UI',22,'bold')).pack(anchor='w')
+        period=ttk.Combobox(box,values=['Günlük','Haftalık','Aylık'],state='readonly');period.current(0);period.pack(anchor='w',pady=12)
+        dates=ttk.Label(box);dates.pack(anchor='w')
+        summary=ttk.Label(box,font=('Segoe UI',15,'bold'),wraplength=950);summary.pack(anchor='w',pady=20)
+        ttk.Label(box,text='Kapanan adisyonlar • Ödeme türü ve siparişi giren garsonlar').pack(anchor='w',pady=6)
+        tree=ttk.Treeview(box,columns=('id','date','table','method','total','waiters'),show='headings')
+        for key,title,width in [('id','Adisyon',65),('date','Tarih / saat',155),('table','Masa',130),('method','Ödeme',85),('total','Tahsilat',100),('waiters','Garsonlar',220)]:
+            tree.heading(key,text=title);tree.column(key,width=width)
+        scroll=ttk.Scrollbar(box,orient='vertical',command=tree.yview);scroll.pack(side='right',fill='y');tree.configure(yscrollcommand=scroll.set)
+        tree.pack(fill='both',expand=True)
+        def load(*args):
+            report=self.store.period_report(['daily','weekly','monthly'][period.current()]);r=report['summary']
+            dates.configure(text=f"{report['start']} — {report['end']} • Yerel bilgisayar saati • Hafta pazartesi başlar")
+            summary.configure(text=f"{r['count']} adisyon   |   Toplam {money(r['total'])}\nNakit {money(r['cash'])}   •   Kart {money(r['card'])}")
+            tree.delete(*tree.get_children())
+            for o in report['orders']:tree.insert('','end',values=(o['id'],o['closed'],o['table_name'],o['method'],money(o['total']),o['waiters']))
+        period.bind('<<ComboboxSelected>>',load)
+        ttk.Button(box,text='Raporu yenile',command=load).pack(pady=12)
+        load()
 
     def history(self):
         dialog=tk.Toplevel(self.root);dialog.title('Son 100 ödeme');dialog.geometry('850x450')

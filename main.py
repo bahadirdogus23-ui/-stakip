@@ -34,6 +34,8 @@ def main():
                 assert len(desktop.buttons)==1
                 desktop.manage()
                 desktop.history()
+                desktop.staff()
+                desktop.reports()
                 desktop.root.update()
             finally:
                 desktop.root.destroy()

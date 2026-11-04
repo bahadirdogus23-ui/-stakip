@@ -72,7 +72,40 @@ class AppTest(unittest.TestCase):
             self.assertEqual(migrated.snapshot()['tables'][0]['total'],9000)
         finally:legacy.cleanup()
 
+    def test_waiter_credentials_persist_securely(self):
+        self.store.save_waiter('ali','Ali Kaya','sifre123')
+        user=self.store.authenticate('ALI','sifre123')
+        self.assertEqual(user['name'],'Ali Kaya')
+        self.assertIsNone(self.store.authenticate('ali','hatali'))
+        with self.store.connect() as db:
+            row=db.execute('SELECT * FROM waiters').fetchone()
+            self.assertNotEqual(row['password_hash'],'sifre123')
+            self.assertNotIn('password_hash',self.store.waiters()[0])
+        self.assertIsNotNone(Store(self.temp.name).authenticate('ali','sifre123'))
+        with self.assertRaises(ValueError):self.store.save_waiter('ali','Başka Ali','sifre123')
+        with self.assertRaises(ValueError):self.store.save_waiter('veli','Veli','123')
+
+    def test_period_reports_cash_card_and_legacy_payments(self):
+        from datetime import date
+        for qty,method,day in [(1,'Nakit','2026-11-04'),(2,'Kart','2026-11-02'),(3,'Nakit','2026-10-31'),(4,'Kart','2026-11-01'),(5,'Nakit','2026-12-01')]:
+            self.store.add(1,1,qty)
+            self.store.pay(1,method)
+            with self.store.connect() as db:
+                db.execute("UPDATE orders SET closed=datetime(?,'utc') WHERE id=(SELECT MAX(id) FROM orders)",(day+' 12:00:00',))
+        # Older releases recorded method on orders without a payments row.
+        with self.store.connect() as db:db.execute('DELETE FROM payments')
+        today=date(2026,11,4)
+        self.assertEqual(self.store.period_report('daily',today)['summary'],dict(count=1,total=9000,cash=9000,card=0))
+        self.assertEqual(self.store.period_report('weekly',today)['summary'],dict(count=2,total=27000,cash=9000,card=18000))
+        monthly=self.store.period_report('monthly',today)
+        self.assertEqual(monthly['summary'],dict(count=3,total=63000,cash=9000,card=54000))
+        self.assertEqual(monthly['start'],'2026-11-01')
+        self.assertEqual(monthly['end'],'2026-11-30')
+        self.assertEqual({r['method'] for r in monthly['orders']},{'Nakit','Kart'})
+        self.assertEqual(self.store.period_report('monthly',date(2027,1,1))['summary']['total'],0)
+
     def test_http_waiter_permissions(self):
+        self.store.save_waiter('ayse','Ayşe Yılmaz','guvenli123')
         server=serve(self.store,'127.0.0.1',0);base=f'http://127.0.0.1:{server.server_port}'
         def req(path,data=None,token=''):
             request=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
@@ -81,14 +114,28 @@ class AppTest(unittest.TestCase):
             self.assertEqual(req('/health')['status'],'ok')
             with self.assertRaises(urllib.error.HTTPError) as e:req('/api/state')
             self.assertEqual(e.exception.code,401)
-            token=req('/api/login',{'pin':self.store.pin()})['token']
-            req('/api/order',{'table':2,'product':1,'qty':3,'waiter':'Ayşe'},token)
+            with self.assertRaises(urllib.error.HTTPError):req('/api/login',{'pin':self.store.pin()})
+            with self.assertRaises(urllib.error.HTTPError):req('/api/login',{'username':'ayse','password':'yanlis'})
+            token=req('/api/login',{'username':'ayse','password':'guvenli123'})['token']
+            req('/api/order',{'table':2,'product':1,'qty':3,'waiter':'Sahte İsim'},token)
             state=req('/api/state',token=token)
             self.assertEqual(state['tables'][1]['total'],27000)
+            self.assertEqual(state['user']['name'],'Ayşe Yılmaz')
+            self.assertEqual(state['items'][0]['waiter'],'Ayşe Yılmaz')
+            self.assertEqual(state['items'][0]['waiter_id'],state['user']['id'])
             self.assertNotIn('report',state)
             self.assertNotIn('payments',state)
             with self.assertRaises(urllib.error.HTTPError) as e:req('/api/pay',{},token)
             self.assertEqual(e.exception.code,404)
+            req('/api/logout',{},token)
+            with self.assertRaises(urllib.error.HTTPError):req('/api/state',token=token)
+            token=req('/api/login',{'username':'ayse','password':'guvenli123'})['token']
+            self.store.save_waiter('ayse','Ayşe Yılmaz','yenisifre',state['user']['id'])
+            with self.assertRaises(urllib.error.HTTPError):req('/api/state',token=token)
+            token=req('/api/login',{'username':'ayse','password':'yenisifre'})['token']
+            self.store.set_waiter_active(state['user']['id'],False)
+            with self.assertRaises(urllib.error.HTTPError):req('/api/state',token=token)
+            with self.assertRaises(urllib.error.HTTPError):req('/api/login',{'username':'ayse','password':'yenisifre'})
         finally:server.shutdown();server.server_close()
 
 if __name__=='__main__':unittest.main()

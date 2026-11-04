@@ -1,9 +1,11 @@
 import os
+import hashlib
+import hmac
 import secrets
 import sqlite3
 import threading
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from contextlib import contextmanager, closing
 
 class Store:
@@ -30,6 +32,9 @@ class Store:
             if 'active' not in columns:
                 db.execute('ALTER TABLE tables ADD COLUMN active INTEGER NOT NULL DEFAULT 1')
             db.execute("CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id), method TEXT NOT NULL, total INTEGER NOT NULL, received INTEGER NOT NULL, change_amount INTEGER NOT NULL, created TEXT DEFAULT CURRENT_TIMESTAMP)")
+            db.execute("CREATE TABLE IF NOT EXISTS waiters(id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, name TEXT NOT NULL, password_hash TEXT NOT NULL, salt TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, version INTEGER NOT NULL DEFAULT 1)")
+            if 'waiter_id' not in {r['name'] for r in db.execute('PRAGMA table_info(items)')}:
+                db.execute('ALTER TABLE items ADD COLUMN waiter_id INTEGER REFERENCES waiters(id)')
             if not db.execute('SELECT 1 FROM tables').fetchone():
                 db.executemany('INSERT INTO tables(name) VALUES(?)', [(f'Masa {i}',) for i in range(1,13)])
             if not db.execute('SELECT 1 FROM products').fetchone():
@@ -62,7 +67,7 @@ class Store:
             payments = [dict(r) for r in db.execute("SELECT p.*,t.name AS table_name FROM payments p JOIN orders o ON o.id=p.order_id JOIN tables t ON t.id=o.table_id ORDER BY p.id DESC LIMIT 100")]
         return dict(tables=tables, products=products, items=items, report=report, sections=sections, payments=payments)
 
-    def add(self, table, product, qty=1, note='', waiter='Kasa'):
+    def add(self, table, product, qty=1, note='', waiter='Kasa', waiter_id=None):
         if type(qty) is not int or not 1 <= qty <= 99:
             raise ValueError('Adet 1–99 arasında olmalı.')
         if len(note)>300 or not 1 <= len(waiter.strip()) <= 50:
@@ -75,7 +80,11 @@ class Store:
             if not p: raise ValueError('Ürün bulunamadı.')
             db.execute("INSERT OR IGNORE INTO orders(table_id) VALUES(?)",(table,))
             order = db.execute("SELECT id FROM orders WHERE table_id=? AND status='open'",(table,)).fetchone()[0]
-            db.execute('INSERT INTO items(order_id,name,price,qty,note,waiter) VALUES(?,?,?,?,?,?)',(order,p['name'],p['price'],qty,note.strip(),waiter.strip()))
+            if waiter_id is not None:
+                account=db.execute('SELECT name FROM waiters WHERE id=? AND active=1',(waiter_id,)).fetchone()
+                if not account:raise ValueError('Garson hesabı aktif değil.')
+                waiter=account['name']
+            db.execute('INSERT INTO items(order_id,name,price,qty,note,waiter,waiter_id) VALUES(?,?,?,?,?,?,?)',(order,p['name'],p['price'],qty,note.strip(),waiter.strip(),waiter_id))
         self.backup()
 
     def pay(self, table, method, received=None, expected_total=None):
@@ -145,6 +154,68 @@ class Store:
         with self.lock, self.connect() as db:
             db.execute('INSERT INTO products(name,price) VALUES(?,?)',(name.strip(),price))
         self.backup()
+
+    @staticmethod
+    def password_digest(password, salt):
+        return hashlib.pbkdf2_hmac('sha256', password.encode(), bytes.fromhex(salt), 600000).hex()
+
+    def waiters(self):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute('SELECT id,username,name,active FROM waiters ORDER BY id')]
+
+    def save_waiter(self, username, name, password, waiter_id=None):
+        username=username.strip().lower();name=name.strip()
+        if not username or len(username)>50 or not name or len(name)>50:
+            raise ValueError('Kullanıcı adı ve ad soyad 1–50 karakter olmalı.')
+        if not 6<=len(password)<=128:raise ValueError('Şifre 6–128 karakter olmalı.')
+        salt=secrets.token_hex(16);digest=self.password_digest(password,salt)
+        with self.lock, self.connect() as db:
+            try:
+                if waiter_id is None:
+                    db.execute('INSERT INTO waiters(username,name,password_hash,salt) VALUES(?,?,?,?)',(username,name,digest,salt))
+                elif not db.execute('UPDATE waiters SET username=?,name=?,password_hash=?,salt=?,version=version+1 WHERE id=?',(username,name,digest,salt,waiter_id)).rowcount:
+                    raise ValueError('Garson bulunamadı.')
+            except sqlite3.IntegrityError:raise ValueError('Kullanıcı adı zaten kullanılıyor.')
+        self.backup()
+
+    def set_waiter_active(self, waiter_id, active):
+        with self.lock, self.connect() as db:
+            db.execute('UPDATE waiters SET active=?,version=version+1 WHERE id=?',(int(bool(active)),waiter_id))
+        self.backup()
+
+    def authenticate(self, username, password):
+        if not isinstance(username,str) or not isinstance(password,str) or len(password)>128:return None
+        with self.connect() as db:
+            row=db.execute('SELECT * FROM waiters WHERE username=?',(username.strip().lower(),)).fetchone()
+        salt=row['salt'] if row else '00'*16
+        digest=self.password_digest(password,salt)
+        if row and row['active'] and hmac.compare_digest(digest,row['password_hash']):
+            return dict(id=row['id'],name=row['name'],username=row['username'],version=row['version'])
+        return None
+
+    def session_waiter(self, waiter_id, version):
+        with self.connect() as db:
+            row=db.execute('SELECT id,name,username FROM waiters WHERE id=? AND version=? AND active=1',(waiter_id,version)).fetchone()
+        return dict(row) if row else None
+
+    def period_report(self, period='daily', today=None):
+        today=today or datetime.now().date()
+        if period=='daily':start=today;end=start+timedelta(days=1)
+        elif period=='weekly':start=today-timedelta(days=today.weekday());end=start+timedelta(days=7)
+        elif period=='monthly':
+            start=today.replace(day=1)
+            end=date(start.year+1,1,1) if start.month==12 else date(start.year,start.month+1,1)
+        else:raise ValueError('Rapor dönemi geçersiz.')
+        with self.connect() as db:
+            rows=[dict(r) for r in db.execute("""SELECT o.id,t.name AS table_name,datetime(o.closed,'localtime') AS closed,o.payment AS method,
+                SUM(i.price*i.qty) AS total,GROUP_CONCAT(DISTINCT i.waiter) AS waiters
+                FROM orders o JOIN tables t ON t.id=o.table_id JOIN items i ON i.order_id=o.id
+                WHERE o.status='paid' AND date(o.closed,'localtime')>=? AND date(o.closed,'localtime')<?
+                GROUP BY o.id ORDER BY o.closed DESC,o.id DESC""",(start.isoformat(),end.isoformat()))]
+        summary=dict(count=len(rows),total=sum(r['total'] for r in rows),
+            cash=sum(r['total'] for r in rows if r['method']=='Nakit'),
+            card=sum(r['total'] for r in rows if r['method']=='Kart'))
+        return dict(start=start.isoformat(),end=(end-timedelta(days=1)).isoformat(),summary=summary,orders=rows)
 
     def backup(self):
         with self.lock:

@@ -1,4 +1,3 @@
-import hmac
 import json
 import secrets
 import threading
@@ -22,14 +21,17 @@ def serve(store, host='0.0.0.0', port=8765):
             self.end_headers(); self.wfile.write(body)
         def authorized(self):
             token=self.headers.get('Authorization','').removeprefix('Bearer ')
-            with lock: return sessions.get(token,0)>time.time()
+            with lock: session=sessions.get(token)
+            if not session or session['expires']<=time.time():return None
+            return store.session_waiter(session['id'],session['version'])
         def do_GET(self):
             if self.path=='/':
                 body=Path(__file__).with_name('waiter.html').read_bytes()
                 self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.end_headers(); self.wfile.write(body)
             elif self.path=='/api/state':
-                if not self.authorized(): return self.reply(401,{'error':'Giriş yapın.'})
-                state=store.snapshot(); state.pop('report',None); state.pop('payments',None); self.reply(200,state)
+                user=self.authorized()
+                if not user: return self.reply(401,{'error':'Giriş yapın.'})
+                state=store.snapshot(); state.pop('report',None); state.pop('payments',None); state['user']=user; self.reply(200,state)
             elif self.path=='/health': self.reply(200,{'status':'ok'})
             else: self.reply(404,{'error':'Bulunamadı.'})
         def do_POST(self):
@@ -44,12 +46,20 @@ def serve(store, host='0.0.0.0', port=8765):
                         history=[t for t in attempts.get(ip,[]) if now-t<60]
                         if len(history)>=10: return self.reply(429,{'error':'Bir dakika sonra tekrar deneyin.'})
                         history.append(now); attempts[ip]=history
-                        if not hmac.compare_digest(str(data.get('pin','')),store.pin()): return self.reply(401,{'error':'PIN yanlış.'})
-                        token=secrets.token_urlsafe(32); sessions[token]=now+12*3600
+                    user=store.authenticate(data.get('username',''),data.get('password',''))
+                    if not user:return self.reply(401,{'error':'Kullanıcı adı veya şifre yanlış; hesap pasif olabilir.'})
+                    token=secrets.token_urlsafe(32)
+                    with lock:
+                        for old in [key for key,value in sessions.items() if value['expires']<=now]:sessions.pop(old,None)
+                        sessions[token]=dict(id=user['id'],version=user['version'],expires=now+12*3600)
                     return self.reply(200,{'token':token})
-                if not self.authorized(): return self.reply(401,{'error':'Giriş yapın.'})
+                user=self.authorized()
+                if not user: return self.reply(401,{'error':'Giriş yapın.'})
+                if self.path=='/api/logout':
+                    with lock:sessions.pop(self.headers.get('Authorization','').removeprefix('Bearer '),None)
+                    return self.reply(200,{'ok':True})
                 if self.path!='/api/order': return self.reply(404,{'error':'Bulunamadı.'})
-                store.add(int(data['table']),int(data['product']),data.get('qty',1),str(data.get('note','')),str(data.get('waiter','')))
+                store.add(int(data['table']),int(data['product']),data.get('qty',1),str(data.get('note','')),user['name'],waiter_id=user['id'])
                 self.reply(200,{'ok':True})
             except (ValueError,KeyError,TypeError): self.reply(400,{'error':'Sipariş bilgilerini kontrol edin.'})
             except Exception: self.reply(500,{'error':'İşlem tamamlanamadı; tekrar göndermeden önce masayı kontrol edin.'})
