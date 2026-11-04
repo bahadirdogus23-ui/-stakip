@@ -44,7 +44,7 @@ class Store:
             if not db.execute('SELECT 1 FROM products').fetchone():
                 db.executemany('INSERT INTO products(name,price) VALUES(?,?)', [('Mercimek çorbası',9000),('Izgara köfte',25000),('Tavuk şiş',23000),('Mevsim salata',11000),('Ayran',3500),('Çay',2000)])
             db.execute('INSERT OR IGNORE INTO settings VALUES(?,?)', ('pin',str(secrets.randbelow(900000)+100000)))
-        self.backup()
+        self.auto_backup()
 
     @contextmanager
     def connect(self):
@@ -63,6 +63,7 @@ class Store:
 
     def snapshot(self):
         with self.connect() as db:
+            db.execute('BEGIN')
             tables = [dict(r) for r in db.execute('''SELECT t.*, o.id AS order_id, COALESCE(SUM(i.price*i.qty),0) AS total FROM tables t LEFT JOIN orders o ON o.table_id=t.id AND o.status='open' LEFT JOIN items i ON i.order_id=o.id WHERE t.active=1 GROUP BY t.id ORDER BY t.id''')]
             products = [dict(r) for r in db.execute('SELECT * FROM products WHERE active=1 ORDER BY id')]
             items = [dict(r) for r in db.execute("SELECT i.*,o.table_id FROM items i JOIN orders o ON o.id=i.order_id WHERE o.status='open' ORDER BY i.id")]
@@ -101,14 +102,15 @@ class Store:
                 waiter=account['name']
             db.execute('INSERT INTO items(order_id,name,price,qty,note,waiter,waiter_id) VALUES(?,?,?,?,?,?,?)',(order,p['name'],p['price'],qty,note.strip(),waiter.strip(),waiter_id))
             if request_id is not None:db.execute('INSERT INTO submitted_orders VALUES(?,?,?)',(waiter_id,request_id,fingerprint))
-        self.backup()
+        self.auto_backup()
 
-    def pay(self, table, method, received=None, expected_total=None):
+    def pay(self, table, method, received=None, expected_total=None, expected_order=None):
         if method not in ('Nakit','Kart'): raise ValueError('Ödeme türü geçersiz.')
         with self.lock, self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             order = db.execute("SELECT o.id,COALESCE(SUM(i.price*i.qty),0) total FROM orders o LEFT JOIN items i ON i.order_id=o.id WHERE o.table_id=? AND o.status='open' GROUP BY o.id",(table,)).fetchone()
             if not order: raise ValueError('Masanın açık hesabı yok.')
+            if expected_order is not None and order['id']!=expected_order:raise ValueError('Bu adisyon kapatılmış. Yeni hesabı kontrol edip ödeme ekranını tekrar açın.')
             total=order['total']
             if expected_total is not None and total != expected_total:
                 raise ValueError('Adisyona yeni sipariş eklendi. Tutarı kontrol edip ödemeyi tekrar açın.')
@@ -118,7 +120,7 @@ class Store:
             db.execute('INSERT INTO payments(order_id,method,total,received,change_amount) VALUES(?,?,?,?,?)',(order['id'],method,total,received,change))
             db.execute("UPDATE orders SET status='paid',closed=CURRENT_TIMESTAMP,payment=? WHERE id=?",(method,order['id']))
             db.execute('UPDATE tables SET epoch=epoch+1 WHERE id=?',(table,))
-        self.backup()
+        self.auto_backup()
         return dict(total=total,received=received,change=change,method=method)
 
     def add_section(self, name):
@@ -127,7 +129,7 @@ class Store:
         with self.lock, self.connect() as db:
             try: db.execute('INSERT INTO sections(name) VALUES(?)',(name,))
             except sqlite3.IntegrityError: raise ValueError('Bu bölüm zaten var.')
-        self.backup()
+        self.auto_backup()
 
     def remove_section(self, section):
         with self.lock, self.connect() as db:
@@ -140,7 +142,7 @@ class Store:
             other=db.execute('SELECT id FROM sections WHERE id<>? LIMIT 1',(section,)).fetchone()[0]
             db.execute('UPDATE tables SET section_id=? WHERE section_id=?',(other,section))
             db.execute('DELETE FROM sections WHERE id=?',(section,))
-        self.backup()
+        self.auto_backup()
 
     def save_table(self, name, section, table=None):
         name=name.strip()
@@ -151,26 +153,26 @@ class Store:
             if table is None:db.execute('INSERT INTO tables(name,section_id) VALUES(?,?)',(name,section))
             else:
                 if not db.execute('UPDATE tables SET name=?,section_id=? WHERE id=? AND active=1',(name,section,table)).rowcount:raise ValueError('Masa bulunamadı.')
-        self.backup()
+        self.auto_backup()
 
     def remove_table(self, table):
         with self.lock, self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             if db.execute("SELECT 1 FROM orders WHERE table_id=? AND status='open'",(table,)).fetchone():raise ValueError('Açık hesabı olan masa kaldırılamaz.')
             db.execute('UPDATE tables SET active=0 WHERE id=?',(table,))
-        self.backup()
+        self.auto_backup()
 
     def set_state(self, item, state):
         if state not in ('Yeni','Hazırlanıyor','Servis edildi'): raise ValueError('Durum geçersiz.')
         with self.lock, self.connect() as db:
             db.execute("UPDATE items SET state=? WHERE id=? AND order_id IN (SELECT id FROM orders WHERE status='open')",(state,item))
-        self.backup()
+        self.auto_backup()
 
     def product(self, name, price):
         if not name.strip() or price<=0: raise ValueError('Geçerli ürün adı ve fiyat girin.')
         with self.lock, self.connect() as db:
             db.execute('INSERT INTO products(name,price) VALUES(?,?)',(name.strip(),price))
-        self.backup()
+        self.auto_backup()
 
     @staticmethod
     def password_digest(password, salt):
@@ -193,12 +195,12 @@ class Store:
                 elif not db.execute('UPDATE waiters SET username=?,name=?,password_hash=?,salt=?,version=version+1 WHERE id=?',(username,name,digest,salt,waiter_id)).rowcount:
                     raise ValueError('Garson bulunamadı.')
             except sqlite3.IntegrityError:raise ValueError('Kullanıcı adı zaten kullanılıyor.')
-        self.backup()
+        self.auto_backup()
 
     def set_waiter_active(self, waiter_id, active):
         with self.lock, self.connect() as db:
             db.execute('UPDATE waiters SET active=?,version=version+1 WHERE id=?',(int(bool(active)),waiter_id))
-        self.backup()
+        self.auto_backup()
 
     def authenticate(self, username, password):
         if not isinstance(username,str) or not isinstance(password,str) or len(password)>128:return None
@@ -234,6 +236,11 @@ class Store:
             card=sum(r['total'] for r in rows if r['method']=='Kart'))
         return dict(start=start.isoformat(),end=(end-timedelta(days=1)).isoformat(),summary=summary,orders=rows)
 
+    def auto_backup(self):
+        try:self.backup()
+        except (OSError,sqlite3.Error) as error:
+            self.last_backup_status=dict(local='',external='',error='Veri kaydedildi; otomatik yedek alınamadı: '+str(error))
+
     def backup_settings(self):
         with self.connect() as db:
             row=db.execute("SELECT value FROM settings WHERE key='backup_directory'").fetchone()
@@ -246,7 +253,7 @@ class Store:
             probe=folder/('.lokanta-check-'+secrets.token_hex(8))
             probe.write_text('');probe.unlink()
         with self.connect() as db:db.execute("INSERT OR REPLACE INTO settings VALUES('backup_directory',?)",(str(directory),))
-        self.backup()
+        self.auto_backup()
 
     def backup_status(self):
         return getattr(self,'last_backup_status',dict(local='',external='',error=''))

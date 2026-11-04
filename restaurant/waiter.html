@@ -1,10 +1,17 @@
 <!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lokanta • Garson</title>
-<style>*{box-sizing:border-box}body{margin:0;background:#f4f5f0;color:#17372d;font:17px system-ui}main{max-width:620px;margin:auto;padding:24px}h1{font-size:28px}input,select,button{width:100%;padding:15px;margin:7px 0;border:1px solid #ccd4ce;border-radius:12px;font:inherit}button{background:#19634d;color:white;border:0;font-weight:700;cursor:pointer}label{display:block;margin-top:14px}article{background:white;border-radius:14px;padding:15px;margin:8px 0}.muted{color:#63766d}#message{padding:12px;white-space:pre-wrap}button:disabled{opacity:.5}article{overflow-wrap:anywhere;white-space:pre-wrap}#connection{padding:12px;font-weight:bold}#pending button{background:#8b4c32}</style>
-<main><div class="muted">LOKANTA / SERVİS</div><h1>Kolay sipariş, hızlı servis.</h1><section id="login"><p>Kasada size tanımlanan kullanıcı adı ve şifreyle giriş yapın.</p><input id="username" autocomplete="username" maxlength="50" placeholder="Kullanıcı adı"><input id="password" type="password" autocomplete="current-password" maxlength="128" placeholder="Şifre"><button id="enter">Bağlan</button></section><section id="app" hidden><article id="identity"></article><button id="logout">Çıkış yap</button><label>Bölüm<select id="section"></select></label><label>Masa<select id="table"></select></label><div id="connection" role="status"></div><div id="pending"></div><div id="bill"></div><label>Ürün<select id="product"></select></label><label>Adet<input id="qty" type="number" min="1" max="99" value="1"></label><label>Sipariş notu<input id="note" maxlength="300" placeholder="Örn. soğansız"></label><button id="send">Siparişi gönder</button><button id="refresh">Masaları yenile</button><p class="muted">Ödeme ve menü işlemleri kasadan yapılır.</p></section><div id="message" role="status"></div></main>
+<style>
+:root{color-scheme:light;--green:#146b50;--ink:#1c3040;--muted:#617687}*{box-sizing:border-box}body{margin:0;background:#eef2f6;color:var(--ink);font:16px system-ui}main{max-width:680px;margin:auto;padding:22px 18px 40px}header{background:#153c32;color:white;padding:22px;border-radius:18px;margin-bottom:20px}.brand{font-size:12px;letter-spacing:2px;color:#bad8cb}h1{font-size:27px;line-height:1.2;margin:12px 0 0}h2{font-size:18px;margin:0 0 14px}.panel{background:white;padding:20px;border-radius:16px;box-shadow:0 3px 14px #172d3c08;margin:14px 0}input,select,button{width:100%;padding:14px;margin:6px 0;border:1px solid #cbd6df;border-radius:10px;font:inherit;min-height:48px}input,select{background:#fff;color:var(--ink)}input:focus,select:focus,button:focus-visible{outline:3px solid #a1d9bf;outline-offset:2px}button{background:var(--green);color:white;border:0;font-weight:650;cursor:pointer}.secondary{background:#eaf0f5;color:var(--ink)}label{display:block;font-weight:600;margin-top:10px}small,.muted{color:var(--muted);line-height:1.5}article{border:1px solid #dce6ed;background:white;border-radius:12px;padding:14px;margin:10px 0;overflow-wrap:anywhere;white-space:pre-wrap}#identity{font-weight:650;border:0;background:#dfefe6;margin:0}#logout{font-size:14px;min-height:40px}#message{position:sticky;bottom:8px;white-space:pre-wrap;background:#153c32;color:white;padding:14px;border-radius:12px;box-shadow:0 4px 20px #0002}#message:empty{display:none}#connection{padding:10px 0;font-weight:600;font-size:14px}#pending button{background:#fff0e3;color:#834b16}button:disabled{opacity:.55;cursor:wait}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:380px){.grid{grid-template-columns:1fr}main{padding:12px}h1{font-size:23px}}
+</style>
+<main><header><div class="brand">LOKANTA / SERVİS</div><h1>Siparişler elinizin altında.</h1></header>
+<section id="login" class="panel"><h2>Garson girişi</h2><p class="muted">Kasada size tanımlanan hesapla giriş yapın.</p><label for="username">Kullanıcı adı</label><input id="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="50" placeholder="Kullanıcı adınız"><label for="password">Şifre</label><input id="password" type="password" autocomplete="current-password" maxlength="128" placeholder="Şifreniz"><button id="enter">Giriş yap</button></section>
+<section id="app" hidden><article id="identity"></article><button id="logout" class="secondary">Hesaptan çıkış yap</button><div id="connection" role="status"></div><div id="pending"></div>
+<div class="panel"><h2>1. Masayı seçin</h2><div class="grid"><label>Bölüm<select id="section"></select></label><label>Masa<select id="table"></select></label></div></div>
+<div class="panel"><h2>2. Siparişi ekleyin</h2><label>Ürün<select id="product"></select></label><label>Adet<input id="qty" type="number" min="1" max="99" inputmode="numeric" value="1"></label><label>Sipariş notu <small>• İsteğe bağlı</small><input id="note" maxlength="300" placeholder="Örn. soğansız, az tuzlu"></label><button id="send">+ Siparişi gönder</button><small>Bağlantı kesilirse sipariş bu cihazda bekletilir. Sayfayı açık tutun.</small></div>
+<div class="panel"><h2>Masanın adisyonu</h2><button id="refresh" class="secondary">Adisyonu yenile</button><div id="bill"></div></div><p class="muted">Ödeme ve menü işlemleri kasadan yapılır.</p></section><div id="message" role="status" aria-live="polite"></div></main>
 <script>
 const $=id=>document.getElementById(id);
 const money=n=>(n/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'});
-let token=sessionStorage.getItem('token')||'', owner=sessionStorage.getItem('owner')||'', state, flushing=false;
+let token=sessionStorage.getItem('token')||'', owner=sessionStorage.getItem('owner')||'', state, flushing=false, refreshing=false;
 const key=kind=>'lokanta-'+kind+'-'+owner;
 function read(kind,fallback){try{return JSON.parse(localStorage.getItem(key(kind)))||fallback}catch{return fallback}}
 function queue(){return read('queue',[])}
@@ -30,7 +37,7 @@ Not: ${item.note||'—'}`;$('bill').append(a);
 }
 function renderPending(){
  $('pending').replaceChildren();const list=queue();
- if(list.length){const title=document.createElement('strong');title.textContent=`Bekleyen ${list.length} sipariş (henüz kasaya ulaşmadı)`;$('pending').append(title)}
+ if(list.length){const title=document.createElement('strong');title.textContent=`Bekleyen ${list.length} sipariş (teslim onayı bekliyor)`;$('pending').append(title)}
  for(const item of list){const a=document.createElement('article');a.textContent=`${item.label}
 ${item.error||'Bağlantı kurulunca otomatik gönderilecek.'}`;
  const remove=document.createElement('button');remove.textContent='Bekleyen kaydı kaldır';remove.disabled=flushing;
@@ -48,45 +55,51 @@ function render(){
  $('login').hidden=true;$('app').hidden=false;bill();renderPending();
 }
 async function refresh(){
+ if(refreshing)return;refreshing=true;const requestedToken=token;
  try{
   const next=await api('state');
+  if(token!==requestedToken)return;
   if(owner&&String(next.user.id)!==owner)throw Error('Hesap bilgisi uyuşmuyor. Tekrar giriş yapın.');
   owner=String(next.user.id);sessionStorage.setItem('owner',owner);state=next;
-  localStorage.setItem(key('state'),JSON.stringify(state));render();$('connection').textContent='● Bağlı';
+  try{localStorage.setItem(key('state'),JSON.stringify(state))}catch{msg('Cihaz depolaması dolu. Çevrimdışı kayıt yapılamayabilir.')}render();$('connection').textContent='● Bağlı';
   await flush();
  }catch(error){
+  if(token!==requestedToken)return;
   if(error.status===401){msg('Oturum kapandı. Bekleyen siparişler korunuyor; aynı hesapla tekrar giriş yapın.');return}
   $('connection').textContent='○ Bağlantı yok • Son bilinen menü kullanılıyor';
   if(!state&&owner&&token){state=read('state',null);if(state)render()}
   msg('Bağlantı kesildi. Siparişler bu tarayıcıda bekletilir.');
- }
+ }finally{refreshing=false}
 }
 async function flush(){
- if(flushing||!token||!owner)return;flushing=true;renderPending();
+ if(flushing||!token||!owner)return;flushing=true;let sent=false;const account=owner;renderPending();
  try{
-  while(queue().length){
-   const item=queue()[0];if(item.error)break;
+  while(queue().some(item=>!item.error)){
+   const item=queue().find(item=>!item.error);
    try{await api('order',item)}catch(error){
-    if(error.status&&error.status!==401&&error.status<500){const list=queue();if(list[0]?.request_id===item.request_id){list[0].error=error.message;saveQueue(list)}}
+    if(error.status&&error.status!==401&&error.status<500){const list=queue();const pending=list.find(q=>q.request_id===item.request_id);if(pending){pending.error=error.message;saveQueue(list)}}
     msg(error.status===401?'Tekrar giriş yapın. Bekleyen siparişler korunuyor.':'Gönderim bekliyor: '+error.message);break;
    }
-   saveQueue(queue().filter(q=>q.request_id!==item.request_id));msg('Sipariş kasaya ulaştı.');
+   saveQueue(queue().filter(q=>q.request_id!==item.request_id));sent=true;msg('✓ Sipariş kasaya ulaştı.');
   }
+  if(sent){try{const next=await api('state');if(owner===account&&String(next.user.id)===account){state=next;render();try{localStorage.setItem(key('state'),JSON.stringify(state))}catch{}}}catch{}}
  }finally{flushing=false;renderPending()}
 }
 $('enter').onclick=async()=>{
- if(flushing)return msg('Gönderim sürüyor; biraz bekleyin.');
+ if(flushing||refreshing)return msg('Bağlantı işlemi sürüyor; biraz bekleyin.');
+ $('enter').disabled=true;
  try{const result=await api('login',{username:$('username').value,password:$('password').value});token=result.token;sessionStorage.setItem('token',token);$('password').value='';owner='';state=null;await refresh()}
- catch(error){msg(error.message)}
+ catch(error){msg(error.message)}finally{$('enter').disabled=false}
 };
 $('send').onclick=async()=>{
- if(!state||!owner)return;const table=state.tables.find(t=>t.id===Number($('table').value)),product=state.products.find(p=>p.id===Number($('product').value)),qty=Number($('qty').value);
+ if($('send').disabled||!state||!owner)return;const table=state.tables.find(t=>t.id===Number($('table').value)),product=state.products.find(p=>p.id===Number($('product').value)),qty=Number($('qty').value);
  if(!table||!product||!Number.isInteger(qty)||qty<1||qty>99)return msg('Masa, ürün ve 1–99 arasında adet seçin.');
  const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);const request_id=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
  const item={request_id,epoch:table.epoch,table:table.id,product:product.id,qty,note:$('note').value,label:`${table.name} · ${qty} × ${product.name}`};
- try{saveQueue([...queue(),item]);$('note').value='';msg('Sipariş kaydedildi; kasaya gönderim bekleniyor.');await flush()}catch(error){msg('Sipariş kaydedilemedi: '+error.message)}
+ $('send').disabled=true;
+ try{saveQueue([...queue(),item]);$('note').value='';$('qty').value='1';msg('Sipariş kaydedildi; kasaya gönderim bekleniyor.');await flush()}catch(error){msg('Sipariş kaydedilemedi: '+error.message)}finally{$('send').disabled=false}
 };
-$('logout').onclick=async()=>{if(flushing)return msg('Gönderim sürüyor; çıkış için biraz bekleyin.');if(queue().length&&!confirm('Bekleyen siparişler bu hesaba kayıtlı kalacak. Çıkış yapılsın mı?'))return;try{await api('logout',{})}catch{}finally{token='';state=null;sessionStorage.removeItem('token');$('app').hidden=true;$('login').hidden=false;msg('Çıkış yapıldı.')}};
-$('refresh').onclick=refresh;$('table').onchange=bill;$('section').onchange=render;
+$('logout').onclick=async()=>{if(flushing||refreshing)return msg('Gönderim sürüyor; çıkış için biraz bekleyin.');if(queue().length&&!confirm('Bekleyen siparişler bu hesaba kayıtlı kalacak. Çıkış yapılsın mı?'))return;try{await api('logout',{})}catch{}finally{token='';state=null;sessionStorage.removeItem('token');$('app').hidden=true;$('login').hidden=false;msg('Çıkış yapıldı.')}};
+$('password').onkeydown=e=>{if(e.key==='Enter')$('enter').onclick()};$('refresh').onclick=refresh;$('table').onchange=bill;$('section').onchange=render;
 window.addEventListener('online',refresh);setInterval(()=>{if(token)refresh()},10000);if(token)refresh();
 </script></html>

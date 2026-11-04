@@ -39,3 +39,11 @@ Garson ve sipariş notu ayrı sütunlardadır. Siparişe çift tıklayarak veya 
 **Yedekleme** menüsü son yedekleri listeler. Son 100 işlem yedeğine ek olarak son 30 günün ve son 12 ayın son durumları ayrı klasörlerde tutulur. Harici disk/ağ klasörü seçilirse ayrıca son 100 yedek oraya yazılır. Her dosya SQLite bütünlük kontrolünden geçirilip geçici dosyadan atomik olarak taşınır. Harici hedef bağlantısı kesilirse yerel kayıt devam eder ve kasa ekranında uyarı görünür. **Yedek dosyasını doğrula**, seçilen dosyanın bütünlüğünü ve uygulama tablolarını kontrol eder; kendiliğinden mevcut verinin üzerine yazmaz. Geri yükleme adımları Veriler ve yedekler bölümündedir.
 
 Bekleyen garson siparişleri benzersiz kimlikle gönderilir. Yanıt kaybolup yeniden gönderildiğinde aynı kayıt ikinci kez işlenmez; bu kontrol sunucu yeniden başlatıldığında da korunur. Bekleyen siparişin masası kapatılmışsa kayıt kasaya otomatik eklenmez; garsonun kontrol edip gerekirse kaldırarak yeniden girmesi gerekir. Telefonunuzun yalnızca internete değil ana bilgisayarın bulunduğu yerel ağa yeniden bağlanması gerekir.
+
+## Arayüz ve hata düzeltmeleri
+
+Kasa ekranı yeniden düzenlendi: ayrı araç çubuğu, bölünebilir masa/adisyon alanları, masa adına göre arama ve dolu/boş filtreleri, sabit ödeme düğmesi, kaydırılabilir listeler. Otomatik yenileme değişmeyen masa kartlarını yeniden oluşturmaz, sipariş seçimini ve kaydırmayı korur. Filtre sonucu boşsa sipariş ekleme kapanır. Tutarlar Türkçe biçimde gösterilir; para girişi 1250,50 veya 1.250,50 olabilir; hatalı ve fazla ondalıklı tutarlar reddedilir. Eski ödeme penceresi daha sonra açılan başka bir adisyonu kapatamaz. Otomatik yedek hatası, kaydedilmiş işlemi başarısız göstermez; kasa uyarı verir.
+
+Garson ekranında giriş, masa seçimi, sipariş girişi ve adisyon ayrı kartlardadır. Hızlı çift dokunma ve geç gelen önceki hesap yanıtları engellenir; başarılı gönderimden sonra adisyon yenilenir. Kuyruktaki sorunlu kayıtlar ayrı gösterilir.
+
+Ek arayüz doğrulaması: masaüstü ekran oturumunda `python tests/ui_smoke.py`. Bu kontrol küçük ekran, filtreler, seçim koruma ve tüm diyalogları çalıştırır; Windows derlemesine de eklenmiştir.

@@ -106,6 +106,27 @@ class AppTest(unittest.TestCase):
             self.assertIn('Disk bağlı değil',self.store.backup_status()['error'])
             self.assertEqual(self.store.snapshot()['tables'][0]['total'],18000)
 
+    def test_old_payment_window_cannot_close_new_order(self):
+        self.store.add(1,1)
+        old=self.store.snapshot()['tables'][0]['order_id']
+        self.store.pay(1,'Kart')
+        self.store.add(1,1)
+        with self.assertRaises(ValueError):self.store.pay(1,'Kart',expected_total=9000,expected_order=old)
+        self.assertIsNotNone(self.store.snapshot()['tables'][0]['order_id'])
+
+    def test_automatic_backup_failure_does_not_repeat_committed_order(self):
+        from unittest.mock import patch
+        with patch.object(self.store,'backup',side_effect=OSError('Disk dolu')):self.store.add(1,1)
+        self.assertEqual(len(self.store.snapshot()['items']),1)
+        self.assertIn('Disk dolu',self.store.backup_status()['error'])
+
+    def test_money_input_and_display(self):
+        from restaurant.formatting import parse_money,money
+        for value in ['1234,50','1.234,50','1234.50',' 1234,50 ₺ ']:self.assertEqual(parse_money(value),123450)
+        self.assertEqual(money(123450),'1.234,50 TL')
+        for value in ['NaN','Infinity','-1','1.234','abc','0,001','9999999999']:
+            with self.assertRaises(ValueError):parse_money(value)
+
     def test_waiter_credentials_persist_securely(self):
         self.store.save_waiter('ali','Ali Kaya','sifre123')
         user=self.store.authenticate('ALI','sifre123')

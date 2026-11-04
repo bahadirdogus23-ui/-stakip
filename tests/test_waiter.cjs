@@ -25,5 +25,13 @@ const context=vm.createContext({console,crypto,AbortController,setTimeout,clearT
  assert.equal(vm.runInContext('queue().length',context),0,'Accounts must not share pending orders');
  vm.runInContext("owner='1'",context);
  assert.equal(vm.runInContext('queue().length',context),1,'Pending orders survive account switch');
+ vm.runInContext("saveQueue([]);token='old-session';owner='1';state=null",context);
+ let respond;context.fetch=async()=>new Promise(resolve=>respond=resolve);
+ const refreshing=vm.runInContext('refresh()',context);
+ vm.runInContext("token='new-session';owner='2'",context);
+ respond({ok:true,status:200,json:async()=>({user:{id:1,name:'Old user'}})});
+ await refreshing;
+ assert.equal(vm.runInContext('owner',context),'2','Late responses must not switch account');
+ assert.equal(vm.runInContext('state',context),null);
  console.log('Offline queue, lost response retry, stable request ID and account isolation passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});
