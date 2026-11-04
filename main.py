@@ -24,6 +24,9 @@ def main():
             try:
                 desktop.root.update()
                 assert desktop.tree.get_children()
+                desktop.tree.selection_set(desktop.tree.get_children()[0])
+                desktop.item_detail()
+                desktop.backup()
                 store.add_section('Bahçe')
                 section=store.snapshot()['sections'][-1]['id']
                 store.save_table('Bahçe 1',section)

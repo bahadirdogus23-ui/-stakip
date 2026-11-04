@@ -72,6 +72,40 @@ class AppTest(unittest.TestCase):
             self.assertEqual(migrated.snapshot()['tables'][0]['total'],9000)
         finally:legacy.cleanup()
 
+    def test_retried_offline_order_is_not_duplicated(self):
+        self.store.save_waiter('ali','Ali','sifre123')
+        user=self.store.authenticate('ali','sifre123')
+        options=dict(waiter_id=user['id'],request_id='offline-request-00001',expected_epoch=0)
+        self.store.add(1,1,**options)
+        restarted=Store(self.temp.name)
+        restarted.add(1,1,**options)
+        self.assertEqual(len(restarted.snapshot()['items']),1)
+        with self.assertRaises(ValueError):restarted.add(1,2,**options)
+        restarted.pay(1,'Nakit')
+        restarted.add(1,1,**options) # Lost success response replayed after payment.
+        self.assertEqual(restarted.snapshot()['items'],[])
+        with self.assertRaises(ValueError):restarted.add(1,1,waiter_id=user['id'],request_id='offline-request-00002',expected_epoch=0)
+        self.assertEqual(restarted.snapshot()['items'],[])
+
+    def test_extended_backups(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as external:
+            self.store.set_backup_directory(external)
+            self.store.add(1,1)
+            self.assertTrue(self.store.backup_status()['external'])
+            self.assertTrue(list((self.store.directory/'yedekler'/'gunluk').glob('*.sqlite3')))
+            self.assertTrue(list((self.store.directory/'yedekler'/'aylik').glob('*.sqlite3')))
+            output=Path(self.store.backup_status()['external'])
+            with closing(sqlite3.connect(output)) as db:self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0],'ok')
+            original=Path.mkdir
+            def fail_external(path,*args,**kwargs):
+                if path==Path(external)/'LokantaTakipYedekleri':raise OSError('Disk bağlı değil')
+                return original(path,*args,**kwargs)
+            with patch.object(Path,'mkdir',fail_external):self.store.add(1,1)
+            self.assertIn('Disk bağlı değil',self.store.backup_status()['error'])
+            self.assertEqual(self.store.snapshot()['tables'][0]['total'],18000)
+
     def test_waiter_credentials_persist_securely(self):
         self.store.save_waiter('ali','Ali Kaya','sifre123')
         user=self.store.authenticate('ALI','sifre123')
@@ -123,6 +157,14 @@ class AppTest(unittest.TestCase):
             self.assertEqual(state['user']['name'],'Ayşe Yılmaz')
             self.assertEqual(state['items'][0]['waiter'],'Ayşe Yılmaz')
             self.assertEqual(state['items'][0]['waiter_id'],state['user']['id'])
+            queued=dict(table=2,product=1,qty=1,note='Az tuzlu',request_id='http-offline-order-0001',epoch=0)
+            req('/api/order',queued,token);req('/api/order',queued,token)
+            self.assertEqual(len(req('/api/state',token=token)['items']),2)
+            self.store.pay(2,'Nakit')
+            queued['request_id']='http-offline-order-0002'
+            with self.assertRaises(urllib.error.HTTPError) as conflict:req('/api/order',queued,token)
+            self.assertEqual(conflict.exception.code,400)
+
             self.assertNotIn('report',state)
             self.assertNotIn('payments',state)
             with self.assertRaises(urllib.error.HTTPError) as e:req('/api/pay',{},token)

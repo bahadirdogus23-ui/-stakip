@@ -1,6 +1,7 @@
 import os
 import hashlib
 import hmac
+import json
 import secrets
 import sqlite3
 import threading
@@ -32,6 +33,9 @@ class Store:
             if 'active' not in columns:
                 db.execute('ALTER TABLE tables ADD COLUMN active INTEGER NOT NULL DEFAULT 1')
             db.execute("CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id), method TEXT NOT NULL, total INTEGER NOT NULL, received INTEGER NOT NULL, change_amount INTEGER NOT NULL, created TEXT DEFAULT CURRENT_TIMESTAMP)")
+            if 'epoch' not in {r['name'] for r in db.execute('PRAGMA table_info(tables)')}:
+                db.execute('ALTER TABLE tables ADD COLUMN epoch INTEGER NOT NULL DEFAULT 0')
+            db.execute('CREATE TABLE IF NOT EXISTS submitted_orders(waiter_id INTEGER NOT NULL REFERENCES waiters(id), request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, PRIMARY KEY(waiter_id,request_id))')
             db.execute("CREATE TABLE IF NOT EXISTS waiters(id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, name TEXT NOT NULL, password_hash TEXT NOT NULL, salt TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, version INTEGER NOT NULL DEFAULT 1)")
             if 'waiter_id' not in {r['name'] for r in db.execute('PRAGMA table_info(items)')}:
                 db.execute('ALTER TABLE items ADD COLUMN waiter_id INTEGER REFERENCES waiters(id)')
@@ -67,13 +71,24 @@ class Store:
             payments = [dict(r) for r in db.execute("SELECT p.*,t.name AS table_name FROM payments p JOIN orders o ON o.id=p.order_id JOIN tables t ON t.id=o.table_id ORDER BY p.id DESC LIMIT 100")]
         return dict(tables=tables, products=products, items=items, report=report, sections=sections, payments=payments)
 
-    def add(self, table, product, qty=1, note='', waiter='Kasa', waiter_id=None):
+    def add(self, table, product, qty=1, note='', waiter='Kasa', waiter_id=None, request_id=None, expected_epoch=None):
         if type(qty) is not int or not 1 <= qty <= 99:
             raise ValueError('Adet 1–99 arasında olmalı.')
         if len(note)>300 or not 1 <= len(waiter.strip()) <= 50:
             raise ValueError('Garson adı gerekli; not en fazla 300 karakter olabilir.')
+        if request_id is not None and (not isinstance(request_id,str) or not 16<=len(request_id)<=100 or waiter_id is None):
+            raise ValueError('Sipariş kimliği geçersiz.')
+        fingerprint=hashlib.sha256(json.dumps([table,product,qty,note,expected_epoch],ensure_ascii=False).encode()).hexdigest()
         with self.lock, self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
+            if request_id is not None:
+                prior=db.execute('SELECT fingerprint FROM submitted_orders WHERE waiter_id=? AND request_id=?',(waiter_id,request_id)).fetchone()
+                if prior:
+                    if prior['fingerprint']!=fingerprint:raise ValueError('Sipariş kimliği farklı bilgilerle kullanılmış.')
+                    return
+            current=db.execute('SELECT epoch FROM tables WHERE id=? AND active=1',(table,)).fetchone()
+            if current and expected_epoch is not None and current['epoch']!=expected_epoch:
+                raise ValueError('Masanın önceki hesabı kapatılmış. Bekleyen siparişi kontrol edin; gerekirse silip yeniden girin.')
             if not db.execute('SELECT 1 FROM tables WHERE id=? AND active=1',(table,)).fetchone():
                 raise ValueError('Masa bulunamadı.')
             p = db.execute('SELECT * FROM products WHERE id=? AND active=1',(product,)).fetchone()
@@ -85,6 +100,7 @@ class Store:
                 if not account:raise ValueError('Garson hesabı aktif değil.')
                 waiter=account['name']
             db.execute('INSERT INTO items(order_id,name,price,qty,note,waiter,waiter_id) VALUES(?,?,?,?,?,?,?)',(order,p['name'],p['price'],qty,note.strip(),waiter.strip(),waiter_id))
+            if request_id is not None:db.execute('INSERT INTO submitted_orders VALUES(?,?,?)',(waiter_id,request_id,fingerprint))
         self.backup()
 
     def pay(self, table, method, received=None, expected_total=None):
@@ -101,6 +117,7 @@ class Store:
             change=received-total
             db.execute('INSERT INTO payments(order_id,method,total,received,change_amount) VALUES(?,?,?,?,?)',(order['id'],method,total,received,change))
             db.execute("UPDATE orders SET status='paid',closed=CURRENT_TIMESTAMP,payment=? WHERE id=?",(method,order['id']))
+            db.execute('UPDATE tables SET epoch=epoch+1 WHERE id=?',(table,))
         self.backup()
         return dict(total=total,received=received,change=change,method=method)
 
@@ -217,14 +234,56 @@ class Store:
             card=sum(r['total'] for r in rows if r['method']=='Kart'))
         return dict(start=start.isoformat(),end=(end-timedelta(days=1)).isoformat(),summary=summary,orders=rows)
 
+    def backup_settings(self):
+        with self.connect() as db:
+            row=db.execute("SELECT value FROM settings WHERE key='backup_directory'").fetchone()
+        return row[0] if row else ''
+
+    def set_backup_directory(self, directory):
+        if directory:
+            folder=Path(directory);folder.mkdir(parents=True,exist_ok=True)
+            # Verify a writable destination before saving configuration.
+            probe=folder/('.lokanta-check-'+secrets.token_hex(8))
+            probe.write_text('');probe.unlink()
+        with self.connect() as db:db.execute("INSERT OR REPLACE INTO settings VALUES('backup_directory',?)",(str(directory),))
+        self.backup()
+
+    def backup_status(self):
+        return getattr(self,'last_backup_status',dict(local='',external='',error=''))
+
     def backup(self):
         with self.lock:
             folder = self.directory / 'yedekler'
             folder.mkdir(exist_ok=True)
-            target = folder / (datetime.now().strftime('%Y%m%d-%H%M%S-%f')+'.sqlite3')
-            with self.connect() as source, closing(sqlite3.connect(target)) as dest:
-                source.backup(dest)
-            for old in sorted(folder.glob('*.sqlite3'))[:-100]: old.unlink()
+            now=datetime.now()
+            target = folder / (now.strftime('%Y%m%d-%H%M%S-%f')+'.sqlite3')
+            def write(destination):
+                destination.parent.mkdir(parents=True,exist_ok=True)
+                temporary=destination.with_suffix('.tmp')
+                try:
+                    with self.connect() as source, closing(sqlite3.connect(temporary)) as dest:
+                        source.backup(dest)
+                        if dest.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise OSError('Yedek bütünlüğü doğrulanamadı.')
+                    os.replace(temporary,destination)
+                finally:
+                    if temporary.exists():temporary.unlink()
+            write(target)
+            for old in sorted(folder.glob('*.sqlite3'))[:-100]:old.unlink()
+            daily=folder/'gunluk';monthly=folder/'aylik'
+            write(daily/(now.strftime('%Y-%m-%d')+'.sqlite3'))
+            write(monthly/(now.strftime('%Y-%m')+'.sqlite3'))
+            for location,count in [(daily,30),(monthly,12)]:
+                for old in sorted(location.glob('*.sqlite3'))[:-count]:old.unlink()
+            self.last_backup_status=dict(local=str(target),external='',error='')
+            external=self.backup_settings()
+            if external:
+                try:
+                    destination=Path(external)/'LokantaTakipYedekleri'
+                    output=destination/target.name
+                    write(output)
+                    for old in sorted(destination.glob('*.sqlite3'))[:-100]:old.unlink()
+                    self.last_backup_status['external']=str(output)
+                except (OSError,sqlite3.Error) as error:self.last_backup_status['error']='Harici yedek alınamadı: '+str(error)
         return target
 
 

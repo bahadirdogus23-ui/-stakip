@@ -1,6 +1,92 @@
 <!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lokanta • Garson</title>
-<style>*{box-sizing:border-box}body{margin:0;background:#f4f5f0;color:#17372d;font:17px system-ui}main{max-width:620px;margin:auto;padding:24px}h1{font-size:28px}input,select,button{width:100%;padding:15px;margin:7px 0;border:1px solid #ccd4ce;border-radius:12px;font:inherit}button{background:#19634d;color:white;border:0;font-weight:700;cursor:pointer}label{display:block;margin-top:14px}article{background:white;border-radius:14px;padding:15px;margin:8px 0}.muted{color:#63766d}#message{padding:12px;white-space:pre-wrap}button:disabled{opacity:.5}</style>
-<main><div class="muted">LOKANTA / SERVİS</div><h1>Kolay sipariş, hızlı servis.</h1><section id="login"><p>Kasada size tanımlanan kullanıcı adı ve şifreyle giriş yapın.</p><input id="username" autocomplete="username" maxlength="50" placeholder="Kullanıcı adı"><input id="password" type="password" autocomplete="current-password" maxlength="128" placeholder="Şifre"><button id="enter">Bağlan</button></section><section id="app" hidden><article id="identity"></article><button id="logout">Çıkış yap</button><label>Bölüm<select id="section"></select></label><label>Masa<select id="table"></select></label><div id="bill"></div><label>Ürün<select id="product"></select></label><label>Adet<input id="qty" type="number" min="1" max="99" value="1"></label><label>Sipariş notu<input id="note" maxlength="300" placeholder="Örn. soğansız"></label><button id="send">Siparişi gönder</button><button id="refresh">Masaları yenile</button><p class="muted">Ödeme ve menü işlemleri kasadan yapılır.</p></section><div id="message" role="status"></div></main>
+<style>*{box-sizing:border-box}body{margin:0;background:#f4f5f0;color:#17372d;font:17px system-ui}main{max-width:620px;margin:auto;padding:24px}h1{font-size:28px}input,select,button{width:100%;padding:15px;margin:7px 0;border:1px solid #ccd4ce;border-radius:12px;font:inherit}button{background:#19634d;color:white;border:0;font-weight:700;cursor:pointer}label{display:block;margin-top:14px}article{background:white;border-radius:14px;padding:15px;margin:8px 0}.muted{color:#63766d}#message{padding:12px;white-space:pre-wrap}button:disabled{opacity:.5}article{overflow-wrap:anywhere;white-space:pre-wrap}#connection{padding:12px;font-weight:bold}#pending button{background:#8b4c32}</style>
+<main><div class="muted">LOKANTA / SERVİS</div><h1>Kolay sipariş, hızlı servis.</h1><section id="login"><p>Kasada size tanımlanan kullanıcı adı ve şifreyle giriş yapın.</p><input id="username" autocomplete="username" maxlength="50" placeholder="Kullanıcı adı"><input id="password" type="password" autocomplete="current-password" maxlength="128" placeholder="Şifre"><button id="enter">Bağlan</button></section><section id="app" hidden><article id="identity"></article><button id="logout">Çıkış yap</button><label>Bölüm<select id="section"></select></label><label>Masa<select id="table"></select></label><div id="connection" role="status"></div><div id="pending"></div><div id="bill"></div><label>Ürün<select id="product"></select></label><label>Adet<input id="qty" type="number" min="1" max="99" value="1"></label><label>Sipariş notu<input id="note" maxlength="300" placeholder="Örn. soğansız"></label><button id="send">Siparişi gönder</button><button id="refresh">Masaları yenile</button><p class="muted">Ödeme ve menü işlemleri kasadan yapılır.</p></section><div id="message" role="status"></div></main>
 <script>
-let token=sessionStorage.getItem('token')||'',state;const $=id=>document.getElementById(id);const money=n=>(n/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'});function msg(s){$('message').textContent=s}async function api(path,data){const r=await fetch('/api/'+path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:data?JSON.stringify(data):undefined});const b=await r.json();if(!r.ok){if(r.status===401){$('login').hidden=false;$('app').hidden=true}throw Error(b.error)}return b}function bill(){const id=Number($('table').value),t=state.tables.find(t=>t.id===id);$('bill').replaceChildren();for(const i of state.items.filter(i=>i.table_id===id)){let a=document.createElement('article');a.textContent=`${i.qty} × ${i.name} · ${money(i.price*i.qty)} · ${i.state}${i.note?' / '+i.note:''}`;$('bill').append(a)}const p=document.createElement('strong');p.textContent='Masa toplamı: '+money(t?.total||0);$('bill').append(p)}function tables(){const selected=$('table').value;const section=Number($('section').value);$('table').replaceChildren(...state.tables.filter(t=>!section||t.section_id===section).map(t=>new Option(`${t.name} · ${t.order_id?'Dolu':'Boş'} · ${money(t.total)}`,t.id)));if([...$('table').options].some(o=>o.value===selected))$('table').value=selected;bill()}async function refresh(){state=await api('state');$('identity').textContent='Giriş yapan: '+state.user.name+' ('+state.user.username+')';const current=$('section').value;$('section').replaceChildren(new Option('Tüm bölümler',0),...state.sections.map(s=>new Option(s.name,s.id)));if([...$('section').options].some(o=>o.value===current))$('section').value=current;tables();$('product').replaceChildren(...state.products.map(p=>new Option(`${p.name} · ${money(p.price)}`,p.id)));$('login').hidden=true;$('app').hidden=false;bill()}$('enter').onclick=async()=>{try{token=(await api('login',{username:$('username').value,password:$('password').value})).token;sessionStorage.setItem('token',token);$('password').value='';await refresh();msg('Bağlandı.')}catch(e){msg(e.message)}};$('send').onclick=async()=>{$('send').disabled=true;try{await api('order',{table:Number($('table').value),product:Number($('product').value),qty:Number($('qty').value),note:$('note').value});$('note').value='';await refresh();msg('Sipariş kaydedildi.')}catch(e){msg(e.message)}finally{$('send').disabled=false}};$('logout').onclick=async()=>{try{await api('logout',{})}finally{token='';sessionStorage.removeItem('token');$('app').hidden=true;$('login').hidden=false;msg('Çıkış yapıldı.')}};$('refresh').onclick=()=>refresh().catch(e=>msg(e.message));$('table').onchange=bill;$('section').onchange=tables;if(token)refresh().catch(e=>msg(e.message));setInterval(()=>{if(!$('app').hidden)refresh().catch(()=>msg('Bağlantı yok. Sipariş göndermeden önce bağlantıyı kontrol edin.'))},10000);
+const $=id=>document.getElementById(id);
+const money=n=>(n/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'});
+let token=sessionStorage.getItem('token')||'', owner=sessionStorage.getItem('owner')||'', state, flushing=false;
+const key=kind=>'lokanta-'+kind+'-'+owner;
+function read(kind,fallback){try{return JSON.parse(localStorage.getItem(key(kind)))||fallback}catch{return fallback}}
+function queue(){return read('queue',[])}
+function saveQueue(list){localStorage.setItem(key('queue'),JSON.stringify(list));renderPending()}
+function msg(text){$('message').textContent=text}
+async function api(path,data){
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+ try{
+  const r=await fetch('/api/'+path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:data?JSON.stringify(data):undefined,signal:controller.signal});
+  const b=await r.json();
+  if(!r.ok){const error=Error(b.error);error.status=r.status;if(r.status===401){$('login').hidden=false;$('app').hidden=true}throw error}return b;
+ }finally{clearTimeout(timeout)}
+}
+function bill(){
+ const id=Number($('table').value),table=state.tables.find(t=>t.id===id);$('bill').replaceChildren();
+ for(const item of state.items.filter(i=>i.table_id===id)){
+  const a=document.createElement('article');a.textContent=`${item.qty} × ${item.name} · ${money(item.price*item.qty)}
+Durum: ${item.state}
+Garson: ${item.waiter}
+Not: ${item.note||'—'}`;$('bill').append(a);
+ }
+ const total=document.createElement('strong');total.textContent='Son bilinen masa toplamı: '+money(table?.total||0);$('bill').append(total);
+}
+function renderPending(){
+ $('pending').replaceChildren();const list=queue();
+ if(list.length){const title=document.createElement('strong');title.textContent=`Bekleyen ${list.length} sipariş (henüz kasaya ulaşmadı)`;$('pending').append(title)}
+ for(const item of list){const a=document.createElement('article');a.textContent=`${item.label}
+${item.error||'Bağlantı kurulunca otomatik gönderilecek.'}`;
+ const remove=document.createElement('button');remove.textContent='Bekleyen kaydı kaldır';remove.disabled=flushing;
+ remove.onclick=()=>{if(confirm('Bu bekleyen kayıt silinsin mi? Yanıtı kaybolmuş sipariş kasaya ulaşmış olabilir; masayı kontrol edin.'))saveQueue(queue().filter(q=>q.request_id!==item.request_id))};a.append(remove);$('pending').append(a)}
+}
+function render(){
+ const selected=$('table').value,section=$('section').value,product=$('product').value;
+ $('identity').textContent='Giriş yapan: '+state.user.name+' ('+state.user.username+')';
+ $('section').replaceChildren(new Option('Tüm bölümler',0),...state.sections.map(s=>new Option(s.name,s.id)));
+ if([...$('section').options].some(o=>o.value===section))$('section').value=section;
+ $('table').replaceChildren(...state.tables.filter(t=>!Number($('section').value)||t.section_id===Number($('section').value)).map(t=>new Option(`${t.name} · ${t.order_id?'Dolu':'Boş'} · ${money(t.total)}`,t.id)));
+ if([...$('table').options].some(o=>o.value===selected))$('table').value=selected;
+ $('product').replaceChildren(...state.products.map(p=>new Option(`${p.name} · ${money(p.price)}`,p.id)));
+ if([...$('product').options].some(o=>o.value===product))$('product').value=product;
+ $('login').hidden=true;$('app').hidden=false;bill();renderPending();
+}
+async function refresh(){
+ try{
+  const next=await api('state');
+  if(owner&&String(next.user.id)!==owner)throw Error('Hesap bilgisi uyuşmuyor. Tekrar giriş yapın.');
+  owner=String(next.user.id);sessionStorage.setItem('owner',owner);state=next;
+  localStorage.setItem(key('state'),JSON.stringify(state));render();$('connection').textContent='● Bağlı';
+  await flush();
+ }catch(error){
+  if(error.status===401){msg('Oturum kapandı. Bekleyen siparişler korunuyor; aynı hesapla tekrar giriş yapın.');return}
+  $('connection').textContent='○ Bağlantı yok • Son bilinen menü kullanılıyor';
+  if(!state&&owner&&token){state=read('state',null);if(state)render()}
+  msg('Bağlantı kesildi. Siparişler bu tarayıcıda bekletilir.');
+ }
+}
+async function flush(){
+ if(flushing||!token||!owner)return;flushing=true;renderPending();
+ try{
+  while(queue().length){
+   const item=queue()[0];if(item.error)break;
+   try{await api('order',item)}catch(error){
+    if(error.status&&error.status!==401&&error.status<500){const list=queue();if(list[0]?.request_id===item.request_id){list[0].error=error.message;saveQueue(list)}}
+    msg(error.status===401?'Tekrar giriş yapın. Bekleyen siparişler korunuyor.':'Gönderim bekliyor: '+error.message);break;
+   }
+   saveQueue(queue().filter(q=>q.request_id!==item.request_id));msg('Sipariş kasaya ulaştı.');
+  }
+ }finally{flushing=false;renderPending()}
+}
+$('enter').onclick=async()=>{
+ if(flushing)return msg('Gönderim sürüyor; biraz bekleyin.');
+ try{const result=await api('login',{username:$('username').value,password:$('password').value});token=result.token;sessionStorage.setItem('token',token);$('password').value='';owner='';state=null;await refresh()}
+ catch(error){msg(error.message)}
+};
+$('send').onclick=async()=>{
+ if(!state||!owner)return;const table=state.tables.find(t=>t.id===Number($('table').value)),product=state.products.find(p=>p.id===Number($('product').value)),qty=Number($('qty').value);
+ if(!table||!product||!Number.isInteger(qty)||qty<1||qty>99)return msg('Masa, ürün ve 1–99 arasında adet seçin.');
+ const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);const request_id=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+ const item={request_id,epoch:table.epoch,table:table.id,product:product.id,qty,note:$('note').value,label:`${table.name} · ${qty} × ${product.name}`};
+ try{saveQueue([...queue(),item]);$('note').value='';msg('Sipariş kaydedildi; kasaya gönderim bekleniyor.');await flush()}catch(error){msg('Sipariş kaydedilemedi: '+error.message)}
+};
+$('logout').onclick=async()=>{if(flushing)return msg('Gönderim sürüyor; çıkış için biraz bekleyin.');if(queue().length&&!confirm('Bekleyen siparişler bu hesaba kayıtlı kalacak. Çıkış yapılsın mı?'))return;try{await api('logout',{})}catch{}finally{token='';state=null;sessionStorage.removeItem('token');$('app').hidden=true;$('login').hidden=false;msg('Çıkış yapıldı.')}};
+$('refresh').onclick=refresh;$('table').onchange=bill;$('section').onchange=render;
+window.addEventListener('online',refresh);setInterval(()=>{if(token)refresh()},10000);if(token)refresh();
 </script></html>

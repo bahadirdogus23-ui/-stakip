@@ -1,6 +1,9 @@
 import socket
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox, simpledialog, filedialog
+from pathlib import Path
+import sqlite3
+from contextlib import closing
 from decimal import Decimal, InvalidOperation
 
 
@@ -21,7 +24,7 @@ class Desktop:
         ttk.Button(top,text='Garsonlar',command=self.staff).pack(side='right',padx=8)
         ttk.Button(top,text='Özet ve raporlar',command=self.reports).pack(side='right',padx=8)
         ttk.Button(top,text='Ödeme geçmişi',command=self.history).pack(side='right',padx=8)
-        ttk.Button(top,text='Yedek al',command=self.backup).pack(side='right')
+        ttk.Button(top,text='Yedekleme',command=self.backup).pack(side='right')
         ttk.Button(top,text='Ürün ekle',command=self.product).pack(side='right',padx=8)
         try:
             addresses=sorted(set(socket.gethostbyname_ex(socket.gethostname())[2]))
@@ -42,10 +45,12 @@ class Desktop:
         self.buttons=[]
         right=ttk.Frame(body);right.pack(side='left',fill='both',expand=True)
         self.title=ttk.Label(right,font=('Segoe UI',20,'bold'));self.title.pack(anchor='w',pady=8)
-        self.tree=ttk.Treeview(right,columns=('product','qty','sum','state','note'),show='headings',selectmode='browse')
-        for col,label,width in [('product','Ürün',160),('qty','Adet',45),('sum','Tutar',90),('state','Durum',110),('note','Not / Garson',160)]:
+        self.tree=ttk.Treeview(right,columns=('product','qty','sum','state','waiter','note'),show='headings',selectmode='browse')
+        for col,label,width in [('product','Ürün',160),('qty','Adet',45),('sum','Tutar',90),('state','Durum',110),('waiter','Garson',130),('note','Sipariş notu',140)]:
             self.tree.heading(col,text=label);self.tree.column(col,width=width)
         self.tree.pack(fill='both',expand=True)
+        self.tree.bind('<Double-1>',lambda event:self.item_detail())
+        ttk.Button(right,text='Seçili siparişin detayını göster',command=self.item_detail).pack(anchor='w',pady=5)
         row=ttk.Frame(right);row.pack(fill='x',pady=8)
         self.products=ttk.Combobox(row,state='readonly',width=25);self.products.pack(side='left',fill='x',expand=True)
         self.qty=ttk.Spinbox(row,from_=1,to=99,width=4);self.qty.set('1');self.qty.pack(side='left',padx=6)
@@ -92,11 +97,12 @@ class Desktop:
         self.pay_button.configure(state='normal' if t and t['order_id'] else 'disabled')
         selected=self.tree.selection();self.tree.delete(*self.tree.get_children())
         for i in data['items']:
-            if i['table_id']==self.selected:self.tree.insert('', 'end',iid=str(i['id']),values=(i['name'],i['qty'],money(i['price']*i['qty']),i['state'],f"{i['note']} / {i['waiter']}"))
+            if i['table_id']==self.selected:self.tree.insert('', 'end',iid=str(i['id']),values=(i['name'],i['qty'],money(i['price']*i['qty']),i['state'],i['waiter'],i['note']))
         if selected and self.tree.exists(selected[0]):self.tree.selection_set(selected[0])
         idx=self.products.current();self.products['values']=[f"{p['name']} · {money(p['price'])}" for p in data['products']]
         if data['products']:self.products.current(max(0,min(idx,len(data['products'])-1)))
-        self.report.configure(text=f"Bugün: {data['report']['count']} kapanan adisyon  •  Tahsilat: {money(data['report']['total'])}   |   Veriler: {self.store.directory}   |   Her işlem sonrası otomatik yedek (son 100)")
+        self.report.configure(text=f"Bugün: {data['report']['count']} kapanan adisyon  •  Tahsilat: {money(data['report']['total'])}   |   Veriler: {self.store.directory}   |   Otomatik yedek: son 100 + günlük 30 + aylık 12")
+        if self.store.backup_status().get('error'):self.report.configure(text=self.report.cget('text')+'   ⚠ '+self.store.backup_status()['error'])
         if schedule:self.root.after(3000,self.refresh)
     def add(self):
         def action():
@@ -244,7 +250,50 @@ class Desktop:
 
     def state(self,state):
         if self.tree.selection():self.call(lambda:self.store.set_state(int(self.tree.selection()[0]),state))
-    def backup(self): self.call(lambda:messagebox.showinfo('Yedek hazır',str(self.store.backup())))
+    def item_detail(self):
+        if not self.tree.selection():return
+        item=next((i for i in self.store.snapshot()['items'] if str(i['id'])==self.tree.selection()[0]),None)
+        if not item:return
+        dialog=tk.Toplevel(self.root);dialog.title('Sipariş detayı');dialog.geometry('600x460');dialog.transient(self.root)
+        box=ttk.Frame(dialog,padding=20);box.pack(fill='both',expand=True)
+        ttk.Label(box,text=item['name'],font=('Segoe UI',20,'bold'),wraplength=550).pack(anchor='w')
+        ttk.Label(box,text=f"Garson: {item['waiter']}\nAdet: {item['qty']}   •   Tutar: {money(item['qty']*item['price'])}\nDurum: {item['state']}",wraplength=550).pack(anchor='w',pady=16)
+        ttk.Label(box,text='Sipariş notunun tamamı').pack(anchor='w')
+        text=tk.Text(box,wrap='word',font=('Segoe UI',12),height=8)
+        text.insert('1.0',item['note'] or 'Not yok.');text.configure(state='disabled');text.pack(fill='both',expand=True,pady=8)
+        ttk.Button(box,text='Kapat',command=dialog.destroy).pack(anchor='e')
+
+    def backup(self):
+        dialog=tk.Toplevel(self.root);dialog.title('Yedekleme merkezi');dialog.geometry('760x560');dialog.transient(self.root)
+        box=ttk.Frame(dialog,padding=20);box.pack(fill='both',expand=True)
+        ttk.Label(box,text='Yedekleme merkezi',font=('Segoe UI',22,'bold')).pack(anchor='w')
+        ttk.Label(box,text='Her işlemde otomatik • Son 100 işlem yedeği • 30 günlük • 12 aylık',wraplength=700).pack(anchor='w',pady=12)
+        status=ttk.Label(box,wraplength=700);status.pack(anchor='w',pady=8)
+        files=tk.Listbox(box,font=('Segoe UI',10));files.pack(fill='both',expand=True)
+        def reload():
+            s=self.store.backup_status()
+            status.configure(text=f"Yerel klasör: {self.store.directory / 'yedekler'}\nHarici hedef: {self.store.backup_settings() or 'Tanımlanmamış'}\nSon yerel: {s.get('local','')}\nHarici durum: {s.get('error') or s.get('external') or 'Hedef seçilmedi'}")
+            files.delete(0,'end')
+            for f in sorted((self.store.directory/'yedekler').rglob('*.sqlite3'),reverse=True):files.insert('end',str(f.relative_to(self.store.directory)))
+        def run(fn):
+            try:fn();reload()
+            except Exception as e:messagebox.showerror('Yedekleme hatası',str(e),parent=dialog)
+        def choose():
+            folder=filedialog.askdirectory(title='Harici disk veya yedek klasörü',parent=dialog)
+            if folder:self.store.set_backup_directory(folder)
+        def verify():
+            path=filedialog.askopenfilename(title='Doğrulanacak yedek',filetypes=[('SQLite yedeği','*.sqlite3')],parent=dialog)
+            if not path:return
+            with closing(sqlite3.connect(Path(path).resolve().as_uri()+'?mode=ro',uri=True)) as db:
+                if db.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('Yedek bozuk.')
+                tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                if not {'tables','orders','items','products','settings'}<=tables:raise ValueError('Bu dosya Lokanta Takip yedeği değil.')
+            messagebox.showinfo('Doğrulandı','Yedek sağlam. Geri yüklemek için uygulamayı kapatın, mevcut veriyi ayrı yere kopyalayın ve yedeği veri klasörüne lokanta.sqlite3 adıyla yerleştirin.',parent=dialog)
+        ttk.Button(box,text='Şimdi yedek al',command=lambda:run(self.store.backup)).pack(fill='x',pady=4)
+        ttk.Button(box,text='Harici yedek klasörü seç',command=lambda:run(choose)).pack(fill='x',pady=4)
+        ttk.Button(box,text='Harici yedeği kapat',command=lambda:run(lambda:self.store.set_backup_directory(''))).pack(fill='x',pady=4)
+        ttk.Button(box,text='Yedek dosyasını doğrula',command=lambda:run(verify)).pack(fill='x',pady=4)
+        reload()
     def product(self):
         name=simpledialog.askstring('Yeni ürün','Ürün adı:')
         if not name:return
