@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import urllib.request
 import urllib.error
+from contextlib import closing
 from restaurant.core import Store
 from restaurant.server import serve
 
@@ -18,7 +19,7 @@ class AppTest(unittest.TestCase):
         self.store.pay(1,'Kart');s=Store(self.temp.name)
         self.assertIsNone(s.snapshot()['tables'][0]['order_id'])
         self.assertEqual(s.snapshot()['report'],{'count':1,'total':18000})
-        with sqlite3.connect(s.backup()) as db:self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0],'ok')
+        with closing(sqlite3.connect(s.backup())) as db:self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0],'ok')
     def test_concurrent_orders(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:list(pool.map(lambda _:self.store.add(1,1),range(10)))
         self.assertEqual(self.store.snapshot()['tables'][0]['total'],90000)

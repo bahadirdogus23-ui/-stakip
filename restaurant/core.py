@@ -4,6 +4,7 @@ import sqlite3
 import threading
 from pathlib import Path
 from datetime import datetime
+from contextlib import contextmanager, closing
 
 class Store:
     def __init__(self, directory):
@@ -27,11 +28,16 @@ class Store:
             db.execute('INSERT OR IGNORE INTO settings VALUES(?,?)', ('pin',str(secrets.randbelow(900000)+100000)))
         self.backup()
 
+    @contextmanager
     def connect(self):
         db = sqlite3.connect(self.path, timeout=15)
-        db.row_factory = sqlite3.Row
-        db.execute('PRAGMA foreign_keys=ON')
-        return db
+        try:
+            db.row_factory = sqlite3.Row
+            db.execute('PRAGMA foreign_keys=ON')
+            with db:
+                yield db
+        finally:
+            db.close()
 
     def pin(self):
         with self.connect() as db:
@@ -85,7 +91,7 @@ class Store:
             folder = self.directory / 'yedekler'
             folder.mkdir(exist_ok=True)
             target = folder / (datetime.now().strftime('%Y%m%d-%H%M%S-%f')+'.sqlite3')
-            with self.connect() as source, sqlite3.connect(target) as dest:
+            with self.connect() as source, closing(sqlite3.connect(target)) as dest:
                 source.backup(dest)
             for old in sorted(folder.glob('*.sqlite3'))[:-100]: old.unlink()
         return target
